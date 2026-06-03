@@ -4,6 +4,7 @@ import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles } from './levelup.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from './app.jsx';
+import { parseKitSig, PERKS } from './wizard/helpers.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
 
 // Hooks used bare in this file (see note in wizard.jsx) — provide them under ES modules.
