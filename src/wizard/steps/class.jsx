@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
@@ -245,22 +245,29 @@ function ClassSubclassPicker({ character, update }) {
               const group = curFeature.skillGroup;
               const skills = (window.DS_SKILL_GROUPS?.[group]) || [];
               const cur = character.cclass.domainSkill;
+              const takenElsewhere = skillsTakenExcept(character, 'domain');
               return (
                 <div style={{marginTop: 16}}>
                   <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                     {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                   </div>
                   <div className="skill-chip-grid">
-                    {skills.map(s => (
-                      <button
-                        type="button"
-                        key={s}
-                        className={`skill-chip${cur === s ? ' on' : ''}`}
-                        onClick={() => setDomainSkill(s)}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {skills.map(s => {
+                      const on = cur === s;
+                      const blocked = !on && takenElsewhere.has(s);
+                      return (
+                        <button
+                          type="button"
+                          key={s}
+                          className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
+                          onClick={() => !blocked && setDomainSkill(s)}
+                          disabled={blocked}
+                          title={blocked ? `Already chosen — ${takenElsewhere.get(s)}` : ''}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -362,22 +369,29 @@ function CensorDomainPicker({ character, update }) {
           {curFeature.skillGroup && (() => {
             const group = curFeature.skillGroup;
             const skills = (window.DS_SKILL_GROUPS?.[group]) || [];
+            const takenElsewhere = skillsTakenExcept(character, 'domain');
             return (
               <div style={{marginTop: 16}}>
                 <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                   {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                 </div>
                 <div className="skill-chip-grid">
-                  {skills.map(s => (
-                    <button
-                      type="button"
-                      key={s}
-                      className={`skill-chip${curSkill === s ? ' on' : ''}`}
-                      onClick={() => setDomainSkill(s)}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {skills.map(s => {
+                    const on = curSkill === s;
+                    const blocked = !on && takenElsewhere.has(s);
+                    return (
+                      <button
+                        type="button"
+                        key={s}
+                        className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
+                        onClick={() => !blocked && setDomainSkill(s)}
+                        disabled={blocked}
+                        title={blocked ? `Already chosen — ${takenElsewhere.get(s)}` : ''}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );

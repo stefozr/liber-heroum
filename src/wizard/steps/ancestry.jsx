@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
@@ -118,6 +118,8 @@ function AncestryStep({ character, update }) {
                 const pool = Array.from(new Set(groups.flatMap(g => DS_SKILL_GROUPS[g] || [])));
                 const picked = sigSkills[sig.name] || [];
                 const groupLabel = groups.join(' / ');
+                // Skills held in any other slot (other signatures, culture, career, domain, level-ups).
+                const takenElsewhere = skillsTakenExcept(character, 'sig:' + sig.name);
                 return (
                   <div style={{marginTop:16}}>
                     <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
@@ -126,7 +128,8 @@ function AncestryStep({ character, update }) {
                     <div className="skill-chip-grid">
                       {pool.map(s => {
                         const on = picked.includes(s);
-                        const blocked = !on && picked.length >= count;
+                        const elsewhere = !on && takenElsewhere.has(s);
+                        const blocked = elsewhere || (!on && picked.length >= count);
                         return (
                           <button
                             type="button"
@@ -134,6 +137,7 @@ function AncestryStep({ character, update }) {
                             className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
                             onClick={() => !blocked && toggleSigSkill(sig.name, count, s)}
                             disabled={blocked}
+                            title={elsewhere ? `Already chosen — ${takenElsewhere.get(s)}` : ''}
                           >
                             {s}
                           </button>

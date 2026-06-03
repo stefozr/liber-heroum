@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
@@ -61,6 +61,9 @@ function CultureStep({ character, update }) {
         const picked = (cu.skills || {})[key] || null;
         const skillPool = sel ? Array.from(new Set(sel.skills ? sel.skills : sel.skillGroups.flatMap(g => DS_SKILL_GROUPS[g] || []))) : [];
         const skillLabel = sel ? (sel.skillLabel || sel.skillGroups.join(' / ')) : '';
+        // Skills held in any other slot (the other two aspects, career, class domain, ancestry, level-ups).
+        const takenElsewhere = skillsTakenExcept(character, 'culture:' + key);
+        const quickBlocked = sel ? takenElsewhere.has(sel.quick) : false;
         return (
           <div key={key}>
             <H3>{name}</H3>
@@ -83,21 +86,27 @@ function CultureStep({ character, update }) {
                 <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom: 10}}>
                   <H4Meta>Choose a {sel.name} Skill</H4Meta>
                   <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:13, color:'var(--ink-3)'}}>
-                    From: {skillLabel}{!picked && ' \u2014 quick pick: '}
-                    {!picked && <button type="button" className="quick-pick-btn" onClick={() => setSkill(key, sel.quick)}>{sel.quick}</button>}
+                    From: {skillLabel}{!picked && !quickBlocked && ' \u2014 quick pick: '}
+                    {!picked && !quickBlocked && <button type="button" className="quick-pick-btn" onClick={() => setSkill(key, sel.quick)}>{sel.quick}</button>}
                   </div>
                 </div>
                 <div className="skill-chip-grid">
-                  {skillPool.map(s => (
-                    <button
-                      type="button"
-                      key={s}
-                      className={`skill-chip${picked === s ? ' on' : ''}`}
-                      onClick={() => setSkill(key, s)}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {skillPool.map(s => {
+                    const on = picked === s;
+                    const blocked = !on && takenElsewhere.has(s);
+                    return (
+                      <button
+                        type="button"
+                        key={s}
+                        className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
+                        onClick={() => !blocked && setSkill(key, s)}
+                        disabled={blocked}
+                        title={blocked ? `Already chosen \u2014 ${takenElsewhere.get(s)}` : ''}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

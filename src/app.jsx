@@ -729,10 +729,68 @@ function summarizeBenefits(c) {
   return { skills, languages, perk, features, classAbilities };
 }
 
+// ───────── Duplicate-prevention: a single source of truth for committed skills/perks ─────────
+// A hero can't hold the same skill (or perk) twice, but they're chosen across several
+// independent slots (culture, career, class domain, ancestry signatures, level-up). These
+// collectors gather every *concrete* pick tagged with a stable `key`, so a picker can
+// exclude its own slot and grey out anything already taken elsewhere.
+
+// Returns [{ name, source, key }] — one entry per skill the character currently holds.
+function collectSkillPicks(c) {
+  const out = [];
+  const push = (name, source, key) => { if (name) out.push({ name, source, key }); };
+  Object.entries((c.culture && c.culture.skills) || {}).forEach(([k, s]) => push(s, 'Culture', 'culture:' + k));
+  ((c.career && c.career.skills) || []).forEach(s => push(s, 'Career', 'career'));
+  if (c.cclass && c.cclass.domainSkill) push(c.cclass.domainSkill, 'Domain', 'domain');
+  Object.entries((c.ancestry && c.ancestry.sigSkills) || {}).forEach(([sig, arr]) =>
+    (arr || []).forEach(s => push(s, sig, 'sig:' + sig)));
+  const cls = classDef(c);
+  const lvl = cls && typeof window !== 'undefined' && window.LEVELUP_DATA && window.LEVELUP_DATA[cls.id];
+  if (lvl) Object.entries(c.levelChoices || {}).forEach(([L, stored]) => {
+    for (const ch of ((lvl[L] && lvl[L].choices) || [])) {
+      if (ch.kind !== 'skill-group') continue;
+      const p = stored && stored.picks && stored.picks[ch.id];
+      if (p && p.chosen) push(p.chosen, 'Level ' + L, 'lvl:' + L + ':' + ch.id);
+    }
+  });
+  return out;
+}
+
+// Returns [{ name, source, key }] — one entry per perk the character currently holds.
+function collectPerkPicks(c) {
+  const out = [];
+  const push = (name, source, key) => { if (name) out.push({ name, source, key }); };
+  if (c.career && c.career.perk) push(c.career.perk, 'Career', 'career');
+  const cls = classDef(c);
+  const lvl = cls && typeof window !== 'undefined' && window.LEVELUP_DATA && window.LEVELUP_DATA[cls.id];
+  if (lvl) Object.entries(c.levelChoices || {}).forEach(([L, stored]) => {
+    for (const ch of ((lvl[L] && lvl[L].choices) || [])) {
+      if (ch.kind !== 'perk') continue;
+      const p = stored && stored.picks && stored.picks[ch.id];
+      if (p && p.chosen) push(p.chosen, 'Level ' + L, 'lvl:' + L + ':' + ch.id);
+    }
+  });
+  return out;
+}
+
+// Map of name → source for every skill held EXCEPT the given slot key (so a picker can
+// keep its own selection togglable while blocking duplicates from other slots).
+function skillsTakenExcept(c, ownKey) {
+  const m = new Map();
+  for (const p of collectSkillPicks(c)) if (p.key !== ownKey) m.set(p.name, p.source);
+  return m;
+}
+function perksTakenExcept(c, ownKey) {
+  const m = new Map();
+  for (const p of collectPerkPicks(c)) if (p.key !== ownKey) m.set(p.name, p.source);
+  return m;
+}
+
 // Expose helpers globally for other files
 Object.assign(window, {
   newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived,
-  summarizeBenefits,
+  summarizeBenefits, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept,
 });
 export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits };
+export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { App };

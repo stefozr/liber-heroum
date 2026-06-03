@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
@@ -24,6 +24,8 @@ function CareerStep({ character, update }) {
   const car = careerDef(character);
   const parsed = car ? parseCareerSkills(car) : null;
   const carSkills = character.career.skills || [];
+  // Skills held in any OTHER slot (culture, class domain, ancestry sigs, level-ups) — can't pick them again here.
+  const takenElsewhere = skillsTakenExcept(character, 'career');
   const carLangs = character.career.languages || [];
   const cu = character.culture || {};
   const knownLangs = new Set(['Caelian', cu.language].filter(Boolean));
@@ -122,7 +124,8 @@ function CareerStep({ character, update }) {
               <button type="button" className="quick-pick-btn" onClick={() => {
                 // Quick build: apply autos + the career's `quick` field as a comma/dot-separated guess
                 const quickList = (car.quick || '').split(/[·\u00b7,;]/).map(s => s.trim()).filter(Boolean);
-                const next = [...new Set([...parsed.auto, ...quickList])];
+                // Skip any skill already held in another slot — quick build mustn't create duplicates.
+                const next = [...new Set([...parsed.auto, ...quickList])].filter(s => !takenElsewhere.has(s));
                 setCarSkills(next);
               }}>Use Quick Build</button>
             </div>
@@ -140,8 +143,9 @@ function CareerStep({ character, update }) {
                       {pool.map(s => {
                         const on = carSkills.includes(s);
                         const isAuto = parsed.auto.includes(s);
-                        // Block selecting more than count for this pick
-                        const blocked = !on && !isAuto && pickedCount >= p.count;
+                        const elsewhere = !on && !isAuto && takenElsewhere.has(s);
+                        // Block selecting more than count for this pick, or a skill held in another slot.
+                        const blocked = elsewhere || (!on && !isAuto && pickedCount >= p.count);
                         return (
                           <button
                             type="button"
@@ -149,7 +153,7 @@ function CareerStep({ character, update }) {
                             className={`skill-chip${on ? ' on' : ''}${isAuto ? ' auto' : ''}${blocked ? ' blocked' : ''}`}
                             onClick={() => !isAuto && !blocked && toggleSkill(idx, s)}
                             disabled={isAuto || blocked}
-                            title={isAuto ? 'Granted by career' : blocked ? `Already picked ${p.count}` : ''}
+                            title={isAuto ? 'Granted by career' : elsewhere ? `Already chosen — ${takenElsewhere.get(s)}` : blocked ? `Already picked ${p.count}` : ''}
                           >
                             {s}{isAuto ? ' \u2713' : ''}
                           </button>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { OrnDivider, GlyphRow, Button, H3, H4Meta, Modal, AbilityCard } from './theme.jsx';
-import { classDef } from './app.jsx';
+import { classDef, collectSkillPicks, collectPerkPicks } from './app.jsx';
 // levelup.jsx — Level-up data + flow for Fury and Conduit, levels 1–4.
 // Exposes to window: LEVELUP_DATA, LevelUpFlow.
 
@@ -1111,6 +1111,23 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
     onClose();
   };
 
+  // Skills/perks already held \u2014 so the same one can't be chosen twice. Excludes the level
+  // being worked on (its picks live in `picks` state), and folds in this session's sibling
+  // picks (other choices at this level) so two choices can't land on the same item.
+  const lvlPrefix = 'lvl:' + nextLevel + ':';
+  const takenSkills = new Map(), takenPerks = new Map();
+  for (const p of collectSkillPicks(character)) if (!p.key.startsWith(lvlPrefix)) takenSkills.set(p.name, p.source);
+  for (const p of collectPerkPicks(character)) if (!p.key.startsWith(lvlPrefix)) takenPerks.set(p.name, p.source);
+  for (const ch of choices) {
+    if (!currentChoice || ch.id === currentChoice.id) continue;
+    const p = picks[ch.id];
+    if (!p || !p.chosen) continue;
+    if (ch.kind === 'skill-group') takenSkills.set(p.chosen, 'this level-up');
+    else if (ch.kind === 'perk') takenPerks.set(p.chosen, 'this level-up');
+  }
+  const currentTaken = currentChoice && currentChoice.kind === 'skill-group' ? takenSkills
+    : currentChoice && currentChoice.kind === 'perk' ? takenPerks : null;
+
   return (
     <Modal open={open} onClose={onClose} title={isEditing ? `Edit Level ${nextLevel} \u2014 ${cls.name}` : `Level ${nextLevel} \u2014 ${cls.name}`} width={720}
       footer={(
@@ -1125,7 +1142,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
         </>
       )}>
       {stepId === 'intro' && <LvlIntro data={data} cls={cls} character={character} nextLevel={nextLevel} isEditing={isEditing} />}
-      {currentChoice && <ChoiceStep choice={currentChoice} pick={picks[currentChoice.id]} onPick={(v) => setPick(currentChoice.id, v)} ctx={ctx} />}
+      {currentChoice && <ChoiceStep choice={currentChoice} pick={picks[currentChoice.id]} onPick={(v) => setPick(currentChoice.id, v)} ctx={ctx} taken={currentTaken} />}
       {stepId === 'review' && <LvlReview data={data} picks={picks} choices={choices} cls={cls} nextLevel={nextLevel} character={character} isEditing={isEditing} />}
     </Modal>
   );
@@ -1210,7 +1227,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
   );
 }
 
-function ChoiceStep({ choice, pick, onPick, ctx }) {
+function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
   const opts = typeof choice.options === 'function' ? choice.options(ctx) : choice.options;
   const isPerk = choice.kind === 'perk';
   const isSkill = choice.kind === 'skill-group';
@@ -1279,14 +1296,17 @@ function ChoiceStep({ choice, pick, onPick, ctx }) {
           <div className={isSkill ? 'skill-pick-grid' : 'grid-2'} style={isSkill ? undefined : {gap:10}}>
             {tierItems.map(p => {
               const selected = pick.chosen === p.name;
+              const blocked = !selected && taken && taken.has(p.name);
               return (
                 <div
                   key={p.name}
-                  className={`lvl-opt simple ${isSkill ? 'compact' : ''} ${selected ? 'selected' : ''}`}
-                  onClick={() => onPick({ ...pick, chosen: p.name, chosenText: p.text })}
+                  className={`lvl-opt simple ${isSkill ? 'compact' : ''} ${selected ? 'selected' : ''} ${blocked ? 'blocked' : ''}`}
+                  onClick={() => !blocked && onPick({ ...pick, chosen: p.name, chosenText: p.text })}
+                  title={blocked ? `Already chosen — ${taken.get(p.name)}` : ''}
                 >
                   <div className="lvl-opt-name">{p.name}</div>
-                  {p.text ? <div className="lvl-opt-body">{p.text}</div> : null}
+                  {blocked ? <div className="lvl-opt-body">Already chosen — {taken.get(p.name)}</div>
+                    : p.text ? <div className="lvl-opt-body">{p.text}</div> : null}
                 </div>
               );
             })}
@@ -1440,6 +1460,11 @@ const LEVELUP_CSS = `
   background: linear-gradient(180deg, rgba(20,20,26, calc(0.55 * var(--surface-alpha, 1))), rgba(14,14,18, calc(0.62 * var(--surface-alpha, 1))));
 }
 .lvl-opt:hover { border-color: var(--gold-deep); }
+.lvl-opt.blocked {
+  opacity: 0.4; cursor: not-allowed;
+}
+.lvl-opt.blocked:hover { border-color: var(--line-2); }
+.lvl-opt.blocked .lvl-opt-name { text-decoration: line-through; }
 .lvl-opt.selected {
   border-color: var(--gold);
   box-shadow: 0 0 20px var(--gold-glow), inset 0 0 0 1px rgba(176,138,72,0.25);

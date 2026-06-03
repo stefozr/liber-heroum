@@ -384,6 +384,10 @@ body[data-theme="obsidian"] .app .bg-grain {
   background: linear-gradient(180deg, rgba(212,169,69,0.16), var(--bg-2));
   box-shadow: 0 0 12px var(--gold-glow);
 }
+.skill-chip.blocked {
+  opacity: 0.4; cursor: not-allowed; text-decoration: line-through;
+}
+.skill-chip.blocked:hover { border-color: var(--line-2); color: var(--ink-2); }
 .quick-pick-btn {
   font-family: var(--mono); font-size: 10px; padding: 3px 8px;
   background: transparent; border: 1px solid var(--gold-deep); color: var(--gold-2);
