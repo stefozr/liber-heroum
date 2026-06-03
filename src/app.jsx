@@ -439,6 +439,42 @@ function App() {
     if (view === 'admin' && currentUser && !currentUser.isAdmin) setView('roster');
   }, [active, activeCampaign, view, currentUser]);
 
+  // ─── Browser history integration ───
+  // In-app navigation is a pure function of (view, activeId, activeCampaignId), so we
+  // mirror each change into a history entry — the browser/mouse Back button then steps
+  // through screens instead of leaving the app. We keep the URL unchanged (GitHub Pages
+  // has no SPA fallback, and the OAuth flow uses the hash), storing nav state only in
+  // history.state. poppingRef suppresses the echo when a popstate-driven setState
+  // re-triggers the sync effect; historyReadyRef makes the first authed screen a
+  // replaceState baseline and pushes thereafter.
+  const poppingRef = React.useRef(false);
+  const historyReadyRef = React.useRef(false);
+
+  useEffect(() => {
+    const onPop = (e) => {
+      const s = e.state && e.state.dsNav;
+      if (!s) return;   // not one of ours → let the browser navigate away
+      poppingRef.current = true;
+      setView(s.view);
+      setActiveId(s.activeId ?? null);
+      setActiveCampaignId(s.activeCampaignId ?? null);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  useEffect(() => {
+    if (booting || !currentUser) { historyReadyRef.current = false; return; }
+    if (poppingRef.current) { poppingRef.current = false; return; }  // came from Back/Forward
+    const loc = { dsNav: { view, activeId, activeCampaignId } };
+    if (!historyReadyRef.current) {
+      window.history.replaceState(loc, '');   // baseline entry for this session
+      historyReadyRef.current = true;
+    } else {
+      window.history.pushState(loc, '');
+    }
+  }, [view, activeId, activeCampaignId, booting, currentUser]);
+
   // ─── Tweaks: theme + surface opacity ───
   const [tw, setTweak] = useTweaks({
     theme: 'obsidian',
