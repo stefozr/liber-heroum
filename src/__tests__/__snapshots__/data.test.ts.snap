@@ -1,0 +1,73 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`game data tables > DS_ANCESTRIES is present and unchanged 1`] = `
+{
+  "bytes": 17365,
+  "count": 12,
+  "hash": "9a4f3995",
+}
+`;
+
+exports[`game data tables > DS_CAREERS is present and unchanged 1`] = `
+{
+  "bytes": 25042,
+  "count": 17,
+  "hash": "9339b67a",
+}
+`;
+
+exports[`game data tables > DS_CLASSES is present and unchanged 1`] = `
+{
+  "bytes": 91676,
+  "count": 9,
+  "hash": "beb2c598",
+}
+`;
+
+exports[`game data tables > DS_COMPLICATIONS is present and unchanged 1`] = `
+{
+  "bytes": 23968,
+  "count": 100,
+  "hash": "216fc86f",
+}
+`;
+
+exports[`game data tables > DS_CULTURES is present and unchanged 1`] = `
+{
+  "bytes": 5365,
+  "count": 4,
+  "hash": "87c336d",
+}
+`;
+
+exports[`game data tables > DS_KITS is present and unchanged 1`] = `
+{
+  "bytes": 6100,
+  "count": 21,
+  "hash": "a76b10e3",
+}
+`;
+
+exports[`game data tables > DS_LANGUAGES is present and unchanged 1`] = `
+{
+  "bytes": 194,
+  "count": 18,
+  "hash": "12f4d159",
+}
+`;
+
+exports[`game data tables > DS_SKILL_GROUPS is present and unchanged 1`] = `
+{
+  "bytes": 708,
+  "count": 5,
+  "hash": "e6f9fa0c",
+}
+`;
+
+exports[`game data tables > DS_STEPS is present and unchanged 1`] = `
+{
+  "bytes": 1874,
+  "count": 7,
+  "hash": "358dec2a",
+}
+`;
