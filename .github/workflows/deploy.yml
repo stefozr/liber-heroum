@@ -31,7 +31,11 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: package-lock.json
-      - run: npm ci
+      # `npm install` (not `npm ci`): the committed lock can carry esbuild's
+      # platform-specific optional binaries flagged in a way that makes the strict
+      # `npm ci` choke on Linux (EBADPLATFORM on @esbuild/*-{netbsd,…}). `npm install`
+      # reconciles and skips the non-matching optionals. CI only builds, so this is safe.
+      - run: npm install --no-audit --no-fund
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
