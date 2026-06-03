@@ -1473,10 +1473,16 @@ const LEVELUP_CSS = `
   content: '\u2720'; position: absolute; top: 6px; right: 10px;
   font-family: var(--display); font-size: 14px; color: var(--gold);
 }
+/* Compact skill chips are small + center-aligned; the corner diamond would sit over the
+   label, so drop it (the gold border + glow already mark selection). */
+.lvl-opt.simple.compact.selected::after { display: none; }
 .lvl-opt-name {
   font-family: var(--display-2); font-size: 14px; font-weight: 700;
   letter-spacing: 0.16em; color: var(--ink); text-transform: uppercase;
 }
+/* Perk cards (non-compact): keep a right gutter so a long/wrapping name never runs under
+   the selection diamond. */
+.lvl-opt.simple:not(.compact) .lvl-opt-name { padding-right: 20px; }
 .lvl-opt-body {
   font-family: var(--serif); font-size: 13px; color: var(--ink-2);
   line-height: 1.55; margin-top: 6px;
