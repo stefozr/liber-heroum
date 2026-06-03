@@ -171,23 +171,9 @@ function AuthField({ label, type = 'text', value, onChange, placeholder, autoFoc
 }
 
 // ───────── The login gate ─────────
-// Handlers (signUp / signIn / provider) throw on failure; we catch + surface.
-function AuthScreen({ onSignUp, onSignIn, onProvider }) {
-  const [mode, setMode] = useAuthState('signin');   // 'signin' | 'signup'
-  const [email, setEmail] = useAuthState('');
-  const [password, setPassword] = useAuthState('');
-  const [displayName, setName] = useAuthState('');
+// OAuth only (Discord / Google). onProvider throws on failure; we catch + surface.
+function AuthScreen({ onProvider }) {
   const [error, setError] = useAuthState('');
-  const [busy, setBusy] = useAuthState(false);
-
-  const submit = async () => {
-    setError(''); setBusy(true);
-    try {
-      if (mode === 'signup') await onSignUp({ email, password, displayName });
-      else await onSignIn({ email, password });
-    } catch (e) { setError(e.message || 'Something went wrong.'); }
-    finally { setBusy(false); }
-  };
 
   // Real OAuth: this redirects to Discord/Google and returns to the app.
   const launchProvider = async (key) => {
@@ -207,7 +193,7 @@ function AuthScreen({ onSignUp, onSignIn, onProvider }) {
           <span className="bc bc-tl"></span><span className="bc bc-tr"></span>
           <span className="bc bc-bl"></span><span className="bc bc-br"></span>
 
-          <div className="auth-mode-label">{mode === 'signup' ? 'Inscribe a New Name' : 'Return to the Chronicle'}</div>
+          <div className="auth-mode-label">Enter the Chronicle</div>
 
           <div className="auth-providers">
             {Object.entries(DS.PROVIDERS).map(([key, p]) => (
@@ -219,30 +205,7 @@ function AuthScreen({ onSignUp, onSignIn, onProvider }) {
             ))}
           </div>
 
-          <div className="auth-or"><span className="ln"></span><span className="tx">or with email</span><span className="ln"></span></div>
-
-          <div className="auth-fields">
-            {mode === 'signup' && (
-              <AuthField label="Known as" value={displayName} onChange={setName} placeholder="The name at your table" onEnter={submit} />
-            )}
-            <AuthField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@realm.world" onEnter={submit} />
-            <AuthField label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" onEnter={submit} />
-          </div>
-
           {error && <div className="auth-error">{error}</div>}
-
-          <div style={{ marginTop: 20 }}>
-            <Button kind="primary" onClick={submit} disabled={busy} style={{ width: '100%', justifyContent: 'center' }}>
-              {busy ? 'One moment…' : (mode === 'signup' ? 'Inscribe & Enter' : 'Enter the Chronicle')}
-            </Button>
-          </div>
-
-          <div className="auth-toggle">
-            {mode === 'signup' ? 'Already chronicled? ' : 'New to these pages? '}
-            <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); }}>
-              {mode === 'signup' ? 'Sign in' : 'Create an account'}
-            </button>
-          </div>
         </div>
 
         <div className="auth-foot">
@@ -254,8 +217,56 @@ function AuthScreen({ onSignUp, onSignIn, onProvider }) {
   );
 }
 
+// ───────── Display Name prompt (shown once, right after first sign-in) ─────────
+// Blocking full-screen card. Prefilled with the provider's name; the chosen value is
+// what shows throughout the app. onConfirm(name) throws on failure; we catch + surface.
+function DisplayNamePrompt({ defaultName, onConfirm }) {
+  const [name, setName] = useAuthState(defaultName || '');
+  const [error, setError] = useAuthState('');
+  const [busy, setBusy] = useAuthState(false);
+
+  const submit = async () => {
+    if (!name.trim()) { setError('Choose a name fellow heroes will know you by.'); return; }
+    setError(''); setBusy(true);
+    try { await onConfirm(name); }
+    catch (e) { setError(e.message || 'Something went wrong.'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
+        <h1 className="auth-title">LIBER HEROUM</h1>
+        <div className="auth-sub">By what name shall you be known?</div>
+
+        <div className="auth-panel">
+          <span className="bc bc-tl"></span><span className="bc bc-tr"></span>
+          <span className="bc bc-bl"></span><span className="bc bc-br"></span>
+
+          <div className="auth-mode-label">Inscribe a New Name</div>
+
+          <div className="auth-fields" style={{ marginTop: 18 }}>
+            <AuthField label="Display name" value={name} onChange={setName} placeholder="The name at your table" autoFocus onEnter={submit} />
+          </div>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <div style={{ marginTop: 20 }}>
+            <Button kind="primary" onClick={submit} disabled={busy} style={{ width: '100%', justifyContent: 'center' }}>
+              {busy ? 'One moment…' : 'Enter the Chronicle'}
+            </Button>
+          </div>
+        </div>
+
+        <div className="auth-foot">This is how fellow heroes will see you — you can change it later</div>
+      </div>
+    </div>
+  );
+}
+
 // ───────── App bar (top chrome for roster + campaign views) ─────────
-function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut }) {
+function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRename }) {
   return (
     <div className="ds-appbar">
       <div className="ab-mark">✠</div>
@@ -268,14 +279,18 @@ function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut }) {
           Campaigns <span className="ds-count">{campaignCount}</span>
         </button>
       </nav>
-      <AccountMenu user={user} onSignOut={onSignOut} />
+      <AccountMenu user={user} onSignOut={onSignOut} onRename={onRename} />
     </div>
   );
 }
 
 // ───────── Account menu ─────────
-function AccountMenu({ user, onSignOut }) {
+function AccountMenu({ user, onSignOut, onRename }) {
   const [open, setOpen] = useAuthState(false);
+  const [renaming, setRenaming] = useAuthState(false);
+  const [name, setName] = useAuthState(user.displayName || '');
+  const [error, setError] = useAuthState('');
+  const [busy, setBusy] = useAuthState(false);
   const ref = useAuthRef(null);
   useAuthEffect(() => {
     if (!open) return;
@@ -283,6 +298,15 @@ function AccountMenu({ user, onSignOut }) {
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
+
+  const openRename = () => { setOpen(false); setName(user.displayName || ''); setError(''); setRenaming(true); };
+  const saveRename = async () => {
+    if (!name.trim()) { setError('Choose a name fellow heroes will know you by.'); return; }
+    setError(''); setBusy(true);
+    try { await onRename(name); setRenaming(false); }
+    catch (e) { setError(e.message || 'Something went wrong.'); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div className="ds-account" ref={ref}>
@@ -303,6 +327,13 @@ function AccountMenu({ user, onSignOut }) {
             </div>
           </div>
 
+          {onRename && (
+            <button className="m-item" onClick={openRename}>
+              <span style={{ width: 26, textAlign: 'center' }}>✎</span>
+              Change display name
+            </button>
+          )}
+
           <div className="m-foot">
             <button className="m-item danger" onClick={() => { setOpen(false); onSignOut(); }}>
               <span style={{ width: 26, textAlign: 'center' }}>⎋</span>
@@ -311,9 +342,26 @@ function AccountMenu({ user, onSignOut }) {
           </div>
         </div>
       )}
+
+      {renaming && (
+        <Modal
+          open
+          title="Change display name"
+          onClose={() => setRenaming(false)}
+          footer={
+            <Button kind="primary" onClick={saveRename} disabled={busy}>
+              {busy ? 'Saving…' : 'Save'}
+            </Button>
+          }>
+          <div className="auth-fields">
+            <AuthField label="Display name" value={name} onChange={setName} placeholder="The name at your table" autoFocus onEnter={saveRename} />
+          </div>
+          {error && <div className="auth-error">{error}</div>}
+        </Modal>
+      )}
     </div>
   );
 }
 
-Object.assign(window, { AccountStyles, Avatar, AuthField, AuthScreen, AppBar, AccountMenu });
-export { AccountStyles, Avatar, AuthField, AuthScreen, AppBar, AccountMenu };
+Object.assign(window, { AccountStyles, Avatar, AuthField, AuthScreen, DisplayNamePrompt, AppBar, AccountMenu });
+export { AccountStyles, Avatar, AuthField, AuthScreen, DisplayNamePrompt, AppBar, AccountMenu };

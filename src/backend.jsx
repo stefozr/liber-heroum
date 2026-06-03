@@ -109,6 +109,9 @@ async function currentProfile() {
     displayName: (prof && prof.display_name) || user.email || 'Hero',
     provider: (prof && prof.provider) || 'email',
     avatar: prof && prof.avatar,
+    // True once the user has explicitly chosen their in-app name (see setDisplayName).
+    // Drives the one-time post-login Display Name prompt in app.jsx.
+    displayNameSet: !!(user.user_metadata && user.user_metadata.display_name_set),
   };
 }
 
@@ -127,19 +130,17 @@ function onAuthChange(cb) {
   return () => data.subscription.unsubscribe();
 }
 
-async function signUpEmail({ email, password, displayName }) {
-  if (!displayName || !displayName.trim()) throw new Error('Choose a name fellow heroes will know you by.');
-  const { error } = await supabase.auth.signUp({
-    email: String(email || '').trim(),
-    password,
-    options: { data: { display_name: displayName.trim() } },
-  });
-  if (error) throw new Error(error.message);
-}
-
-async function signInEmail({ email, password }) {
-  const { error } = await supabase.auth.signInWithPassword({ email: String(email || '').trim(), password });
-  if (error) throw new Error(error.message);
+// Set the user's in-app display name. Writes to profiles (so co-members see it) and
+// stamps user_metadata.display_name_set so the one-time chooser prompt won't reappear.
+async function setDisplayName(name) {
+  const dn = String(name || '').trim();
+  if (!dn) throw new Error('Choose a name fellow heroes will know you by.');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in.');
+  const { error: e1 } = await supabase.from('profiles').update({ display_name: dn }).eq('id', user.id);
+  if (e1) throw new Error(e1.message);
+  const { error: e2 } = await supabase.auth.updateUser({ data: { display_name: dn, display_name_set: true } });
+  if (e2) throw new Error(e2.message);
 }
 
 async function signInWithProvider(provider) {
@@ -260,7 +261,7 @@ const DS = {
   K, uid,
   initialsOf, avatarColors, hueOf, PROVIDERS, findByCode,
   init, onAuthChange,
-  signUpEmail, signInEmail, signInWithProvider, signOut,
+  signInWithProvider, signOut, setDisplayName,
   loadAll,
   upsertCharacter, deleteCharacter, uploadPortrait,
   createCampaign, joinByCode, updateCampaign, regenInviteCode,

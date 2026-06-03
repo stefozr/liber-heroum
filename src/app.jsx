@@ -2,7 +2,7 @@ import React from 'react';
 import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS } from './data.jsx';
 import { ThemeStyles } from './theme.jsx';
 import { DS } from './backend.jsx';
-import { AccountStyles, AuthScreen, AppBar } from './auth.jsx';
+import { AccountStyles, AuthScreen, DisplayNamePrompt, AppBar } from './auth.jsx';
 import { CampaignStyles, CampaignHub, CampaignDetail } from './campaigns.jsx';
 import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from './tweaks-panel.jsx';
 import { RosterScreen } from './roster.jsx';
@@ -357,12 +357,16 @@ function App() {
   const openCampaign = useCallback((id) => { setActiveCampaignId(id); setView('campaign'); }, []);
 
   // ── auth actions ──
-  // These throw on failure; AuthScreen catches and surfaces the message. Success
+  // These throw on failure; the auth surfaces catch and surface the message. Success
   // is observed via DS.onAuthChange (above), which loads the store and navigates.
-  const doSignUp = useCallback((data) => DS.signUpEmail(data), []);
-  const doSignIn = useCallback((data) => DS.signInEmail(data), []);
   const doProvider = useCallback((provider) => DS.signInWithProvider(provider), []);
   const signOut = useCallback(() => DS.signOut(), []);
+  // Persist the chosen display name, then update local state optimistically (the
+  // updateUser call also refires onAuthChange, but this makes the prompt close instantly).
+  const setDisplayName = useCallback(async (name) => {
+    await DS.setDisplayName(name);
+    setCurrentUser(u => u ? { ...u, displayName: name.trim(), displayNameSet: true } : u);
+  }, []);
 
   // ── campaign actions ──
   // Creation and joins go through RPCs (DS) and return the canonical campaign;
@@ -460,7 +464,9 @@ function App() {
             <div className="auth-sub" style={{ marginTop: 24 }}>Opening the Liber Heroum…</div>
           </div></div>
         ) : !currentUser ? (
-          <AuthScreen onSignUp={doSignUp} onSignIn={doSignIn} onProvider={doProvider} />
+          <AuthScreen onProvider={doProvider} />
+        ) : !currentUser.displayNameSet ? (
+          <DisplayNamePrompt defaultName={currentUser.displayName} onConfirm={setDisplayName} />
         ) : chromeView ? (
           <div className="ds-shell">
             <AppBar
@@ -470,6 +476,7 @@ function App() {
               campaignCount={myCampaigns.length}
               user={currentUser}
               onSignOut={signOut}
+              onRename={setDisplayName}
             />
             <div className="ds-shell-body">
               {view === 'roster' && (
