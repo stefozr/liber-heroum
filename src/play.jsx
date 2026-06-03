@@ -200,8 +200,8 @@ function PlayView({ character, update, onExit, onEdit }) {
         <div className="play-bg" style={cls ? { backgroundImage: `url(${cls.img})` } : {}}></div>
 
         <div className="play-content">
-          {/* Hero banner */}
-          <div className="hero-banner">
+          {/* Hero masthead (named to avoid ad-blocker cosmetic filters on "banner") */}
+          <div className="hero-masthead">
             <div className={`hb-portrait ${character.portrait ? 'has-img' : ''}`}
               style={character.portrait ? { backgroundImage: `url(${character.portrait})` } : {}}>
               {!character.portrait && <span className="hb-glyph">{renderGlyph(cls?.glyph || '✠')}</span>}
@@ -880,7 +880,7 @@ const PLAY_CSS = `
 .brand-mark .brand-name { font-family: var(--display); font-size: 16px; letter-spacing: 0.24em; color: var(--gold-2); white-space: nowrap; }
 .brand-mark .brand-sub { font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
 
-.hero-banner {
+.hero-masthead {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
   border: 1px solid var(--gold-deep);
   background: linear-gradient(100deg, var(--surface-fade-b), rgba(7,9,28,0.35));
