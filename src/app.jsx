@@ -3,6 +3,7 @@ import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS } from
 import { ThemeStyles } from './theme.jsx';
 import { DS } from './backend.jsx';
 import { AccountStyles, AuthScreen, DisplayNamePrompt, AppBar } from './auth.jsx';
+import { AdminScreen } from './admin.jsx';
 import { CampaignStyles, CampaignHub, CampaignDetail } from './campaigns.jsx';
 import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from './tweaks-panel.jsx';
 import { RosterScreen } from './roster.jsx';
@@ -344,6 +345,8 @@ function App() {
     if (backView && backView.view === 'campaign') {
       setActiveCampaignId(backView.campaignId);
       setView('campaign');
+    } else if (backView && backView.view === 'admin') {
+      setView('admin');
     } else {
       setView('roster');
     }
@@ -433,7 +436,8 @@ function App() {
   useEffect(() => {
     if ((view === 'wizard' || view === 'play') && !active) setView('roster');
     if (view === 'campaign' && !activeCampaign) setView('campaigns');
-  }, [active, activeCampaign, view]);
+    if (view === 'admin' && currentUser && !currentUser.isAdmin) setView('roster');
+  }, [active, activeCampaign, view, currentUser]);
 
   // ─── Tweaks: theme + surface opacity ───
   const [tw, setTweak] = useTweaks({
@@ -447,7 +451,7 @@ function App() {
 
   // The roster / campaign views share the top app bar; the wizard & play views
   // own their full chrome and stand alone.
-  const chromeView = view === 'roster' || view === 'campaigns' || view === 'campaign';
+  const chromeView = view === 'roster' || view === 'campaigns' || view === 'campaign' || view === 'admin';
 
   return (
     <>
@@ -477,6 +481,8 @@ function App() {
               user={currentUser}
               onSignOut={signOut}
               onRename={setDisplayName}
+              isAdmin={currentUser.isAdmin}
+              allCount={characters.length}
             />
             <div className="ds-shell-body">
               {view === 'roster' && (
@@ -516,6 +522,14 @@ function App() {
                   onLeave={leaveCampaign}
                   onDelete={deleteCampaign}
                   onBack={() => onNav('campaigns')}
+                />
+              )}
+              {view === 'admin' && currentUser.isAdmin && (
+                <AdminScreen
+                  characters={characters}
+                  users={users}
+                  onOpen={(id) => openCharacter(id, { view: 'admin' })}
+                  onDelete={deleteCharacter}
                 />
               )}
             </div>

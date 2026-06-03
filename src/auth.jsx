@@ -266,7 +266,7 @@ function DisplayNamePrompt({ defaultName, onConfirm }) {
 }
 
 // ───────── App bar (top chrome for roster + campaign views) ─────────
-function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRename }) {
+function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRename, isAdmin, allCount }) {
   return (
     <div className="ds-appbar">
       <div className="ab-mark">✠</div>
@@ -278,6 +278,11 @@ function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRena
         <button className={`ds-tab ${view === 'campaigns' || view === 'campaign' ? 'on' : ''}`} onClick={() => onNav('campaigns')}>
           Campaigns <span className="ds-count">{campaignCount}</span>
         </button>
+        {isAdmin && (
+          <button className={`ds-tab ${view === 'admin' ? 'on' : ''}`} onClick={() => onNav('admin')}>
+            All Heroes <span className="ds-count">{allCount}</span>
+          </button>
+        )}
       </nav>
       <AccountMenu user={user} onSignOut={onSignOut} onRename={onRename} />
     </div>

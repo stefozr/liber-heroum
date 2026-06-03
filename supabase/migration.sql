@@ -57,6 +57,13 @@ create index if not exists characters_owner_idx    on public.characters (owner_i
 create index if not exists characters_campaign_idx on public.characters (campaign_id);
 create index if not exists members_user_idx         on public.campaign_members (user_id);
 
+-- Superusers. Membership is granted ONLY via the SQL editor / service role — there is
+-- deliberately no insert/update/delete RLS policy below, so a normal user cannot
+-- promote themselves (which they could if this were a self-editable column on profiles).
+create table if not exists public.admins (
+  user_id uuid primary key references public.profiles on delete cascade
+);
+
 -- ─── Invite-code generator (ambiguity-free alphabet, format ABC-DEF) ──────────
 -- Used as the default for campaigns.invite_code. Loops until it finds a free
 -- code. Mirrors the old client-side makeInviteCode().
@@ -110,12 +117,33 @@ as $$
   );
 $$;
 
+-- Is the caller a superuser? (See the admins table above.)
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.admins where user_id = auth.uid()
+  );
+$$;
+
 -- ─── Enable RLS ───────────────────────────────────────────────────────────────
 
 alter table public.profiles         enable row level security;
 alter table public.campaigns         enable row level security;
 alter table public.campaign_members  enable row level security;
 alter table public.characters        enable row level security;
+alter table public.admins            enable row level security;
+
+-- ─── Policies: admins ────────────────────────────────────────────────────────
+-- Readable by any signed-in user (the client checks its own admin status). There is
+-- intentionally NO write policy: grants happen only via the SQL editor / service role.
+drop policy if exists admins_select on public.admins;
+create policy admins_select on public.admins
+  for select to authenticated using (true);
 
 -- ─── Policies: profiles ────────────────────────────────────────────────────
 -- Display name + avatar are low-sensitivity, and party screens need to show
@@ -144,7 +172,7 @@ create policy profiles_insert on public.profiles
 drop policy if exists campaigns_select on public.campaigns;
 create policy campaigns_select on public.campaigns
   for select to authenticated
-  using (gm_id = auth.uid() or public.is_member(id));
+  using (gm_id = auth.uid() or public.is_member(id) or public.is_admin());
 
 drop policy if exists campaigns_update on public.campaigns;
 create policy campaigns_update on public.campaigns
@@ -176,27 +204,28 @@ create policy members_delete on public.campaign_members
 -- INSERT/UPDATE: owner, or the director of the character's campaign
 --   (encodes the "Director has full edit" rule).
 -- DELETE: owner only.
+-- A superuser (is_admin) bypasses all of these — full read/write/delete everywhere.
 
 drop policy if exists characters_select on public.characters;
 create policy characters_select on public.characters
   for select to authenticated
-  using (owner_id = auth.uid() or public.is_member(campaign_id));
+  using (owner_id = auth.uid() or public.is_member(campaign_id) or public.is_admin());
 
 drop policy if exists characters_insert on public.characters;
 create policy characters_insert on public.characters
   for insert to authenticated
-  with check (owner_id = auth.uid() or public.is_director(campaign_id));
+  with check (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin());
 
 drop policy if exists characters_update on public.characters;
 create policy characters_update on public.characters
   for update to authenticated
-  using (owner_id = auth.uid() or public.is_director(campaign_id))
-  with check (owner_id = auth.uid() or public.is_director(campaign_id));
+  using (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin())
+  with check (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin());
 
 drop policy if exists characters_delete on public.characters;
 create policy characters_delete on public.characters
   for delete to authenticated
-  using (owner_id = auth.uid());
+  using (owner_id = auth.uid() or public.is_admin());
 
 -- ─── RPC: create a campaign (campaign + director membership atomically) ──────
 
@@ -330,3 +359,13 @@ drop policy if exists portraits_delete on storage.objects;
 create policy portraits_delete on storage.objects
   for delete to authenticated
   using (bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ─── Grant superuser (run manually; do NOT commit a real email) ──────────────
+-- Make an account a superuser by inserting it here from the SQL editor. The user
+-- must have signed in at least once (so their auth.users / profiles row exists).
+--
+--   insert into public.admins (user_id)
+--   select id from auth.users where email = 'you@example.com'
+--   on conflict do nothing;
+--
+-- Revoke with:  delete from public.admins where user_id = (select id from auth.users where email = 'you@example.com');
