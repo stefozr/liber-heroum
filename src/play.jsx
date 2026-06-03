@@ -10,7 +10,7 @@ import { parseKitSig, PERKS } from './wizard/helpers.js';
 // Hooks used bare in this file (see note in wizard.jsx) — provide them under ES modules.
 const { useState, useEffect } = React;
 
-function PlayView({ character, update, onExit, onEdit }) {
+function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
   const cls = classDef(character);
   const anc = ancestryDef(character);
   const kit = kitDef(character);
@@ -25,9 +25,9 @@ function PlayView({ character, update, onExit, onEdit }) {
   const [bioOpen, setBioOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
 
-  // Initialise current stamina if undefined
+  // Initialise current stamina if undefined (skip for read-only viewers — not our sheet).
   useEffect(() => {
-    if (character.play.stamina == null && derived.staminaMax) {
+    if (canEdit && character.play.stamina == null && derived.staminaMax) {
       update(c => ({ ...c, play: { ...c.play, stamina: derived.staminaMax } }));
     }
     // eslint-disable-next-line
@@ -165,7 +165,7 @@ function PlayView({ character, update, onExit, onEdit }) {
   }
 
   return (
-    <div className="play">
+    <div className={`play${canEdit ? '' : ' play-readonly'}`}>
       <PlayStyles />
       <LevelUpStyles />
 
@@ -189,10 +189,11 @@ function PlayView({ character, update, onExit, onEdit }) {
         </div>
         <div className="center"></div>
         <div className="right">
+          {!canEdit && <span className="play-readonly-tag" title="Only the owner or Director can edit this hero">👁 Viewing</span>}
           <Button kind="ghost" small onClick={() => setRulesOpen(true)}>RULES</Button>
           <Button kind="ghost" small onClick={() => setBioOpen(true)}>BIOGRAPHY</Button>
-          <Button kind="ghost" small onClick={onEdit}>EDIT</Button>
-          <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>
+          {canEdit && onEdit && <Button kind="ghost" small onClick={onEdit}>EDIT</Button>}
+          {canEdit && <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>}
         </div>
       </div>
 
@@ -928,6 +929,15 @@ const PLAY_CSS = `
 .vitals {
   display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr; gap: 12px;
   margin-bottom: 24px;
+}
+/* Read-only viewer (not owner/director/admin): the session trackers are inert. The
+   underlying update is already a no-op; this makes the controls look non-interactive. */
+.play-readonly .vitals button,
+.play-readonly .vitals input { pointer-events: none; opacity: 0.5; }
+.play-readonly-tag {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 3px;
+  padding: 4px 8px; margin-right: 6px; white-space: nowrap;
 }
 .vital {
   border: 1px solid var(--gold);

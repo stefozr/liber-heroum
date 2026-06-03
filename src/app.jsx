@@ -18,6 +18,18 @@ const { useState, useEffect, useMemo, useReducer, useCallback } = React;
 // now speaks to Supabase. Character ids are client-supplied text (the DB column
 // is text), so the wizard can create a hero locally and upsert it as-is.
 const LS_VIEW = `${DS.K.session}/view`;   // last view is a per-device UI preference
+const NOOP_UPDATE = () => {};             // read-only PlayView: mutations are no-ops
+
+// Pure editability rule (mirrors the characters_update RLS policy): a hero may be edited
+// by its owner, the director of its campaign, or a global admin. Everyone else may only
+// view. Exported for unit testing; the App wraps it in a useCallback over current state.
+function canEditCharacterFor(ch, user, campaigns) {
+  if (!ch || !user) return false;
+  if (ch.ownerId === user.id) return true;
+  if (user.isAdmin) return true;
+  const camp = ch.campaignId ? (campaigns || []).find(c => c.id === ch.campaignId) : null;
+  return !!(camp && camp.gmId === user.id);
+}
 
 function uid() {
   return 'c' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
@@ -233,6 +245,18 @@ function App() {
   const active = useMemo(() => characters.find(c => c.id === activeId) || null, [characters, activeId]);
   const activeCampaign = useMemo(() => campaigns.find(c => c.id === activeCampaignId) || null, [campaigns, activeCampaignId]);
 
+  // A hero is editable by its owner, the director of its campaign, or a global admin.
+  // The party may still VIEW each other's sheets read-only (RLS allows select); only
+  // these three may write (mirrors the characters_update RLS policy).
+  const canEditCharacter = useCallback(
+    (ch) => canEditCharacterFor(ch, currentUser, campaigns),
+    [currentUser, campaigns]
+  );
+
+  // Ref mirror of activeId so the realtime callback isn't stale without resubscribing.
+  const activeIdRef = React.useRef(activeId);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
   // ── boot + auth lifecycle ──
   // Loads the RLS-scoped store on boot and on a fresh sign-in. A token refresh
   // (user→user) deliberately does NOT reload, so it can't clobber an in-flight
@@ -265,6 +289,24 @@ function App() {
     });
     return unsub;
   }, [refreshStore]);
+
+  // ── live sync: merge other clients' character changes in realtime ──
+  // A player viewing the Director's edits (or vice-versa) sees them within ~1s. We skip the
+  // hero the user is actively EDITING so an echo of their own save can't clobber in-progress
+  // local state; everything else (incl. a hero we're only viewing read-only) is applied.
+  useEffect(() => {
+    if (booting || !currentUser) return;
+    const off = DS.subscribeCharacters(
+      (row) => setCharacters(prev => {
+        if (row.id === activeIdRef.current && canEditCharacter(row)) return prev;
+        const merged = migrateCharacterChars(row);
+        const i = prev.findIndex(c => c.id === row.id);
+        return i === -1 ? [...prev, merged] : prev.map(c => (c.id === row.id ? merged : c));
+      }),
+      (id) => setCharacters(prev => prev.filter(c => c.id !== id)),
+    );
+    return off;
+  }, [booting, currentUser, canEditCharacter]);
 
   // ── debounced per-character save (replaces the old whole-array write-through) ──
   const saveTimer = React.useRef(null);
@@ -320,8 +362,11 @@ function App() {
     if (!ch) return;
     setActiveId(id);
     setBackView(back);
-    setView(ch.status === 'complete' ? 'play' : 'wizard');
-  }, [characters]);
+    // Non-editors (other players viewing a party sheet) always land on the read-only
+    // play view — never the wizard, even for an in-progress hero — so they can't edit.
+    const editable = canEditCharacter(ch);
+    setView(editable && ch.status !== 'complete' ? 'wizard' : 'play');
+  }, [characters, canEditCharacter]);
 
   const deleteCharacter = useCallback((id) => {
     if (pendingSave.current && pendingSave.current.id === id) pendingSave.current = null;
@@ -586,12 +631,18 @@ function App() {
             }}
           />
         ) : view === 'play' && active ? (
-          <PlayView
-            character={active}
-            update={updateActive}
-            onExit={goBackFromHero}
-            onEdit={() => setView('wizard')}
-          />
+          (() => {
+            const editable = canEditCharacter(active);
+            return (
+              <PlayView
+                character={active}
+                update={editable ? updateActive : NOOP_UPDATE}
+                onExit={goBackFromHero}
+                onEdit={editable ? () => setView('wizard') : null}
+                canEdit={editable}
+              />
+            );
+          })()
         ) : null}
 
         {currentUser && (
@@ -793,4 +844,5 @@ Object.assign(window, {
 });
 export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
+export { canEditCharacterFor };
 export { App };

@@ -360,6 +360,21 @@ create policy portraits_delete on storage.objects
   for delete to authenticated
   using (bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- ─── Realtime: stream character changes to party members ─────────────────────
+-- Adds public.characters to Supabase's realtime publication so the app can subscribe
+-- to live INSERT/UPDATE/DELETE. postgres_changes is RLS-scoped, so each client only
+-- receives changes for rows it may SELECT (its own + shared-campaign heroes). Guarded
+-- so re-running this migration is safe.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'characters'
+  ) then
+    alter publication supabase_realtime add table public.characters;
+  end if;
+end $$;
+
 -- ─── Grant superuser (run manually; do NOT commit a real email) ──────────────
 -- Make an account a superuser by inserting it here from the SQL editor. The user
 -- must have signed in at least once (so their auth.users / profiles row exists).

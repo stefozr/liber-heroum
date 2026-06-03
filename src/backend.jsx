@@ -199,6 +199,25 @@ async function deleteCharacter(id) {
   if (error) throw new Error(error.message);
 }
 
+// Live sync: stream every characters change this client is allowed to SEE (RLS scopes
+// postgres_changes to rows the authenticated user can SELECT — own + shared-campaign
+// heroes). onUpsert(hydrated) fires for INSERT/UPDATE, onDelete(id) for DELETE. Returns
+// an unsubscribe function. Requires the table to be in the supabase_realtime publication
+// (see supabase/migration.sql).
+function subscribeCharacters(onUpsert, onDelete) {
+  const channel = supabase
+    .channel('characters-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'characters' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        if (payload.old && payload.old.id) onDelete(payload.old.id);
+      } else if (payload.new) {
+        onUpsert(hydrateChar(payload.new));
+      }
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
 async function uploadPortrait(file) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in.');
@@ -266,7 +285,7 @@ const DS = {
   init, onAuthChange,
   signInWithProvider, signOut, setDisplayName,
   loadAll,
-  upsertCharacter, deleteCharacter, uploadPortrait,
+  upsertCharacter, deleteCharacter, subscribeCharacters, uploadPortrait,
   createCampaign, joinByCode, updateCampaign, regenInviteCode,
   leaveCampaign, removeMember, disbandCampaign,
 };
