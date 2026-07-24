@@ -17,7 +17,7 @@ Vite + React app with a Supabase backend.
 
 - No Playwright in the repo. Install it in the session scratchpad (`npm install playwright --no-save`) and `npx playwright install chromium`, then drive http://localhost:5173/ with a small script. Note: `npx playwright` alone installs the package into the npx cache where scripts can't import it — install into the script's directory.
 - The auth screen exercises `index.html` base styles, `src/theme/styles.js` (RELIQUARY_CSS, injected via a `<style>` tag by ThemeStyles), and `src/auth.jsx`.
-- Useful checks via `page.evaluate`: computed `font-size` of `document.documentElement` (the global text-size knob in `index.html` is `html { font-size: 120% }`; all app font sizes are rem).
+- Useful checks via `page.evaluate`: computed `font-size` of `document.documentElement` (the global text-size knob in `index.html` is `html { font-size: 135% }`; all app font sizes are rem).
 
 ## Other checks
 

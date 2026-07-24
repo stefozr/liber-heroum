@@ -598,7 +598,7 @@ function ClassKitPicker({ character, update }) {
   const orderOf = (id) => (id === sel ? 1 : id === sel2 ? 2 : 0);
 
   const KitGrid = ({ selected, onPick, disabledId, dualSel }) => (
-    <div className="grid-3" style={{marginTop: 14}}>
+    <div className="grid-2" style={{marginTop: 14}}>
       {pool.map(k => {
         const blocked = disabledId && k.id === disabledId;
         const order = dualSel ? orderOf(k.id) : 0;
