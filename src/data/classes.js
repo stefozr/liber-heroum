@@ -677,8 +677,14 @@ const DS_CLASSES = [
       { name: 'Discipline', text: 'At the start of combat you gain discipline equal to your Victories, then 2 at the start of each turn. You gain 1 more the first time each round an enemy in your Null Field takes a main action, and 1 the first time the Director spends Malice.' },
       { name: 'Discipline Mastery', text: 'Your tradition grants benefits as your discipline grows (2/4/6, with more at 4th/7th/10th level): free surges, edges and then double edges on the Grab and Knockback maneuvers, and more. Benefits last until the end of your turn. Using Inertial Shield also lets you Disengage (Chronokinetic), Grab (Cryokinetic), or Knockback (Metakinetic) as a free triggered action.' },
       { name: 'Null Speed', text: 'You gain a bonus to speed and to the number of squares you can shift when you take the Disengage move action equal to your Agility score.' },
-      { name: 'Psionic Augmentation', text: 'Choose one augmentation, changeable via a psionic meditation on a respite: Density (+6 Stamina, increasing by 6 at 4th/7th/10th, and +1 stability), Force (+1 rolled damage with damage-dealing psionic abilities), or Speed (+1 speed and to your Disengage shift distance).' },
+      { name: 'Psionic Augmentation', text: 'Your training has turned your body into the perfect psionic weapon, shaping pathways in your mind that enhance your physical form. Choose one of the following augmentations. You can change your augmentation by undergoing a psionic meditation as a respite activity.', choose: 'augment' },
       { name: 'Psionic Martial Arts', text: 'A Null forgoes a kit — your body is your weapon. Whenever you use the Knockback or Grab maneuver you use Intuition instead of Might (for the roll and for targeting larger creatures), and Knockback can slide the target instead of pushing.' },
+    ],
+    // Psionic Augmentation options (stored in cclass.enchantment, like the Talent's).
+    enchantments: [
+      { name: 'Density Augmentation', text: 'You gain a +6 bonus to Stamina (increasing by 6 at 4th, 7th, and 10th levels) and a +1 bonus to stability.' },
+      { name: 'Force Augmentation', text: 'Your damage-dealing psionic abilities gain a +1 bonus to rolled damage.' },
+      { name: 'Speed Augmentation', text: 'You gain a +1 bonus to speed and to the distance you can shift when you take the Disengage move action.' },
     ],
     sigCount: 2,
     signatures: [

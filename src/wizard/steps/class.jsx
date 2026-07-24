@@ -51,15 +51,15 @@ function ClassStep({ character, update }) {
               <Crest glyph={c.glyph} />
               <div style={{flex:1, minWidth:0}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:8}}>
-                  <div style={{fontFamily:'var(--display)', fontSize:18, letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
+                  <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
                   <Tag kind="gold">{c.resource.toUpperCase()}</Tag>
                 </div>
-                <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:5}}>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:5}}>
                   {c.role}{!c.deep && ' · BASICS ONLY'}
                 </div>
               </div>
             </div>
-            <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:10, lineHeight:1.45}}>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:10, lineHeight:1.45}}>
               {c.blurb}
             </div>
           </SelCard>
@@ -75,8 +75,8 @@ function ClassStep({ character, update }) {
             <Crest glyph={cls.glyph} size="large" />
             <div>
               <H2>{cls.name}</H2>
-              <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: 16, marginTop: 4}}>"{cls.quote}"</div>
-              <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', marginTop: 10, lineHeight:1.55}}>{cls.longBlurb}</div>
+              <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '1rem', marginTop: 4}}>"{cls.quote}"</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 10, lineHeight:1.55}}>{cls.longBlurb}</div>
             </div>
           </div>
 
@@ -103,9 +103,9 @@ function ClassStep({ character, update }) {
                     <AbilityCard key={f.name} ability={ability} kind="sig" />
                   ) : (
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
-                      <div style={{fontFamily:'var(--display-2)', fontSize:13, fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
-                      <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
-                      {(f.choose === 'prayerWard' || f.choose === 'enchantWard' || f.choose === 'augmentWard' || f.choose === 'triggered') && <PrayerWardPicker character={character} update={update} cls={cls} feature={f} />}
+                      <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
+                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+                      {(f.choose === 'prayerWard' || f.choose === 'enchantWard' || f.choose === 'augmentWard' || f.choose === 'augment' || f.choose === 'triggered') && <PrayerWardPicker character={character} update={update} cls={cls} feature={f} />}
                     </div>
                   );
                 })}
@@ -132,13 +132,14 @@ function PrayerWardPicker({ character, update, cls, feature }) {
     triggered: [['Triggered Action', 'triggereds', 'triggeredAction']],
     enchantWard: [['Enchantment', 'enchantments', 'enchantment'], ['Elementalist Ward', 'wards', 'ward']],
     augmentWard: [['Augmentation', 'enchantments', 'enchantment'], ['Talent Ward', 'wards', 'ward']],
+    augment: [['Augmentation', 'enchantments', 'enchantment']], // Null: augmentation only, no ward
   };
   const groups = CONFIG[feature?.choose] || CONFIG.prayerWard;
   const setKey = (stateKey, name) => update(c => ({ ...c, cclass: { ...c.cclass, [stateKey]: c.cclass[stateKey] === name ? null : name } }));
 
   const Group = ({ label, options, current, onPick }) => (
     <div>
-      <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>{label} <span style={{color:'var(--gold-2)'}}>· Pick 1</span></div>
+      <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>{label} <span style={{color:'var(--gold-2)'}}>· Pick 1</span></div>
       <div className="pw-grid">
         {options.map(o => {
           const on = current === o.name;
@@ -210,13 +211,13 @@ function ClassSubclassPicker({ character, update }) {
     return (
       <div className="stack-22">
         <div>
-          <H3>{cls.subclassName} <span style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 2</span></H3>
+          <H3>{cls.subclassName} <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 2</span></H3>
           <div className="grid-4" style={{marginTop: 10}}>
             {cls.domains.map(d => {
               const on = chosenDomains.includes(d);
               return (
                 <div key={d} className={`card ${on ? 'selected' : ''}`} onClick={() => toggleDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
-                  <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
+                  <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
                 </div>
               );
             })}
@@ -225,7 +226,7 @@ function ClassSubclassPicker({ character, update }) {
 
         {ready && (
           <div>
-            <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
+            <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
             <Deck>At 1st level you gain the 1st-level feature of one of your two domains. The other follows at 2nd level.</Deck>
             <div className="grid-2" style={{marginTop: 12, gap: 10}}>
               {chosenDomains.map(d => {
@@ -234,9 +235,9 @@ function ClassSubclassPicker({ character, update }) {
                 const on = curFeature?.domain === d;
                 return (
                   <div key={d} className={`card ${on ? 'selected' : ''}`} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
-                    <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
-                    <div style={{fontFamily:'var(--display-2)', fontSize:14, fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
-                    <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{f.text}</div>
+                    <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
+                    <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{f.text}</div>
                   </div>
                 );
               })}
@@ -248,7 +249,7 @@ function ClassSubclassPicker({ character, update }) {
               const takenElsewhere = skillsTakenExcept(character, 'domain');
               return (
                 <div style={{marginTop: 16}}>
-                  <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
+                  <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                     {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                   </div>
                   <div className="skill-chip-grid">
@@ -277,7 +278,7 @@ function ClassSubclassPicker({ character, update }) {
 
         {ready && (
           <div>
-            <H3>Domain Ability <span style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
+            <H3>Domain Ability <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
             <Deck>Each domain grants a signature {cls.resource}-fueled ability. Choose one tied to your domains.</Deck>
             <div className="grid-2" style={{marginTop: 12, gap: 12}}>
               {chosenDomains.flatMap(d => (window.DOMAIN_2_ABILITIES?.[d] || []).map(a => {
@@ -307,11 +308,11 @@ function ClassSubclassPicker({ character, update }) {
         {cls.subclasses.map(s => (
           <SelCard key={s.id || s.name} selected={character.cclass.subclass === (s.id || s.name)} onClick={() => setSub(s.id || s.name)}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
-              <div style={{fontFamily:'var(--display)', fontSize:16, letterSpacing:'0.10em'}}>{s.name}</div>
+              <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em'}}>{s.name}</div>
               {s.tag && <Tag>{s.tag}</Tag>}
             </div>
-            <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{s.text}</div>
-            {s.skill && <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:8, textTransform:'uppercase'}}>+ Skill: {s.skill}</div>}
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{s.text}</div>
+            {s.skill && <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:8, textTransform:'uppercase'}}>+ Skill: {s.skill}</div>}
           </SelCard>
         ))}
       </div>
@@ -343,14 +344,14 @@ function CensorDomainPicker({ character, update }) {
   return (
     <div className="stack-22">
       <div>
-        <H3>Deity &amp; Domain <span style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
+        <H3>Deity &amp; Domain <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
         <Deck>Pick one domain from your deity&rsquo;s portfolio. It grants a 1st-level domain feature and a skill, and shapes the features you gain as you rise in level.</Deck>
         <div className="grid-4" style={{marginTop: 10}}>
           {cls.domains.map(d => {
             const on = chosen === d;
             return (
               <div key={d} className={`card ${on ? 'selected' : ''}`} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
-                <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
+                <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
               </div>
             );
           })}
@@ -359,11 +360,11 @@ function CensorDomainPicker({ character, update }) {
 
       {chosen && curFeature && (
         <div>
-          <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>From {chosen}</span></H3>
+          <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>From {chosen}</span></H3>
           <div className="orn-frame" style={{padding:'14px 18px', marginTop:10}}>
-            <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{chosen}</div>
-            <div style={{fontFamily:'var(--display-2)', fontSize:14, fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{curFeature.name}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{curFeature.text}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{chosen}</div>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{curFeature.name}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{curFeature.text}</div>
           </div>
 
           {curFeature.skillGroup && (() => {
@@ -372,7 +373,7 @@ function CensorDomainPicker({ character, update }) {
             const takenElsewhere = skillsTakenExcept(character, 'domain');
             return (
               <div style={{marginTop: 16}}>
-                <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                   {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                 </div>
                 <div className="skill-chip-grid">
@@ -511,7 +512,7 @@ function AbilityPicker({ character, update }) {
       </div>
       ) : cls.signatureNote ? (
       <div>
-        <H3>Signature Abilities <span style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>From your kits</span></H3>
+        <H3>Signature Abilities <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>From your kits</span></H3>
         <Deck>{cls.signatureNote}</Deck>
       </div>
       ) : null}

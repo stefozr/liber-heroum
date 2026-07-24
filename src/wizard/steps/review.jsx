@@ -50,11 +50,11 @@ function ReviewStep({ character, update }) {
           </div>
         )}
         <H1>{character.identity.name || 'Unnamed Hero'}</H1>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: 17, marginTop: 6, letterSpacing:'0.04em'}}>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '1.0625rem', marginTop: 6, letterSpacing:'0.04em'}}>
           {[anc && anc.name, cls && cls.name, car && car.name].filter(Boolean).join(' · ')}
         </div>
         {subLabel && (
-          <div style={{fontFamily:'var(--mono)', fontSize:10.5, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginTop: 6}}>
+          <div style={{fontFamily:'var(--mono)', fontSize: '0.65625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginTop: 6}}>
             {(cls.subclassName || 'Subclass')}: <span style={{color:'var(--ink-2)'}}>{subLabel}</span>
           </div>
         )}
@@ -69,20 +69,20 @@ function ReviewStep({ character, update }) {
       <div className="grid-2" style={{gap: 16}}>
         <ReviewBlock title="Ancestry" body={anc ? (
           <>
-            <div style={{fontFamily:'var(--display)', fontSize:16, color:'var(--ink)', letterSpacing:'0.10em'}}>{anc.name}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:6}}>SIG: {(anc.signatures || [anc.signature]).map(s => s.name).join(' · ').toUpperCase()}</div>
+            <div style={{fontFamily:'var(--display)', fontSize: '1rem', color:'var(--ink)', letterSpacing:'0.10em'}}>{anc.name}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:6}}>SIG: {(anc.signatures || [anc.signature]).map(s => s.name).join(' · ').toUpperCase()}</div>
             {Object.values(character.ancestry.sigSkills || {}).flat().filter(Boolean).length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Signature skill: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigSkills || {}).flat().filter(Boolean).join(', ')}</b>
               </div>
             )}
             {Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 {(anc.signatures || [anc.signature]).find(s => s.optionChoice)?.optionChoice.label || 'Choice'}: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).join(', ')}</b>
               </div>
             )}
             {anc.id === 'revenant' && character.ancestry.formerLife && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Former Life: <b style={{color:'var(--gold-2)'}}>{(DS_ANCESTRIES.find(a => a.id === character.ancestry.formerLife) || {}).name}</b>
                 {Object.entries(character.ancestry.prevLifeTraits || {}).filter(([, v]) => v).map(([, v]) => (
                   <span key={v}> · borrowed {v}</span>
@@ -90,7 +90,7 @@ function ReviewStep({ character, update }) {
               </div>
             )}
             {character.ancestry.traits?.length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Traits: {character.ancestry.traits.join(', ')}
               </div>
             )}
@@ -99,16 +99,16 @@ function ReviewStep({ character, update }) {
 
         <ReviewBlock title="Culture" body={cu.environment ? (
           <>
-            <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{cu.archetype || 'Custom'}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em', marginTop: 6, textTransform:'uppercase'}}>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{cu.archetype || 'Custom'}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop: 6, textTransform:'uppercase'}}>
               {[cu.environment, cu.organization, cu.upbringing].filter(Boolean).join(' · ')}
             </div>
             {cu.skills && Object.values(cu.skills).filter(Boolean).length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Skills: {Object.values(cu.skills).filter(Boolean).join(', ')}
               </div>
             )}
-            <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:6}}>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>
               Languages: Caelian + {cu.language}
             </div>
           </>
@@ -116,42 +116,42 @@ function ReviewStep({ character, update }) {
 
         <ReviewBlock title="Career" body={car ? (
           <>
-            <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{car.name}</div>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{car.name}</div>
             {character.career.incident && (
-              <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize:13, marginTop:6}}>{character.career.incident}</div>
+              <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6}}>{character.career.incident}</div>
             )}
             {character.career.perk && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:6}}>Perk: {character.career.perk}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>Perk: {character.career.perk}</div>
             )}
             {character.career.taken && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>What was taken: {character.career.taken}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>What was taken: {character.career.taken}</div>
             )}
           </>
         ) : '—'} />
 
         <ReviewBlock title="Class" body={cls ? (
           <>
-            <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{cls.name}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--gold-2)', letterSpacing:'0.18em', marginTop: 6, textTransform:'uppercase'}}>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{cls.name}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop: 6, textTransform:'uppercase'}}>
               Resource · {cls.resource}
             </div>
             {subLabel && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:6}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>
                 {(cls.subclassName || (cls.pickTwoDomains || cls.pickOneDomain ? 'Domains' : 'Subclass'))}: {subLabel}
               </div>
             )}
             {character.cclass.domainFeature?.name && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:4}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4}}>
                 Domain feature: {character.cclass.domainFeature.name}{character.cclass.domainSkill ? ` (${character.cclass.domainSkill})` : ''}
               </div>
             )}
             {featureChoices.length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:4}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4}}>
                 Features: {featureChoices.join(', ')}
               </div>
             )}
             {cls.flexCharOrder && Object.keys(chars).length > 0 && (
-              <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.12em', textTransform:'uppercase', marginTop:8, display:'flex', gap:10, flexWrap:'wrap'}}>
+              <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.12em', textTransform:'uppercase', marginTop:8, display:'flex', gap:10, flexWrap:'wrap'}}>
                 {['Might','Agility','Reason','Intuition','Presence'].map(k => (
                   <span key={k}>{k.slice(0,3)} <b style={{color: chars[k] > 0 ? 'var(--gold-2)' : 'var(--ink-2)'}}>{fmtChar(chars[k])}</b></span>
                 ))}
@@ -162,14 +162,14 @@ function ReviewStep({ character, update }) {
 
         <ReviewBlock title="Kit" body={kit ? (
           <>
-            <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{kit.name}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>{kit.armor} · {kit.weapon}</div>
-            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:13, color:'var(--gold-2)', marginTop:5}}>{parseKitSig(kit.sig).name}</div>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{kit.name}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>{kit.armor} · {kit.weapon}</div>
+            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--gold-2)', marginTop:5}}>{parseKitSig(kit.sig).name}</div>
             {kit2 && (
               <>
-                <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, marginTop:8}}>{kit2.name}</div>
-                <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>{kit2.armor} · {kit2.weapon}</div>
-                <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:13, color:'var(--gold-2)', marginTop:5}}>{parseKitSig(kit2.sig).name}</div>
+                <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, marginTop:8}}>{kit2.name}</div>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>{kit2.armor} · {kit2.weapon}</div>
+                <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--gold-2)', marginTop:5}}>{parseKitSig(kit2.sig).name}</div>
               </>
             )}
           </>
@@ -177,9 +177,9 @@ function ReviewStep({ character, update }) {
 
         <ReviewBlock title="Complication" body={comp ? (
           <>
-            <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{comp.name}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize:12.5, color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>+ {comp.benefit}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize:12.5, color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{comp.name}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>+ {comp.benefit}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>
           </>
         ) : 'None — a simpler life.'} />
       </div>
@@ -190,33 +190,33 @@ function ReviewStep({ character, update }) {
           <H4Meta>Skills, Languages & Perk</H4Meta>
           <div className="grid-2" style={{gap: 18, marginTop: 8}}>
             <div>
-              <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom: 6}}>Skills</div>
-              {benefits.skills.length === 0 && <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize:13}}>None granted.</div>}
+              <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom: 6}}>Skills</div>
+              {benefits.skills.length === 0 && <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.8125rem'}}>None granted.</div>}
               {benefits.skills.map((s, i) => (
                 <div key={i} style={{marginBottom: 7}}>
-                  <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase'}}>{s.source}</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', lineHeight:1.5}}>{s.text}</div>
+                  <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase'}}>{s.source}</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5}}>{s.text}</div>
                 </div>
               ))}
             </div>
             <div>
-              <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom: 6}}>Languages</div>
+              <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom: 6}}>Languages</div>
               {benefits.languages.map((l, i) => (
                 <div key={i} style={{marginBottom: 6}}>
-                  <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase'}}>{l.source}</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)'}}>{l.text}</div>
+                  <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase'}}>{l.source}</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)'}}>{l.text}</div>
                 </div>
               ))}
               {benefits.perk && (
                 <div style={{marginTop: 14}}>
-                  <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom: 6}}>Perk</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)'}}>
+                  <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom: 6}}>Perk</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)'}}>
                     {benefits.perk.chosen
-                      ? <><b style={{color:'var(--ink)'}}>{benefits.perk.chosen}</b> <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.16em'}}>({benefits.perk.group})</span></>
+                      ? <><b style={{color:'var(--ink)'}}>{benefits.perk.chosen}</b> <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.16em'}}>({benefits.perk.group})</span></>
                       : <><b style={{color:'var(--ink)'}}>{benefits.perk.group}</b> <span style={{color:'var(--ink-3)'}}> perk group</span></>}
                   </div>
                   {benefits.perk.chosen && benefits.perk.desc && (
-                    <div style={{fontFamily:'var(--serif)', fontSize:12.5, color:'var(--ink-2)', lineHeight:1.5, marginTop: 5}}>{benefits.perk.desc}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop: 5, whiteSpace:'pre-line'}}>{benefits.perk.desc}</div>
                   )}
                 </div>
               )}
@@ -232,8 +232,8 @@ function ReviewStep({ character, update }) {
           <div className="grid-2" style={{gap:14, marginTop: 8}}>
             {benefits.features.map(f => (
               <div key={f.name} style={{padding:'8px 0'}}>
-                <div style={{fontFamily:'var(--display-2)', fontSize:13, fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:4, lineHeight:1.55}}>{f.text}</div>
+                <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
+                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55}}>{f.text}</div>
               </div>
             ))}
           </div>
@@ -267,7 +267,7 @@ function ReviewStep({ character, update }) {
 
       <div className="orn-frame" style={{padding: '20px 24px', textAlign:'center'}}>
         <GlyphRow>✠ · ❦ · ✠</GlyphRow>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: 16, marginTop: 10, maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: '1rem', marginTop: 10, maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
           The rites are complete. Commit to the Liber Heroum, and your hero takes their first breath as a stalwart of Orden.
         </div>
       </div>

@@ -1,8 +1,8 @@
 // wizard/helpers.js — pure helpers + shared constants for the creation wizard.
 import { DS_SKILL_GROUPS } from '../data.jsx';
 
-function timeString() {
-  const d = new Date();
+function timeString(at) {
+  const d = at != null ? new Date(at) : new Date();
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
@@ -41,60 +41,101 @@ function parseCareerSkills(career) {
   return { auto, picks };
 }
 
-// Curated perks per group, with concise descriptions. Player picks one — no free-text.
+// Attribute each chosen career skill to exactly one pick group. Storage stays a flat
+// name array (everything downstream consumes it), but a couple of skills live in two
+// groups (Track: exploration+intrigue, Handle Animals: exploration+interpersonal) — so
+// without attribution a single pick would light up in both groups' lists.
+// `skillPicks` ({ name: pickIdx }) records where the user actually clicked; skills
+// without a valid entry (legacy saves, quick build) fall back to the first pool that
+// contains them and still has capacity. Returns Map<skillName, pickIdx>.
+function attributeCareerSkills(parsed, skills, skillPicks) {
+  const map = new Map();
+  if (!parsed || !parsed.picks.length) return map;
+  const chosen = (skills || []).filter(s => !parsed.auto.includes(s));
+  const picked = skillPicks || {};
+  const pools = parsed.picks.map(p => p.options ? p.options : Array.from(new Set(p.groups.flatMap(g => DS_SKILL_GROUPS[g] || []))));
+  const counts = parsed.picks.map(() => 0);
+  for (const s of chosen) {
+    const idx = picked[s];
+    if (typeof idx === 'number' && pools[idx] && pools[idx].includes(s)) {
+      map.set(s, idx);
+      counts[idx]++;
+    }
+  }
+  for (const s of chosen) {
+    if (map.has(s)) continue;
+    let idx = pools.findIndex((pool, i) => pool.includes(s) && counts[i] < parsed.picks[i].count);
+    if (idx === -1) idx = pools.findIndex(pool => pool.includes(s));
+    if (idx === -1) continue;
+    map.set(s, idx);
+    counts[idx]++;
+  }
+  return map;
+}
+
+// Official perks per group, full rules text (source: Draw Steel via forgesteel data,
+// github.com/andyaiken/forgesteel). Names must match the official compendium so the
+// FoundryVTT export can substitute the official documents. Player picks one.
 
 const PERKS = {
   Crafting: [
-    { name: 'Area of Expertise',     text: 'Your mastery of one craft outshines the rest. Treat one crafting skill as a specialty when bringing it to bear.' },
-    { name: 'Artisan',                text: 'You retain a network of fellow makers willing to consult, trade favors, and share workshop space.' },
-    { name: 'Field Engineer',        text: 'You can improvise repairs, bridges, or shelter from whatever the land provides — quickly and reliably.' },
-    { name: 'Tinker',                 text: 'You build small devices, traps, and gadgets that solve niche problems without much fuss.' },
-    { name: 'Quartermaster',         text: 'You always know where the supplies are. Rations, tools, and consumables stretch further in your hands.' },
-    { name: 'Repairs Specialist',    text: 'Broken gear in your hands becomes serviceable again with surprisingly little effort or time.' },
+    { name: 'Area of Expertise', text: 'Choose one skill you already have from the crafting skill group. Whenever you obtain a tier 1 outcome on an easy or medium test using this skill, you treat it as a tier 2 outcome instead. Additionally, if you spend 1 minute inspecting an object related to the chosen skill, you can estimate its value and learn of any flaws in its construction.' },
+    { name: 'Expert Artisan', text: 'Whenever you make a test as part of a crafting or research project that uses a skill you already have from the crafting skill group, you can make the power roll twice and use either roll.' },
+    { name: 'Handy', text: 'Whenever you make a test to craft something and don’t have a skill that applies to the test, you gain a +1 bonus to the power roll.' },
+    { name: 'Improvisation Creation', text: 'Without needing to make a test—and even without tools—you can quickly jury-rig or repair a mundane item or piece of equipment related to a skill you have from the crafting skill group. That item lasts for 1 hour or works for one use or activation (whichever comes first, as the Director determines), then breaks beyond repair. For example, if you have the Carpentry skill, you could repair a rickety wooden bridge long enough for a group of creatures to cross it, or build a simple shovel made of wood that can be used for 1 hour.' },
+    { name: 'Inspired Artisan', text: 'When you make a project roll using a skill from the crafting skill group, you can spend a hero token to make another project roll for the same project as part of the same respite activity. You can’t use this perk more than once per respite.' },
+    { name: 'Traveling Artisan', text: 'On any day when you don’t take a respite, you can spend 1 uninterrupted hour working on a crafting project using a skill you have from the crafting skill group. If you do so, you gain 1d10 project points toward that project.' },
   ],
   Exploration: [
-    { name: 'Wood Wise',              text: 'You read forests and the lives within them; tracking, foraging, and quiet travel come naturally.' },
-    { name: 'Monster Whisperer',     text: 'You recognize the hungers and habits of creatures — beast, fey, or otherwise — at a glance.' },
-    { name: 'Friend Catapult',       text: 'You can hurl an ally — willing or not — farther and safer than seems physically reasonable.' },
-    { name: 'Brawny',                 text: 'Lifting, hauling, and bracing tasks come easily. Heavy gates and stuck doors yield to you alone.' },
-    { name: 'Camouflage Hunter',     text: 'You blend into your terrain; even sharp-eyed predators struggle to track or fix on you.' },
-    { name: 'Put Your Back Into It!', text: 'When you spend effort over a long task, you go further than most expect.' },
-    { name: 'Teamwork',               text: 'Coordinated tasks with allies gain a tangible edge in your hands; you instinctively close gaps in a plan.' },
-    { name: 'Pathfinder',             text: 'You read trails and landscapes. Rarely lost, rarely surprised, and never long without a route.' },
-    { name: 'Stargazer',              text: 'You navigate by celestial signs and read omens scribed in the night sky that others miss.' },
-    { name: 'Mountaineer',            text: 'Cliffs and crevasses bend to your patience and judgement. You climb where others must search for a path.' },
+    { name: 'Brawny', text: 'Whenever you fail a Might test, you can lose Stamina equal to 1d6 + your level to improve the outcome of the test by one tier. You can use this perk only once per test.' },
+    { name: 'Camouflage Hunter', text: 'Whenever you are in wilderness, once you are hidden from a creature, you don’t need cover or concealment to stay hidden from them.' },
+    { name: 'Danger Sense', text: 'Whenever you are in a natural environment (but not in a settlement in that environment), you gain an edge on tests made using the Alertness skill, and you can’t be surprised. Additionally, you have a connection to nature that warns you if any natural disaster is imminent within the next 72 hours, though you don’t know exactly what it will entail (an earthquake, a wildfire, and so forth).' },
+    { name: 'Friend Catapult', text: 'Maneuver. You grab a willing adjacent ally or object of your size or smaller, then vertical push that target up to a number of squares equal to twice your Might score. If a creature you push falls as a result of this movement, the effective distance of the fall is reduced by a number of squares equal to twice your Might score. When you use this perk, you can’t use it again until you earn 1 or more Victories.' },
+    { name: 'I’ve Got You', text: 'Free triggered action. Trigger: a willing ally lands on you or adjacent to you when they fall. Effect: you catch your ally. Neither of you takes damage from the fall.' },
+    { name: 'Monster Whisperer', text: 'You can use the Handle Animals skill to interact with nonsapient creatures who are not animals.' },
+    { name: 'Put Your Back Into It', text: 'During montage tests, whenever you make a test to assist a test and obtain a tier 1 outcome, the assisted test doesn’t take a bane. Additionally, once per montage test, you can turn an ally’s tier 1 test outcome into a tier 2 outcome.' },
+    { name: 'Team Leader', text: 'At the start of a group test or montage test, you can spend a hero token. If you do, all participants make tests as if they also had any skill you have from the exploration group.' },
+    { name: 'Teamwork', text: 'When you take your first turn during a montage test, you can both make a test and assist another hero’s test.' },
+    { name: 'Wood Wise', text: 'When you make a test using a skill from the exploration skill group and at least one of the d10s rolled is a 1, you can reroll one d10. You can use this perk only once per test.' },
   ],
   Interpersonal: [
-    { name: 'Spot the Tell',         text: 'A glance tells you when someone lies, hides intent, or is about to bolt.' },
-    { name: 'Harmonizer',             text: 'Tense rooms calm in your presence; quarrels find footing again when you join them.' },
-    { name: 'Engrossing Monologue',  text: 'Audiences cannot help but listen when you speak at length. Crowds quiet, guards forget.' },
-    { name: 'Networker',              text: 'You can always find a contact in any city given a day and a clean coat.' },
-    { name: 'Voice of Authority',    text: 'Strangers instinctively defer to you, at least until they learn better.' },
-    { name: 'Trusted Confidant',     text: 'People share secrets with you they wouldn\u2019t share with kin. Your discretion is known.' },
+    { name: 'Charming Liar', text: 'If you fail a test using the Lie skill, you don’t suffer any consequences associated with the failure. Additionally, during a negotiation, you can be caught in one lie without negative consequences. When you use either benefit of this perk, you can’t use this perk again until you earn 1 or more Victories.' },
+    { name: 'Dazzler', text: 'Whenever a creature watches you sing, dance, or perform a role (as an actor, not just in disguise) for 1 uninterrupted minute or more, you gain an edge on any test made to influence that creature for 1 hour after the performance ends.' },
+    { name: 'Engrossing Monologue', text: 'Whenever you are not in combat, you can shout to get the attention of hearing creatures within 10 squares of you. Each such creature who is not hostile toward you listens to what you have to say for 1 uninterrupted minute or more, or until they sense danger or any form of imminent harm. While creatures are listening to you, each of your allies gains an edge on tests made to avoid being noticed by those creatures.' },
+    { name: 'Harmonizer', text: 'You can make a Presence test using the Music skill to influence creatures who don’t have emotions or can’t understand you. Additionally, once during a negotiation when an ally makes an argument, you can play music to give that ally an edge on their test.' },
+    { name: 'Lie Detector', text: 'In response to another creature communicating information to you, you can spend a hero token to determine whether that information contained any knowing lies. If so, you know what the lies are, but not what the truth is.' },
+    { name: 'Open Book', text: 'Whenever you speak one-on-one with a creature, you can ask them one question about themself that might typically offend them or raise suspicion. If they choose not to answer honestly, they simply deflect or redirect the question, with no further complications. If they choose to answer honestly, the creature can immediately ask you a question about yourself in turn, which you must answer honestly.' },
+    { name: 'Pardon My Friend', text: 'When an ally within 5 squares fails a Presence test, you can step in and make a Presence test that takes a bane, with your roll replacing the ally’s roll. This perk can be used only once per test, even if more than one character has it.' },
+    { name: 'Power Player', text: 'Whenever you make a test that uses the Brag, Flirt, or Intimidate skills, you can use Might instead of any other characteristic the test calls for.' },
+    { name: 'So, Tell Me ...', text: 'Whenever you succeed on a Presence test to influence one or more creatures, you can ask one creature you influenced a follow-up question after the test resolves, which they must answer honestly. At the Director’s discretion, the creature doesn’t have to answer the question completely—or at all—if the response would put them or a loved one in danger.' },
+    { name: 'Spot The Tell', text: 'Whenever you make a test to read a person and obtain a tier 3 outcome, you notice several tells that give away their true feelings. Any test you make to read that person in the future gains an edge.' },
   ],
   Intrigue: [
-    { name: 'Forgettable Face',      text: 'You slip witnesses\u2019 memories within minutes of meeting them. Few can describe you to others.' },
-    { name: 'Criminal Contacts',     text: 'In any city, a backroom door opens for the right knock — and the right name dropped first.' },
-    { name: 'False Identity',        text: 'You maintain a believable second life — papers, contacts, reputation, and small tells included.' },
-    { name: 'Discreet',               text: 'You move and act without leaving evident traces. Soft entries, softer exits.' },
-    { name: 'Quick Hands',           text: 'Petty theft, small sleights, and quiet locks are within your reach without much practice.' },
-    { name: 'Soft Footfall',         text: 'You move silently when patience allows. Floors, leaves, and gravel forgive you.' },
+    { name: 'Criminal Contacts', text: 'You have access to a network of criminal contacts. As a respite activity while you take a respite in a settlement, you can ask a question of your contacts by making a Presence test. On a tier 2 outcome, you learn one piece of information that would be common among criminals—the secret entrances into a building, the location of a local criminal in hiding, the name of a local thieves’ guild leader, and so forth. On a tier 3 outcome, you can instead gain knowledge that would be uncommon among criminals as long as such information exists—the location of a local treasure cache, the location of a murder weapon used in a noble’s assassination, the name of an NPC secretly bankrolling a local assassin’s guild, and so forth.' },
+    { name: 'Forgettable Face', text: 'If you spend 10 minutes or less interacting with a creature who hasn’t met you before, you can cause them to forget your face when you part. If asked to describe you, the creature gives only a vague, blank, and unhelpful description. Additionally, if you spend 1 hour or more assembling a disguise, you automatically obtain a tier 2 outcome on any test that could make use of the Disguise skill. If you have the Disguise skill, you automatically obtain a tier 3 outcome on the test.' },
+    { name: 'Gum Up The Works', text: 'Triggered action. Trigger: a mundane trap activates within 3 squares of you. Effect: you can move up to 3 squares toward the trap. If this movement brings you adjacent to any of the trap’s mechanisms, you can jam the trap, preventing it from activating. As long as you stay adjacent to the mechanism, the trap can’t go off unless an attempt to disarm it fails.' },
+    { name: 'Lucky Dog', text: 'Whenever you fail a test using any skill from the intrigue skill group, you can lose Stamina equal to 1d6 + your level to improve the outcome of the test by one tier. You can use this perk only once per test.' },
+    { name: 'Master of Disguise', text: 'You can don or remove a disguise as part of any test you make using the Hide skill, or while using the Hide maneuver.' },
+    { name: 'Slipped Lead', text: 'You gain an edge on tests made to escape bonds. Given 1 uninterrupted minute, you can escape any mundane bonds without making a test. Additionally, it’s not immediately obvious when you’ve escaped bonds until you do something that makes it clear you have done so (cast them off, use an ability that harms one or more creatures, and so forth).' },
   ],
   Lore: [
-    { name: 'I\u2019ve Read About This Place', text: 'Strange locales remind you of texts you\u2019ve studied; you recall pertinent details when needed.' },
-    { name: 'Expert Sage',           text: 'You can produce a relevant book or scroll from a vast personal library — given access to it.' },
-    { name: 'Polyglot',               text: 'You parse foreign tongues faster than scholars expect. Old dialects yield to your ear.' },
-    { name: 'Cartographer',           text: 'You sketch and read maps with uncanny accuracy, even from memory of a glanced original.' },
-    { name: 'Arcane Reader',          text: 'You decipher magic notation common to most schools, even if you cannot cast from it.' },
-    { name: 'Lore-Keeper',            text: 'You remember names, dates, and chains of cause across kingdoms and generations.' },
+    { name: 'But I Know Who Does', text: 'Whenever you fail a test to recall lore using a skill from the lore skill group, you instinctively recall the nearest location where the information you seek might be found. This could be the tower of a local sage, a library in a nearby city, somewhere deep in a dungeon, or any other location of the Director’s determination. The Director can decide that certain lore can’t be revealed this way.' },
+    { name: 'Eidetic Memory', text: 'Your mind is an encyclopedia, though not always an easy one to organize. When you finish a respite, choose one skill from the lore skill group that you don’t have. You have that skill until you finish your next respite. Additionally, if you spend 1 uninterrupted minute or more reading any page of text, you can memorize its contents, allowing you to memorize entire books with sufficient time.' },
+    { name: 'Expert Sage', text: 'Whenever you make a test as part of a crafting or research project using a skill from the lore skill group, you can make the power roll twice and use either roll.' },
+    { name: 'I’ve Read About This Place', text: 'Each time you enter a settlement you’ve never been to before, you can ask the Director one of the following questions:\n• Who is the most influential public figure in this settlement?\n• Who in this settlement would be the friendliest to us right now?\n• What does this settlement need most from outsiders?\nIf the Director doesn’t have an answer to the question you ask, or doesn’t want to answer, you can instead ask a different question.' },
+    { name: 'Linguist', text: 'You have an ear for languages. You automatically learn two new languages, as long as you have regularly heard those languages spoken or seen them written before. Additionally, if you spend 7 days or more in a place where you regularly hear or read a language you don’t know, you can pick up enough of that language to hold a conversation or understand basic written information. Having picked up a language this way, you can subsequently learn it using the Learn New Language research project at half the usual project goal cost.' },
+    { name: 'Polymath', text: 'Whenever you make a test to recall lore and don’t have a skill that applies to the test, you gain a +1 bonus to the power roll.' },
+    { name: 'Specialist', text: 'You are a leading expert on a particular subject. Choose one skill you have from the lore skill group. You always have a double edge on tests made to recall lore using this skill. Additionally, your specialist knowledge grants you notoriety in fields related to the chosen skill. You treat your Renown as 1 higher when negotiating with an NPC who knows your reputation, or 2 higher if they have the same skill you chose for this perk.' },
+    { name: 'Traveling Sage', text: 'On any day when you don’t take a respite, you can spend 1 uninterrupted hour working on a research project using a skill you have from the lore skill group. If you do so, you gain 1d10 project points toward that project.' },
   ],
   Supernatural: [
-    { name: 'Ritualist',              text: 'You can run smaller rituals — wards, blessings, brief glimpses — without exhausting yourself.' },
-    { name: 'Arcane Trick',          text: 'A small, repeatable bit of magic — harmless but useful: light, sound, sleight, change of voice.' },
-    { name: 'Whispered Names',       text: 'You catch fragments of supernatural conversations at the edge of hearing, especially near old places.' },
-    { name: 'Spirit-Touched',        text: 'Spirits sense and often pause for you; some answer questions, when politely asked.' },
-    { name: 'Saint\u2019s Favor',     text: 'Your patron\u2019s blessing makes minor miracles possible at need — never spectacular, always timely.' },
-    { name: 'Echo of Magic',         text: 'You sense lingering magic for hours after it was used nearby, and can tell its broad shape.' },
+    { name: 'Arcane Trick', text: 'Main action (Magic, Self). Choose one of the following effects:\n• You teleport a size 1S or smaller object adjacent to you into an unoccupied space adjacent to you.\n• Until the start of your next turn, a part of your body shoots a shower of harmless noisy sparks that light up each square adjacent to you.\n• You ignite or snuff out (your choice) every mundane light source of 1L or smaller adjacent to you.\n• You transform up to 1 pound of edible food you touch to make it taste delicious or disgusting.\n• Until the start of your next turn, you make your body exude a particular odor you’ve smelled before. This smell can be sensed by each creature within 5 squares of you, but can’t impose any condition or other drawback on those creatures.\n• You place a small magical inscription on the surface of a mundane object you touch, or you can remove an inscription that was made by you or by another creature using Arcane Trick.\n• You touch a size 1T object to cover it with an illusion that makes it look like a different object. Any creature who handles the object becomes aware of the illusion. The illusion ends when you stop touching the object.' },
+    { name: 'Creature Sense', text: 'Maneuver. Choose a creature within 10 squares. If that creature is your level or lower, you learn the keywords in their stat block (Demon, Humanoid, Undead, and so forth).' },
+    { name: 'Familiar', text: 'A supernatural spirit who has taken the form of a specific small animal or animated object has chosen to be your familiar—or to adopt you as their familiar. The familiar can hold small objects in their mouth or claws, but can’t perform activities that would typically require hands. They can’t harm other creatures or objects. They can flank in combat, but only with you. While you and your familiar are within 10 squares of each other, you can communicate telepathically and share each other’s senses. If your familiar is destroyed, you can restore them as a respite activity, or by spending a Recovery as a main action to bring them back into existence in an unoccupied space adjacent to you.' },
+    { name: 'Invisible Force', text: 'Maneuver (Psionic, Ranged 10; one size 1T unattended object). You can grab or manipulate the target object with your mind, moving the object up to a number of squares equal to your Reason, Intuition, or Presence score (your choice). You can use this ability to turn doorknobs, pull levers, and so forth. You can manipulate any small movable piece of a larger object as long as the piece is unattended and size 1T. You can’t use this ability to break a smaller piece off a larger object.' },
+    { name: 'Psychic Whisper', text: 'Maneuver (Psionic, Ranged 10; one ally who understands at least one language). You send a telepathic message to them that takes 10 seconds or less to speak. The target knows who the message is from and can decide to ignore it and subsequent messages.' },
+    { name: 'Ritualist', text: 'You can spend 1 uninterrupted minute to perform a magic ritual of blessing, targeting yourself or one willing creature you touch. The target has a double edge on the next test they make within the next minute. A target can’t use this benefit on an activity that takes longer than 1 minute.' },
+    { name: 'Thingspeaker', text: 'When you hold an object in your hand for 1 uninterrupted minute, you can sense whether it bears emotional resonance (treasured gifts, murder weapons, personal keepsakes). If the Director determines the object bears emotional resonance, you learn the most dominant emotion associated with it, then receive a vision that answers one of the following questions:\n• What was the name of the person whose emotion is imprinted on this object?\n• Why does this emotion linger on the object?\n• How long has it been since the object was held by the person whose emotion lingers on it?\nAfter asking one question, you can choose to delve deeper by asking one additional question from the list, but you are then overcome with emotions that do not belong to you. You take a bane on Intuition and Presence tests until you finish a respite, and you can’t use this perk again while you suffer this bane.' },
   ],
 };
 
@@ -145,4 +186,4 @@ function fmtKitDmg(v) {
 
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
-export { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg };
+export { timeString, parseCareerSkills, attributeCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg };

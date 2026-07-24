@@ -39,3 +39,18 @@ describe('Wizard renders every step', () => {
     });
   });
 });
+
+describe('Null class step', () => {
+  it('offers the Psionic Augmentation picker with the three official options', () => {
+    const classStep = DS_STEPS.findIndex((s: any) => /class/i.test(s.id));
+    const c = sampleCharacter(classStep);
+    c.cclass.id = 'null';
+    c.kit.id = null;
+    const { container } = render(
+      <Wizard character={c} update={noop} onExit={noop} onComplete={noop} />
+    );
+    for (const opt of ['Density Augmentation', 'Force Augmentation', 'Speed Augmentation']) {
+      expect(container.textContent).toContain(opt);
+    }
+  });
+});

@@ -38,7 +38,7 @@ const DS_CAREERS = [
     ] },
   { id: 'beggar', name: 'Beggar', desc: 'You lived by the kindness of strangers, begging for coin or food at taverns, crossroads, and city streets.',
     skills: 'Rumors; one exploration + one interpersonal', quick: 'Empathize · Endurance · Rumors',
-    languages: 2, perk: 'Interpersonal', quickPerk: 'Spot the Tell',
+    languages: 2, perk: 'Interpersonal', quickPerk: 'Spot The Tell',
     questions: ['What circumstances led you to beg?', 'Where did you beg?', 'Who bullied you for sport?', 'Who showed you the most kindness?'],
     incidents: [
       { name: 'Champion', text: 'Watching another friend fall to preventable misfortune was the last straw. You set off to make real change for those society forgot.' },
@@ -170,7 +170,7 @@ const DS_CAREERS = [
     ] },
   { id: 'sailor', name: 'Sailor', desc: 'You worked aboard a ship — merchant, military, or pirate — as deckhand, mate, or even captain.',
     skills: 'Swim; two more exploration', quick: 'Climb · Gymnastics · Swim',
-    languages: 2, perk: 'Exploration', quickPerk: 'Put Your Back Into It!',
+    languages: 2, perk: 'Exploration', quickPerk: 'Put Your Back Into It',
     questions: ['What was your ship\u2019s name and trade?', 'What was your job aboard?', 'What\u2019s the longest you spent at sea?', 'Who or what did you lose on your voyages?'],
     incidents: [
       { name: 'Alone', text: 'The loved one you sailed with — your lifelong dream — died at sea. You lost your taste for the sailing life and never looked back.' },
@@ -194,7 +194,7 @@ const DS_CAREERS = [
     ] },
   { id: 'warden', name: 'Warden', desc: 'You protected a wild region from poachers, cultists, and disaster — and could guide or rescue those who wandered the wilds.',
     skills: 'Track; two exploration', quick: 'Endurance · Nature · Track',
-    languages: 1, perk: 'Exploration', quickPerk: 'Pathfinder',
+    languages: 1, perk: 'Exploration', quickPerk: 'Danger Sense',
     questions: ['What environment did you protect?', 'Were you part of a group or self-appointed?', 'Which animal was your constant companion?', 'What mysterious creature did you meet in the wilds?'],
     incidents: [
       { name: 'Cleared Land', text: 'Developers or settlers razed the wild you swore to protect. You left to defend nature wherever it is threatened.' },

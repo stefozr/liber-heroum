@@ -309,20 +309,55 @@ function App() {
   }, [booting, currentUser, canEditCharacter]);
 
   // ── debounced per-character save (replaces the old whole-array write-through) ──
+  // saveState drives the wizard's save pill: 'pending' while an edit is debouncing
+  // or in flight, 'saved' (+timestamp) once Supabase confirms, 'error' on failure.
   const saveTimer = React.useRef(null);
   const pendingSave = React.useRef(null);
+  const [saveState, setSaveState] = useState({ status: 'saved', at: null });
+  const runSave = useCallback((ch) => {
+    DS.upsertCharacter(ch)
+      .then(() => setSaveState({ status: 'saved', at: Date.now() }))
+      .catch(e => { console.error('Save failed', e); setSaveState({ status: 'error', at: Date.now() }); });
+  }, []);
   const queueSave = useCallback((c) => {
     pendingSave.current = c;
+    setSaveState(s => (s.status === 'pending' ? s : { status: 'pending', at: s.at }));
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       const ch = pendingSave.current; pendingSave.current = null; saveTimer.current = null;
-      if (ch) DS.upsertCharacter(ch).catch(e => console.error('Save failed', e));
+      if (ch) runSave(ch);
     }, 600);
-  }, []);
+  }, [runSave]);
   const flushSave = useCallback(() => {
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
     const ch = pendingSave.current; pendingSave.current = null;
-    if (ch) DS.upsertCharacter(ch).catch(e => console.error('Save failed', e));
+    if (ch) runSave(ch);
+  }, [runSave]);
+
+  // A refresh/close inside the debounce window (or mid-flight) would silently drop
+  // the last edit — the normal supabase fetch dies with the document. Hand any
+  // pending save to a keepalive request the browser completes across the unload.
+  // visibilitychange('hidden') also covers mobile tab-switches, where pagehide
+  // may never fire before the process is culled.
+  useEffect(() => {
+    const flushKeepalive = () => {
+      const ch = pendingSave.current;
+      if (!ch) return;
+      pendingSave.current = null;
+      if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+      // If the page survives (tab switch rather than close), reflect the outcome
+      // in the pill; if it's truly unloading these callbacks simply never run.
+      DS.upsertCharacterKeepalive(ch)
+        .then(() => setSaveState({ status: 'saved', at: Date.now() }))
+        .catch(e => { console.error('Save failed', e); setSaveState({ status: 'error', at: Date.now() }); });
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flushKeepalive(); };
+    window.addEventListener('pagehide', flushKeepalive);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flushKeepalive);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Heroes belonging to the signed-in account (for the personal roster).
@@ -398,9 +433,10 @@ function App() {
   }, [backView, flushSave]);
 
   const onNav = useCallback((target) => {
+    flushSave();   // commit any debounced edit before the screen changes
     if (target === 'campaigns') { setActiveCampaignId(null); }
     setView(target);
-  }, []);
+  }, [flushSave]);
 
   const openCampaign = useCallback((id) => { setActiveCampaignId(id); setView('campaign'); }, []);
 
@@ -499,6 +535,7 @@ function App() {
     const onPop = (e) => {
       const s = e.state && e.state.dsNav;
       if (!s) return;   // not one of ours → let the browser navigate away
+      flushSave();   // commit any debounced edit before Back/Forward changes screens
       poppingRef.current = true;
       setView(s.view);
       setActiveId(s.activeId ?? null);
@@ -506,7 +543,7 @@ function App() {
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [flushSave]);
 
   useEffect(() => {
     if (booting || !currentUser) { historyReadyRef.current = false; return; }
@@ -619,6 +656,7 @@ function App() {
           <Wizard
             character={active}
             update={updateActive}
+            saveState={saveState}
             onExit={goBackFromHero}
             onComplete={(isComplete = true) => {
               if (isComplete) {
@@ -750,6 +788,9 @@ function summarizeBenefits(c) {
           if (c.cclass?.enchantment) parts.push(`Augmentation: ${c.cclass.enchantment}`);
           if (c.cclass?.ward) parts.push(`Ward: ${c.cclass.ward}`);
           features.push({ name: f.name, text: parts.length ? parts.join(' \u00b7 ') : f.text });
+        } else if (f.choose === 'augment') {
+          // Null: augmentation only (stored in the shared enchantment field), no ward.
+          features.push({ name: f.name, text: c.cclass?.enchantment ? `Augmentation: ${c.cclass.enchantment}` : f.text });
         } else {
           features.push({ name: f.name, text: f.text });
         }
