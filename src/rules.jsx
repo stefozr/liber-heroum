@@ -290,37 +290,37 @@ const RULES_CSS = `
   gap: 10px; margin-bottom: 4px;
 }
 .mnv-name {
-  font-family: var(--display-2); font-size: 13px; font-weight: 600;
+  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 600;
   letter-spacing: 0.16em; color: var(--ink); text-transform: uppercase;
 }
 .mnv-kw {
-  font-family: var(--mono); font-size: 9px; color: var(--ink-3);
+  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
   letter-spacing: 0.2em; text-transform: uppercase;
 }
 .mnv-blurb {
-  font-family: var(--serif); font-size: 13px; color: var(--ink-2);
+  font-family: var(--serif); font-size: 0.8125rem; color: var(--ink-2);
   line-height: 1.5;
 }
 .mnv-roll {
   display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 12px;
-  font-family: var(--mono); font-size: 10px;
+  font-family: var(--mono); font-size: 0.625rem;
   margin: 6px 0 8px;
 }
-.mnv-roll .k { color: var(--ink-3); letter-spacing: 0.2em; text-transform: uppercase; font-size: 9px; }
-.mnv-roll .v { color: var(--ink); font-family: var(--serif); font-size: 12px; }
+.mnv-roll .k { color: var(--ink-3); letter-spacing: 0.2em; text-transform: uppercase; font-size: 0.5625rem; }
+.mnv-roll .v { color: var(--ink); font-family: var(--serif); font-size: 0.75rem; }
 .mnv-tier {
   display: grid; grid-template-columns: 24px 1fr; gap: 8px;
-  font-family: var(--serif); font-size: 12px; color: var(--ink-2);
+  font-family: var(--serif); font-size: 0.75rem; color: var(--ink-2);
   line-height: 1.45; padding: 3px 0;
 }
 .mnv-tier .tg {
-  font-family: var(--display); font-size: 14px; color: var(--gold);
+  font-family: var(--display); font-size: 0.875rem; color: var(--gold);
   text-align: center; line-height: 1;
 }
 .mnv-tier.t1 .tg { opacity: 0.55; }
 .mnv-tier.t3 .tg { color: var(--gold-2); }
 .mnv-effect {
-  font-family: var(--serif); font-size: 12px; color: var(--ink-3);
+  font-family: var(--serif); font-size: 0.75rem; color: var(--ink-3);
   font-style: italic; line-height: 1.5;
   border-top: 1px dashed var(--line-2); padding-top: 6px; margin-top: 6px;
 }
@@ -354,15 +354,15 @@ const RULES_CSS = `
   margin-bottom: 8px;
 }
 .rg-nav-head .glyph {
-  font-family: var(--display); color: var(--gold); font-size: 18px; letter-spacing: 0.3em; opacity: 0.8;
+  font-family: var(--display); color: var(--gold); font-size: 1.125rem; letter-spacing: 0.3em; opacity: 0.8;
   display: block; text-align: center; margin-bottom: 6px;
 }
 .rg-nav-head .title {
-  font-family: var(--display); font-size: 17px; letter-spacing: 0.14em;
+  font-family: var(--display); font-size: 1.0625rem; letter-spacing: 0.14em;
   color: var(--ink); text-align: center;
 }
 .rg-nav-head .sub {
-  font-family: var(--mono); font-size: 9px; color: var(--ink-3);
+  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
   letter-spacing: 0.28em; text-transform: uppercase;
   text-align: center; margin-top: 5px;
 }
@@ -370,7 +370,7 @@ const RULES_CSS = `
   display: block; width: 100%; text-align: left;
   background: transparent; border: 0; border-left: 2px solid transparent;
   color: var(--ink-2); padding: 9px 22px;
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
+  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.22em;
   text-transform: uppercase; cursor: pointer;
   transition: color .12s, border-color .12s, background .12s;
 }
@@ -389,19 +389,19 @@ const RULES_CSS = `
   width: 32px; height: 32px;
   background: transparent; border: 1px solid var(--line-2);
   color: var(--ink-2); cursor: pointer;
-  font-family: var(--display); font-size: 16px;
+  font-family: var(--display); font-size: 1rem;
 }
 .rg-close:hover { border-color: var(--rubric-2); color: var(--rubric-2); }
 .rg-section-title {
-  font-family: var(--display); font-size: 28px; letter-spacing: 0.1em;
+  font-family: var(--display); font-size: 1.75rem; letter-spacing: 0.1em;
   color: var(--ink); margin: 0 0 4px;
 }
 .rg-section-eyebrow {
-  font-family: var(--mono); font-size: 9px; color: var(--gold);
+  font-family: var(--mono); font-size: 0.5625rem; color: var(--gold);
   letter-spacing: 0.32em; text-transform: uppercase; margin-bottom: 4px;
 }
 .rg-section-intro {
-  font-family: var(--serif); font-style: italic; font-size: 14px;
+  font-family: var(--serif); font-style: italic; font-size: 0.875rem;
   color: var(--ink-2); line-height: 1.55; margin: 14px 0 22px;
   border-left: 2px solid var(--gold-deep); padding-left: 14px;
   max-width: 640px;
@@ -410,16 +410,16 @@ const RULES_CSS = `
   margin: 14px 0 18px; max-width: 720px;
 }
 .rg-entry-name {
-  font-family: var(--display-2); font-size: 13px; font-weight: 600;
+  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 600;
   letter-spacing: 0.18em; color: var(--gold-2); text-transform: uppercase;
   margin-bottom: 6px;
   display: flex; align-items: baseline; gap: 10px;
 }
 .rg-entry-name::before {
-  content: '\u2756'; color: var(--gold); font-size: 9px; opacity: 0.7;
+  content: '\u2756'; color: var(--gold); font-size: 0.5625rem; opacity: 0.7;
 }
 .rg-entry-text {
-  font-family: var(--serif); font-size: 14px; color: var(--ink);
+  font-family: var(--serif); font-size: 0.875rem; color: var(--ink);
   line-height: 1.6;
 }
 .rg-entry-text p { margin: 0 0 7px; }
@@ -431,7 +431,7 @@ const RULES_CSS = `
   background: transparent; border: 1px solid var(--line-2);
   color: var(--ink-2); cursor: pointer;
   padding: 8px 14px;
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.22em; text-transform: uppercase;
   transition: color .12s, border-color .12s, background .12s;
 }
 .rules-launcher::before {
@@ -439,14 +439,14 @@ const RULES_CSS = `
 }
 .rules-launcher:hover { border-color: var(--gold); color: var(--ink); background: rgba(176,138,72,0.06); }
 .rules-launcher.large {
-  padding: 15px 30px; font-size: 12px; letter-spacing: 0.26em;
+  padding: 15px 30px; font-size: 0.75rem; letter-spacing: 0.26em;
   font-family: var(--display-2); font-weight: 700;
   background: linear-gradient(180deg, var(--gold-2), var(--gold-deep));
   border: 1px solid var(--gold-2);
   color: #1a120a;
   box-shadow: 0 0 22px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.25);
 }
-.rules-launcher.large::before { font-size: 17px; color: #2a1c08; }
+.rules-launcher.large::before { font-size: 1.0625rem; color: #2a1c08; }
 .rules-launcher.large:hover {
   background: linear-gradient(180deg, #f0d480, #b8932f);
   border-color: var(--gold-2); color: #0b0e1f;

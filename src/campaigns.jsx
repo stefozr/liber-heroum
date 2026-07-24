@@ -13,10 +13,10 @@ const CAMPAIGN_CSS = `
 
 .cmp-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 8px; flex-wrap: wrap; }
 .cmp-page-head .titles h1 {
-  font-family: var(--display); font-weight: 700; font-size: 40px; letter-spacing: 0.06em;
+  font-family: var(--display); font-weight: 700; font-size: 2.5rem; letter-spacing: 0.06em;
   color: var(--ink); margin: 0; line-height: 1;
 }
-.cmp-page-head .titles .sub { font-family: var(--hand); font-style: italic; font-size: 18px; color: var(--gold-2); margin-top: 10px; }
+.cmp-page-head .titles .sub { font-family: var(--hand); font-style: italic; font-size: 1.125rem; color: var(--gold-2); margin-top: 10px; }
 .cmp-actions { display: flex; gap: 10px; }
 
 .cmp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; margin-top: 30px; }
@@ -31,16 +31,16 @@ const CAMPAIGN_CSS = `
 }
 .cmp-card .cc-body { padding: 18px 20px 14px; flex: 1; }
 .cmp-card .cc-role {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em; text-transform: uppercase;
   border: 1px solid var(--line-2); color: var(--ink-3); padding: 3px 9px; display: inline-block;
 }
 .cmp-card .cc-role.director { border-color: var(--gold); color: var(--gold-2); }
-.cmp-card .cc-name { font-family: var(--display); font-size: 24px; letter-spacing: 0.04em; color: var(--ink); margin-top: 12px; line-height: 1.1; }
-.cmp-card .cc-desc { font-family: var(--serif); font-size: 14px; color: var(--ink-2); line-height: 1.5; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cmp-card .cc-name { font-family: var(--display); font-size: 1.5rem; letter-spacing: 0.04em; color: var(--ink); margin-top: 12px; line-height: 1.1; }
+.cmp-card .cc-desc { font-family: var(--serif); font-size: 0.875rem; color: var(--ink-2); line-height: 1.5; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cmp-card .cc-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 11px 20px; border-top: 1px solid var(--line);
-  font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase;
 }
 .cmp-card .cc-avatars { display: flex; }
 .cmp-card .cc-avatars .ds-avatar { margin-left: -7px; border-color: var(--bg-1); box-shadow: 0 0 0 1px var(--line-2); }
@@ -50,14 +50,14 @@ const CAMPAIGN_CSS = `
 .cmp-empty {
   border: 1px dashed var(--line-2); padding: 50px 30px; text-align: center; margin-top: 30px;
 }
-.cmp-empty .e-glyph { font-family: var(--display); font-size: 40px; color: var(--gold); opacity: 0.4; }
-.cmp-empty .e-title { font-family: var(--display); font-size: 20px; letter-spacing: 0.12em; color: var(--gold-2); margin-top: 14px; }
-.cmp-empty .e-sub { font-family: var(--hand); font-style: italic; color: var(--ink-2); font-size: 16px; margin-top: 8px; }
+.cmp-empty .e-glyph { font-family: var(--display); font-size: 2.5rem; color: var(--gold); opacity: 0.4; }
+.cmp-empty .e-title { font-family: var(--display); font-size: 1.25rem; letter-spacing: 0.12em; color: var(--gold-2); margin-top: 14px; }
+.cmp-empty .e-sub { font-family: var(--hand); font-style: italic; color: var(--ink-2); font-size: 1rem; margin-top: 8px; }
 
 /* Detail */
 .cmp-back {
   background: transparent; border: none; cursor: pointer; color: var(--ink-3);
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.2em; text-transform: uppercase;
   padding: 0; margin-bottom: 22px; display: inline-flex; gap: 8px; align-items: center;
 }
 .cmp-back:hover { color: var(--gold-2); }
@@ -67,22 +67,22 @@ const CAMPAIGN_CSS = `
   padding: 24px 26px; position: relative;
 }
 .cmp-detail-head .role-tag {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.22em; text-transform: uppercase;
   border: 1px solid var(--line-2); color: var(--ink-3); padding: 4px 10px;
 }
 .cmp-detail-head .role-tag.director { border-color: var(--gold); color: var(--gold-2); }
-.cmp-detail-head h1 { font-family: var(--display); font-weight: 700; font-size: 36px; letter-spacing: 0.05em; color: var(--ink); margin: 12px 0 0; line-height: 1.05; }
-.cmp-detail-head .desc { font-family: var(--serif); font-size: 15px; color: var(--ink-2); line-height: 1.6; margin-top: 12px; max-width: 720px; }
+.cmp-detail-head h1 { font-family: var(--display); font-weight: 700; font-size: 2.25rem; letter-spacing: 0.05em; color: var(--ink); margin: 12px 0 0; line-height: 1.05; }
+.cmp-detail-head .desc { font-family: var(--serif); font-size: 0.9375rem; color: var(--ink-2); line-height: 1.6; margin-top: 12px; max-width: 720px; }
 .cmp-detail-head .head-tools { position: absolute; top: 22px; right: 24px; display: flex; gap: 8px; }
 
 .cmp-sigil {
   display: inline-flex; align-items: stretch; margin-top: 18px; border: 1px solid var(--gold-deep);
 }
-.cmp-sigil .sg-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); display: grid; place-items: center; padding: 0 12px; border-right: 1px solid var(--line); background: rgba(0,0,0,0.2); }
-.cmp-sigil .sg-code { font-family: var(--display); font-size: 18px; letter-spacing: 0.3em; color: var(--gold-2); padding: 9px 16px; }
+.cmp-sigil .sg-label { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); display: grid; place-items: center; padding: 0 12px; border-right: 1px solid var(--line); background: rgba(0,0,0,0.2); }
+.cmp-sigil .sg-code { font-family: var(--display); font-size: 1.125rem; letter-spacing: 0.3em; color: var(--gold-2); padding: 9px 16px; }
 .cmp-sigil .sg-copy {
   background: transparent; border: none; border-left: 1px solid var(--line); cursor: pointer;
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--ink-3); padding: 0 14px;
 }
 .cmp-sigil .sg-copy:hover { color: var(--gold-2); background: rgba(176,138,72,0.06); }
@@ -94,16 +94,16 @@ const CAMPAIGN_CSS = `
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-2);
   background: rgba(255,255,255,0.012); padding: 8px 12px 8px 8px;
 }
-.member-chip .mc-name { font-family: var(--display-2); font-size: 13px; letter-spacing: 0.04em; color: var(--ink); }
-.member-chip .mc-tag { font-family: var(--mono); font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+.member-chip .mc-name { font-family: var(--display-2); font-size: 0.8125rem; letter-spacing: 0.04em; color: var(--ink); }
+.member-chip .mc-tag { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
 .member-chip .mc-tag.director { color: var(--gold-2); }
-.member-chip .mc-kick { background: transparent; border: none; cursor: pointer; color: var(--ink-4); font-size: 14px; padding: 0 2px 0 6px; }
+.member-chip .mc-kick { background: transparent; border: none; cursor: pointer; color: var(--ink-4); font-size: 0.875rem; padding: 0 2px 0 6px; }
 .member-chip .mc-kick:hover { color: var(--rubric-2); }
 
 .party-group { margin-bottom: 26px; }
 .party-group .pg-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.party-group .pg-head .pg-name { font-family: var(--display-2); font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); }
-.party-group .pg-head .pg-you { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--line-2); padding: 2px 7px; }
+.party-group .pg-head .pg-name { font-family: var(--display-2); font-size: 0.8125rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); }
+.party-group .pg-head .pg-you { font-family: var(--mono); font-size: 0.53125rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--line-2); padding: 2px 7px; }
 .party-group .pg-line { flex: 1; height: 1px; background: var(--line); }
 
 .party-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
@@ -113,15 +113,15 @@ const CAMPAIGN_CSS = `
 }
 .ph-card:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
 .ph-card .ph-img { width: 84px; flex-shrink: 0; background-size: cover; background-position: center top; background-color: var(--bg-3); }
-.ph-card .ph-img.empty { display: grid; place-items: center; color: var(--gold); opacity: 0.4; font-family: var(--display); font-size: 26px; }
+.ph-card .ph-img.empty { display: grid; place-items: center; color: var(--gold); opacity: 0.4; font-family: var(--display); font-size: 1.625rem; }
 .ph-card .ph-body { padding: 11px 14px; flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.ph-card .ph-name { font-family: var(--display); font-size: 17px; letter-spacing: 0.03em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ph-card .ph-meta { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-card .ph-name { font-family: var(--display); font-size: 1.0625rem; letter-spacing: 0.03em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-card .ph-meta { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ph-card .ph-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.ph-card .ph-lvl { font-family: var(--display); font-size: 10px; letter-spacing: 0.16em; color: var(--gold); }
-.ph-card .ph-status { font-family: var(--mono); font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; }
+.ph-card .ph-lvl { font-family: var(--display); font-size: 0.625rem; letter-spacing: 0.16em; color: var(--gold); }
+.ph-card .ph-status { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; }
 .ph-card .ph-status.wip { color: var(--rubric-2); }
-.ph-card .ph-edit { font-family: var(--mono); font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); border: 1px solid var(--gold-deep); padding: 2px 6px; }
+.ph-card .ph-edit { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); border: 1px solid var(--gold-deep); padding: 2px 6px; }
 
 .add-hero-card {
   border: 1px dashed var(--line-2); background: transparent; cursor: pointer;
@@ -129,22 +129,22 @@ const CAMPAIGN_CSS = `
   transition: all .16s;
 }
 .add-hero-card:hover { border-color: var(--gold); border-style: solid; background: rgba(176,138,72,0.04); }
-.add-hero-card .ah-glyph { font-family: var(--display); font-size: 22px; color: var(--gold); }
-.add-hero-card .ah-text { font-family: var(--display-2); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); margin-top: 6px; }
+.add-hero-card .ah-glyph { font-family: var(--display); font-size: 1.375rem; color: var(--gold); }
+.add-hero-card .ah-text { font-family: var(--display-2); font-size: 0.6875rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); margin-top: 6px; }
 
 .assign-row {
   display: flex; align-items: center; gap: 12px; border: 1px solid var(--line-2);
   padding: 10px 12px; cursor: pointer; transition: border-color .14s, background .14s;
 }
 .assign-row:hover { border-color: var(--gold); background: rgba(176,138,72,0.05); }
-.assign-row .ar-name { font-family: var(--display-2); font-size: 14px; color: var(--ink); }
-.assign-row .ar-meta { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
-.assign-row .ar-where { margin-left: auto; font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-2); }
+.assign-row .ar-name { font-family: var(--display-2); font-size: 0.875rem; color: var(--ink); }
+.assign-row .ar-meta { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
+.assign-row .ar-where { margin-left: auto; font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-2); }
 
 /* Roster hero-card "add to campaign" control */
 .hc-camp {
   background: transparent; border: none; cursor: pointer; color: var(--ink-3);
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase;
   padding: 4px 6px; transition: color .12s;
 }
 .hc-camp:hover { color: var(--gold-2); }
@@ -274,7 +274,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
           </>
         )}
       >
-        <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14, marginBottom: 16, lineHeight: 1.55 }}>
+        <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: '0.875rem', marginBottom: 16, lineHeight: 1.55 }}>
           You'll be its Director. A sigil will be minted that you can share so players may bring their heroes.
         </div>
         <div className="stack-12">
@@ -301,7 +301,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
           </>
         )}
       >
-        <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14, marginBottom: 16, lineHeight: 1.55 }}>
+        <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: '0.875rem', marginBottom: 16, lineHeight: 1.55 }}>
           Ask your Director for the campaign sigil — a short code like <b style={{ color: 'var(--gold-2)', fontStyle: 'normal' }}>ABC-DEF</b> — and enter it below.
         </div>
         <div className="input-row">
@@ -312,7 +312,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="ABC-DEF"
             autoFocus
-            style={{ fontFamily: 'var(--display)', fontSize: 20, letterSpacing: '0.24em', textAlign: 'center' }}
+            style={{ fontFamily: 'var(--display)', fontSize: '1.25rem', letterSpacing: '0.24em', textAlign: 'center' }}
             onKeyDown={(e) => { if (e.key === 'Enter') submitJoin(); }}
           />
         </div>
@@ -378,7 +378,7 @@ function CampaignDetail({
               <span className="sg-code">{campaign.inviteCode}</span>
               <button className="sg-copy" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy'}</button>
             </div>
-            <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)' }}>
+            <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: '0.84375rem', color: 'var(--ink-3)' }}>
               Share this so players can join the table.
             </span>
           </div>
@@ -437,7 +437,7 @@ function CampaignDetail({
                   </div>
                 )}
                 {g.heroes.length === 0 && !isMe && (
-                  <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-3)', fontSize: 14, alignSelf: 'center' }}>
+                  <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-3)', fontSize: '0.875rem', alignSelf: 'center' }}>
                     No heroes brought to the table yet.
                   </div>
                 )}
@@ -465,7 +465,7 @@ function CampaignDetail({
           </>
         )}
       >
-        <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14, marginBottom: 16 }}>
+        <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: '0.875rem', marginBottom: 16 }}>
           Choose one of your heroes to add to <b style={{ color: 'var(--gold-2)', fontStyle: 'normal' }}>{campaign.name}</b>.
         </div>
         <div className="stack-8">
@@ -514,7 +514,7 @@ function CampaignDetail({
               </div>
               <Button kind="ghost" small onClick={() => onRegen(campaign.id)}>↻ Mint a new sigil</Button>
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-4)', letterSpacing: '0.1em', marginTop: 6 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '0.5625rem', color: 'var(--ink-4)', letterSpacing: '0.1em', marginTop: 6 }}>
               The old sigil stops working once you mint a new one.
             </div>
           </div>
@@ -542,7 +542,7 @@ function CampaignDetail({
           </>
         )}
       >
-        <div style={{ textAlign: 'center', fontFamily: 'var(--serif)', fontSize: 15, color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', fontFamily: 'var(--serif)', fontSize: '0.9375rem', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
           {confirm?.kind === 'delete' && <>This dissolves <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b> for everyone. Heroes return to their owners' rosters, unbound. This cannot be undone.</>}
           {confirm?.kind === 'leave' && <>You'll leave <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b>. Your heroes return to your roster, unbound from this table.</>}
           {confirm?.kind === 'kick' && <>Remove <b style={{ color: 'var(--gold-2)' }}>{userById[confirm.userId]?.displayName}</b> from the campaign? Their heroes return to their own roster.</>}

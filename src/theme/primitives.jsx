@@ -220,7 +220,7 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
       </div>
       {(a.powerRoll || (a.tiers && a.tiers.length)) &&
       <>
-          <div style={{ marginTop: 10, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{a.powerRoll ? `Power Roll + ${a.powerRoll}` : 'Power Roll'}</div>
+          <div style={{ marginTop: 10, fontFamily: 'var(--mono)', fontSize: '0.625rem', color: 'var(--ink-3)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>{a.powerRoll ? `Power Roll + ${a.powerRoll}` : 'Power Roll'}</div>
           <PowerRoll rows={a.tiers} />
         </>
       }

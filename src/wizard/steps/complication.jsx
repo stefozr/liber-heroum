@@ -33,7 +33,7 @@ function ComplicationStep({ character, update }) {
   return (
     <div className="stack-22">
       <div className="orn-frame bracket-corners" style={{padding:'18px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap'}}>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:15, color:'var(--ink-2)'}}>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.9375rem', color:'var(--ink-2)'}}>
           Roll the dice and let fate decide, or browse and choose the thread you'll carry.
         </div>
         <div style={{display:'flex', gap:10}}>
@@ -46,12 +46,12 @@ function ComplicationStep({ character, update }) {
       <div className="grid-2">
         {DS_COMPLICATIONS.map(c => (
           <SelCard key={c.id} id={'comp-' + c.id} selected={sel === c.id} onClick={() => pick(c.id)}>
-            <div style={{fontFamily:'var(--display)', fontSize:16, letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
+            <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
             <div style={{marginTop: 10, display:'grid', gridTemplateColumns:'auto 1fr', gap: '4px 12px', alignItems:'start'}}>
               <Tag kind="gold">Benefit</Tag>
-              <div style={{fontFamily:'var(--serif)', fontSize:13.5, color:'var(--ink-2)', lineHeight:1.5}}>{c.benefit}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.5}}>{c.benefit}</div>
               <Tag kind="rubric">Drawback</Tag>
-              <div style={{fontFamily:'var(--serif)', fontSize:13.5, color:'var(--ink-2)', lineHeight:1.5}}>{c.drawback}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.5}}>{c.drawback}</div>
             </div>
           </SelCard>
         ))}

@@ -55,10 +55,10 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
               placeItems: 'center',
             }}>
               <div>
-                <div style={{fontFamily:'var(--display)', fontSize:18, letterSpacing:'0.16em', color:'var(--gold-2)', marginBottom: 10}}>
+                <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.16em', color:'var(--gold-2)', marginBottom: 10}}>
                   The book is empty.
                 </div>
-                <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize:16}}>
+                <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: '1rem'}}>
                   Your first hero awaits a name.
                 </div>
               </div>
@@ -77,7 +77,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           <GlyphRow>✠ · ❦ · ✠ · ❦ · ✠</GlyphRow>
           <div style={{
             fontFamily:'var(--hand)', fontStyle:'italic',
-            color:'var(--ink-3)', fontSize: 13, marginTop: 14, letterSpacing: '0.04em',
+            color:'var(--ink-3)', fontSize: '0.8125rem', marginTop: 14, letterSpacing: '0.04em',
           }}>
             "Tell me, who would you save? Knowing the cost?"
           </div>
@@ -107,8 +107,8 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
         )}
       >
         <div style={{textAlign:'center'}}>
-          <div style={{fontFamily:'var(--display)', fontSize:24, color:'var(--gold-2)', letterSpacing:'0.08em', marginBottom:14}}>{pendingName}</div>
-          <div style={{fontFamily:'var(--serif)', fontSize:15, color:'var(--ink-2)', lineHeight:1.6, maxWidth:340, margin:'0 auto'}}>
+          <div style={{fontFamily:'var(--display)', fontSize: '1.5rem', color:'var(--gold-2)', letterSpacing:'0.08em', marginBottom:14}}>{pendingName}</div>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.9375rem', color:'var(--ink-2)', lineHeight:1.6, maxWidth:340, margin:'0 auto'}}>
             This hero and all their deeds will be struck from the Liber Heroum. This cannot be undone.
           </div>
         </div>
@@ -136,14 +136,14 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
       <div className="hc-img" style={bg ? {backgroundImage: `url(${bg})`} : {background: 'linear-gradient(135deg, var(--bg-2), var(--bg-3))'}}>
         {!bg && <div style={{
           position:'absolute', inset:0, display:'grid', placeItems:'center',
-          fontFamily:'var(--display)', fontSize:60, color:'var(--gold)', opacity:0.25,
+          fontFamily:'var(--display)', fontSize: '3.75rem', color:'var(--gold)', opacity:0.25,
         }}>✠</div>}
       </div>
       <div className="hc-lvl">LV {String(c.level).padStart(2,'0')}</div>
       {campaignName && (
         <div style={{
           position:'absolute', top:10, left:12, zIndex:2,
-          fontFamily:'var(--mono)', fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase',
+          fontFamily:'var(--mono)', fontSize: '0.5625rem', letterSpacing:'0.16em', textTransform:'uppercase',
           color:'var(--gold-2)', background:'rgba(8,8,10,0.82)', border:'1px solid var(--gold-deep)',
           padding:'4px 9px', maxWidth:'70%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
         }} title={campaignName}>✦ {campaignName}</div>
@@ -194,15 +194,15 @@ function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign })
         </>
       )}
     >
-      <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14, marginBottom: 16, lineHeight: 1.55 }}>
+      <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: '0.875rem', marginBottom: 16, lineHeight: 1.55 }}>
         Choose a table to bring <b style={{ color: 'var(--gold-2)', fontStyle: 'normal' }}>{name}</b> to.
         A hero sits at one table at a time.
       </div>
 
       {campaigns.length === 0 ? (
         <div style={{ border: '1px dashed var(--line-2)', padding: '28px 20px', textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--display)', fontSize: 16, letterSpacing: '0.1em', color: 'var(--gold-2)' }}>NO CAMPAIGNS YET</div>
-          <div style={{ fontFamily: 'var(--hand)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, marginTop: 8 }}>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '1rem', letterSpacing: '0.1em', color: 'var(--gold-2)' }}>NO CAMPAIGNS YET</div>
+          <div style={{ fontFamily: 'var(--hand)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: '0.9375rem', marginTop: 8 }}>
             Found or join a campaign from the Campaigns tab, then return here.
           </div>
         </div>

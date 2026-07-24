@@ -45,8 +45,8 @@ function CultureStep({ character, update }) {
         <div className="grid-3" style={{marginTop:12, gap:8}}>
           {DS_CULTURES.archetypes.map(a => (
             <div key={a.name} className={`card ${cu.archetype === a.name ? 'selected' : ''}`} onClick={() => apply(a)} style={{padding:'10px 14px'}}>
-              <div style={{fontFamily:'var(--display-2)', fontSize:13, letterSpacing:'0.12em', color:'var(--ink)', fontWeight:600}}>{a.name}</div>
-              <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', marginTop:3}}>
+              <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.12em', color:'var(--ink)', fontWeight:600}}>{a.name}</div>
+              <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', marginTop:3}}>
                 {a.env} · {a.org} · {a.upb}
               </div>
             </div>
@@ -70,11 +70,11 @@ function CultureStep({ character, update }) {
             <div className="grid-3" style={{marginTop:10}}>
               {items.map(it => (
                 <SelCard key={it.id} selected={cu[key] === it.id} onClick={() => setAspect(key, it.id, it)}>
-                  <div style={{fontFamily:'var(--display)', fontSize:15, letterSpacing:'0.12em', color:'var(--ink)'}}>{it.name}</div>
-                  <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--gold-2)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
+                  <div style={{fontFamily:'var(--display)', fontSize: '0.9375rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{it.name}</div>
+                  <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
                     SKILL: {it.skillLabel || it.skillGroups.join(' / ')} · Quick: {it.quick}
                   </div>
-                  <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>
                     {it.desc}
                   </div>
                 </SelCard>
@@ -85,7 +85,7 @@ function CultureStep({ character, update }) {
               <div className="orn-frame" style={{marginTop: 14, padding:'14px 18px'}}>
                 <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom: 10}}>
                   <H4Meta>Choose a {sel.name} Skill</H4Meta>
-                  <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:13, color:'var(--ink-3)'}}>
+                  <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--ink-3)'}}>
                     From: {skillLabel}{!picked && !quickBlocked && ' \u2014 quick pick: '}
                     {!picked && !quickBlocked && <button type="button" className="quick-pick-btn" onClick={() => setSkill(key, sel.quick)}>{sel.quick}</button>}
                   </div>
@@ -120,7 +120,7 @@ function CultureStep({ character, update }) {
         <div className="grid-4" style={{marginTop:12}}>
           {DS_LANGUAGES.map(L => (
             <div key={L} className={`card ${cu.language === L ? 'selected' : ''}`} onClick={() => setField('language', L)} style={{padding:'10px 12px'}}>
-              <div style={{fontFamily:'var(--display-2)', fontSize:12, letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{L}</div>
+              <div style={{fontFamily:'var(--display-2)', fontSize: '0.75rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{L}</div>
             </div>
           ))}
         </div>

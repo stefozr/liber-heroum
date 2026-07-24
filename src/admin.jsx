@@ -18,7 +18,7 @@ const ADMIN_CSS = `
   position: absolute; top: 8px; right: 8px; z-index: 5;
   width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer;
   background: rgba(8,8,10,0.72); border: 1px solid var(--line-2); color: var(--rubric-2);
-  font-family: var(--mono); font-size: 12px; transition: border-color .14s, background .14s;
+  font-family: var(--mono); font-size: 0.75rem; transition: border-color .14s, background .14s;
 }
 .adm-del:hover { border-color: var(--rubric); background: rgba(138,58,48,0.18); }
 `;

@@ -82,13 +82,13 @@ function AncestryStep({ character, update }) {
         {DS_ANCESTRIES.map(a => (
           <SelCard key={a.id} selected={sel === a.id} onClick={() => setAnc(a.id)}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap: 10}}>
-              <div style={{fontFamily:'var(--display)', fontSize:17, letterSpacing:'0.10em', color:'var(--ink)'}}>{a.name}</div>
+              <div style={{fontFamily:'var(--display)', fontSize: '1.0625rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{a.name}</div>
               <span className="c-stamp">{a.glyph}</span>
             </div>
-            <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
               SIZE {a.size} · SPD {a.speed} · {a.points} PTS
             </div>
-            <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:10, lineHeight:1.45}}>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:10, lineHeight:1.45}}>
               {a.desc}
             </div>
           </SelCard>
@@ -100,7 +100,7 @@ function AncestryStep({ character, update }) {
           <OrnDivider glyph={`❦  ${anc.name.toUpperCase()}  ❦`} />
 
           {(anc.height || anc.lifespan) && (
-            <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', display:'flex', gap:18, flexWrap:'wrap'}}>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', display:'flex', gap:18, flexWrap:'wrap'}}>
               {anc.height && <span>Height: <b style={{color:'var(--ink-2)'}}>{isRevenant && formerAnc ? formerAnc.height : anc.height}</b></span>}
               {anc.weight && <span>Weight: <b style={{color:'var(--ink-2)'}}>{isRevenant && formerAnc ? formerAnc.weight : anc.weight}</b></span>}
               {anc.lifespan && <span>Life Expectancy: <b style={{color:'var(--ink-2)'}}>{anc.lifespan}</b></span>}
@@ -110,7 +110,7 @@ function AncestryStep({ character, update }) {
           {(anc.signatures || [anc.signature]).map((sig, i) => (
             <div key={sig.name} className="orn-frame bracket-corners" style={{padding: '22px 24px'}}>
               <H3>Signature Trait: <span style={{color:'var(--gold-2)'}}>{sig.name}</span></H3>
-              <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', marginTop:8, lineHeight:1.55}}>
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.55}}>
                 {sig.text}
               </div>
               {sig.skillChoice && (() => {
@@ -122,7 +122,7 @@ function AncestryStep({ character, update }) {
                 const takenElsewhere = skillsTakenExcept(character, 'sig:' + sig.name);
                 return (
                   <div style={{marginTop:16}}>
-                    <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
+                    <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
                       Choose {count} {groupLabel} skill{count > 1 ? 's' : ''} — picked <b style={{color: picked.length === count ? 'var(--gold-2)' : 'var(--ink)'}}>{picked.length}</b> / {count}
                     </div>
                     <div className="skill-chip-grid">
@@ -155,7 +155,7 @@ function AncestryStep({ character, update }) {
                 if (detailed) {
                   return (
                     <div style={{marginTop:16}}>
-                      <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:10}}>
+                      <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:10}}>
                         {label} — {count === 1 ? 'choose one' : `choose ${count} (${picked.length}/${count})`}
                       </div>
                       <div className="grid-2">
@@ -169,8 +169,8 @@ function AncestryStep({ character, update }) {
                               onClick={() => !blocked && toggleSigOption(sig.name, count, o.name)}
                               style={{ opacity: blocked ? 0.5 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
                             >
-                              <div style={{fontFamily:'var(--display)', fontSize:14, letterSpacing:'0.12em', color:'var(--ink)'}}>{o.name}</div>
-                              {o.text && <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{o.text}</div>}
+                              <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{o.name}</div>
+                              {o.text && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{o.text}</div>}
                             </div>
                           );
                         })}
@@ -180,7 +180,7 @@ function AncestryStep({ character, update }) {
                 }
                 return (
                   <div style={{marginTop:16}}>
-                    <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
+                    <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
                       {label} — {count === 1 ? 'choose one' : `choose ${count}`}{count > 1 ? ` (${picked.length}/${count})` : ''}
                     </div>
                     <div className="skill-chip-grid">
@@ -252,12 +252,12 @@ function AncestryStep({ character, update }) {
                   >
                     <div style={{display:'flex', justifyContent:'space-between', gap:10, alignItems:'baseline'}}>
                       <div style={{display:'flex', alignItems:'baseline', gap:8}}>
-                        <div style={{fontFamily:'var(--display)', fontSize:14, letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
+                        <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
                         {isQuick && <Tag kind="gold">Suggested</Tag>}
                       </div>
                       <Tag kind="gold">{t.cost} PT</Tag>
                     </div>
-                    <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
                   </div>
                 );
               })}
@@ -276,11 +276,11 @@ function AncestryStep({ character, update }) {
                     <Pill kind={chosen ? 'gold' : ''}>{chosen ? 'CHOSEN' : `PICK ${cost}-PT TRAIT`}</Pill>
                   </div>
                   {!formerAnc ? (
-                    <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize:14, marginTop:10}}>
+                    <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem', marginTop:10}}>
                       Choose your Former Life ancestry above to borrow a {cost}-point trait from it.
                     </div>
                   ) : pool.length === 0 ? (
-                    <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize:14, marginTop:10}}>
+                    <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem', marginTop:10}}>
                       {formerAnc.name} has no {cost}-point traits to borrow.
                     </div>
                   ) : (
@@ -295,10 +295,10 @@ function AncestryStep({ character, update }) {
                             style={{cursor:'pointer'}}
                           >
                             <div style={{display:'flex', justifyContent:'space-between', gap:10, alignItems:'baseline'}}>
-                              <div style={{fontFamily:'var(--display)', fontSize:14, letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
+                              <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
                               <Tag kind="gold">{t.cost} PT</Tag>
                             </div>
-                            <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
+                            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
                           </div>
                         );
                       })}
