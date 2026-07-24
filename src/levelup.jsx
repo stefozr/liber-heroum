@@ -1,6 +1,16 @@
 import React from 'react';
 import { OrnDivider, GlyphRow, Button, H3, H4Meta, Modal, AbilityCard } from './theme.jsx';
 import { classDef, collectSkillPicks, collectPerkPicks } from './app.jsx';
+// Per-class level-up tables defined in their own modules. Imported (not window-
+// installed) so registration is deterministic and survives HMR re-evaluation.
+import { troubadour } from './levelup-troubadour.jsx';
+import { shadow } from './levelup-shadow.jsx';
+import { nul } from './levelup-null.jsx';
+import { tactician } from './levelup-tactician.jsx';
+import { talent } from './levelup-talent.jsx';
+import { furyHi } from './levelup-fury-hi.jsx';
+import { conduitHi } from './levelup-conduit-hi.jsx';
+import { elementalistHi } from './levelup-elementalist-hi.jsx';
 // levelup.jsx — Level-up data + flow for Fury and Conduit, levels 1–4.
 // Exposes to window: LEVELUP_DATA, LevelUpFlow.
 
@@ -716,6 +726,14 @@ const LEVELUP_DATA = {
     },
   },
 };
+
+// Merge in the tables defined in their own modules: levels 5–10 for the classes
+// above, and the five classes maintained entirely outside this file.
+Object.assign(LEVELUP_DATA.fury, furyHi);
+Object.assign(LEVELUP_DATA.conduit, conduitHi);
+Object.assign(LEVELUP_DATA.elementalist, elementalistHi);
+Object.assign(LEVELUP_DATA, { troubadour, shadow, null: nul, tactician, talent });
+
 // ─────────────────────────────────────────────────────────────────────────────
 const DOMAIN_1ST_FEATURES = {
   Creation:   { name: 'Hands of the Maker',          skillGroup: 'crafting',      text: 'Magic maneuver: create a mundane object of size 1S or smaller. You can maintain a number of objects created this way equal to your Intuition score, and destroy any with a thought. Crafting skill group access.' },
@@ -1037,7 +1055,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
         footer={<Button kind="primary" onClick={onClose}>CLOSE</Button>}>
         <div style={{textAlign:'center'}}>
           <GlyphRow>✠ · ❦ · ✠</GlyphRow>
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:17, color:'var(--ink-2)', marginTop:14, lineHeight:1.55, maxWidth:480, margin:'14px auto 0'}}>
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '1.0625rem', color:'var(--ink-2)', marginTop:14, lineHeight:1.55, maxWidth:480, margin:'14px auto 0'}}>
             {nextLevel > 10
               ? 'You stand at the height of mortal power. There are no more rungs to climb \u2014 only legends to write.'
               : nextLevel > 4
@@ -1133,7 +1151,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
       footer={(
         <>
           <Button kind="ghost" onClick={isFirst ? onClose : back}>{isFirst ? (isEditing ? 'CANCEL' : 'NOT YET') : '\u25C2 BACK'}</Button>
-          <div style={{flex:1, textAlign:'center', fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
+          <div style={{flex:1, textAlign:'center', fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
             Step {stepIdx + 1} of {steps.length}
           </div>
           <Button kind="primary" disabled={!canAdvance} onClick={next}>
@@ -1171,7 +1189,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
   return (
     <div className="stack-16">
       <div style={{textAlign:'center'}}>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:18, color:'var(--gold-2)', lineHeight:1.55, maxWidth: 520, margin:'0 auto'}}>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '1.125rem', color:'var(--gold-2)', lineHeight:1.55, maxWidth: 520, margin:'0 auto'}}>
           “{data.summary}”
         </div>
       </div>
@@ -1180,7 +1198,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
       <div className="grid-2" style={{gap:14}}>
         <div className="orn-frame" style={{padding:'14px 18px'}}>
           <H4Meta>Mechanical Gains</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.5}}>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.5}}>
             <div>· <b style={{color:'var(--gold-2)'}}>+{data.staminaGain}</b> maximum Stamina (→ {newStamina})</div>
             {data.autoCharacteristicIncrease && Object.entries(data.autoCharacteristicIncrease).filter(([k]) => k !== 'max').map(([k, v]) => (
               <div key={k}>· {k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
@@ -1192,13 +1210,13 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
         <div className="orn-frame" style={{padding:'14px 18px'}}>
           <H4Meta>New Features</H4Meta>
           {autoFeatures.length === 0 ? (
-            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize:13}}>No automatic features at this level.</div>
+            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.8125rem'}}>No automatic features at this level.</div>
           ) : (
             <div className="stack-8">
               {autoFeatures.map(f => (
                 <div key={f.name}>
-                  <div style={{fontFamily:'var(--display-2)', fontSize:13, fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{f.text}</div>
+                  <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{f.text}</div>
                 </div>
               ))}
             </div>
@@ -1209,7 +1227,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
       {autoAbilities.length > 0 && (
         <div>
           <H4Meta>Abilities Granted</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize:13.5, color:'var(--ink-2)', lineHeight:1.55, marginTop:4, marginBottom:10}}>
+          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:4, marginBottom:10}}>
             You receive both of the following abilities automatically.
           </div>
           <div className="grid-2" style={{gap:10}}>
@@ -1220,7 +1238,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
         </div>
       )}
 
-      <div style={{textAlign:'center', fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
+      <div style={{textAlign:'center', fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
         {isEditing ? 'Press Continue to revise your choices for this level.' : 'Press Continue to choose what else this level brings.'}
       </div>
     </div>
@@ -1251,13 +1269,13 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
       <div>
         <H3>{choice.label}</H3>
         {choice.help && (
-          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize:14, color:'var(--ink-2)', lineHeight:1.55, marginTop:4}}>{choice.help}</div>
+          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:4}}>{choice.help}</div>
         )}
       </div>
 
       <div className="stack-12">
         {opts.length === 0 && (
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize:14, textAlign:'center', padding:'20px 0'}}>
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem', textAlign:'center', padding:'20px 0'}}>
             (No options available for your current build.)
           </div>
         )}
@@ -1290,7 +1308,7 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
       {isTiered && pick && tierItems.length > 0 && (
         <div className="stack-12">
           <OrnDivider glyph={`${deriveGroupName(pick)} ${tierNoun}`} size="small" />
-          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize:13.5, color:'var(--ink-2)', lineHeight:1.55, marginTop:-4, textAlign:'center'}}>
+          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:-4, textAlign:'center'}}>
             {tierPrompt}
           </div>
           <div className={isSkill ? 'skill-pick-grid' : 'grid-2'} style={isSkill ? undefined : {gap:10}}>
@@ -1370,7 +1388,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
     <div className="stack-16">
       <div style={{textAlign:'center'}}>
         <H3>{isEditing ? 'Confirm Your Revisions' : 'Confirm the Ascension'}</H3>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize:14, marginTop:6}}>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: '0.875rem', marginTop:6}}>
           {isEditing
             ? `Your updated choices for Lv ${nextLevel}, to be re-recorded in the Liber.`
             : `Everything gained as you step into Lv ${nextLevel}, recorded in the Liber.`}
@@ -1380,7 +1398,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
       {/* Mechanical gains */}
       <div className="orn-frame" style={{padding:'14px 18px'}}>
         <H4Meta>Mechanical Gains</H4Meta>
-        <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.6}}>
+        <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.6}}>
           <div>· <b style={{color:'var(--gold-2)'}}>+{data.staminaGain}</b> maximum Stamina (→ {newStamina})</div>
           {charInc.map(([k, v]) => (
             <div key={k}>· {k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
@@ -1400,8 +1418,8 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
           <div className="stack-8">
             {autoFeatures.map(f => (
               <div key={f.name}>
-                <div style={{fontFamily:'var(--display-2)', fontSize:13, fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{f.text}</div>
+                <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
+                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{f.text}</div>
               </div>
             ))}
           </div>
@@ -1415,15 +1433,15 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
             const pick = picks[ch.id];
             return (
               <div key={ch.id} className="orn-frame" style={{padding:'12px 16px'}}>
-                <div style={{fontFamily:'var(--mono)', fontSize:9, color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:4}}>{ch.label}</div>
-                <div style={{fontFamily:'var(--display-2)', fontSize:14, fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)'}}>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:4}}>{ch.label}</div>
+                <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)'}}>
                   {pick.chosen
-                    ? <>{pick.chosen} <span style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.18em', marginLeft:6}}>({pick.name || pick})</span></>
+                    ? <>{pick.chosen} <span style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.18em', marginLeft:6}}>({pick.name || pick})</span></>
                     : (pick.name || pick)}
                 </div>
-                {pick.chosen && pick.chosenText && <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.chosenText}</div>}
-                {!pick.chosen && pick.body && <div style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.body}</div>}
-                {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize:12.5, color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{pick.effect}</div>}
+                {pick.chosen && pick.chosenText && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.chosenText}</div>}
+                {!pick.chosen && pick.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.body}</div>}
+                {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{pick.effect}</div>}
               </div>
             );
           })}
@@ -1471,27 +1489,27 @@ const LEVELUP_CSS = `
 }
 .lvl-opt.selected::after {
   content: '\u2720'; position: absolute; top: 6px; right: 10px;
-  font-family: var(--display); font-size: 14px; color: var(--gold);
+  font-family: var(--display); font-size: 0.875rem; color: var(--gold);
 }
 /* Compact skill chips are small + center-aligned; the corner diamond would sit over the
    label, so drop it (the gold border + glow already mark selection). */
 .lvl-opt.simple.compact.selected::after { display: none; }
 .lvl-opt-name {
-  font-family: var(--display-2); font-size: 14px; font-weight: 700;
+  font-family: var(--display-2); font-size: 0.875rem; font-weight: 700;
   letter-spacing: 0.16em; color: var(--ink); text-transform: uppercase;
 }
 /* Perk cards (non-compact): keep a right gutter so a long/wrapping name never runs under
    the selection diamond. */
 .lvl-opt.simple:not(.compact) .lvl-opt-name { padding-right: 20px; }
 .lvl-opt-body {
-  font-family: var(--serif); font-size: 13px; color: var(--ink-2);
+  font-family: var(--serif); font-size: 0.8125rem; color: var(--ink-2);
   line-height: 1.55; margin-top: 6px;
 }
 .skill-pick-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
 }
 .lvl-opt.simple.compact { padding: 10px 12px; text-align: center; }
-.lvl-opt.simple.compact .lvl-opt-name { font-size: 12px; letter-spacing: 0.1em; }
+.lvl-opt.simple.compact .lvl-opt-name { font-size: 0.75rem; letter-spacing: 0.1em; }
 @media (max-width: 560px) { .skill-pick-grid { grid-template-columns: repeat(2, 1fr); } }
 `;
 function LevelUpStyles() { return <style>{LEVELUP_CSS}</style>; }
