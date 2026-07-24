@@ -5,6 +5,7 @@ import { ManeuversPanel, RulesGlossary } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles } from './levelup.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from './app.jsx';
 import { parseKitSig, PERKS } from './wizard/helpers.js';
+import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
 
 // Hooks used bare in this file (see note in wizard.jsx) — provide them under ES modules.
@@ -192,6 +193,17 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
           {!canEdit && <span className="play-readonly-tag" title="Only the owner or Director can edit this hero">👁 Viewing</span>}
           <Button kind="ghost" small onClick={() => setRulesOpen(true)}>RULES</Button>
           <Button kind="ghost" small onClick={() => setBioOpen(true)}>BIOGRAPHY</Button>
+          <Button kind="ghost" small title="Download as a FoundryVTT (Draw Steel system) actor file" onClick={async () => {
+            try {
+              // Official compendium index (null → generated-item fallback).
+              const idx = await loadOfficialIndex();
+              const file = heroName.trim().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'hero';
+              downloadJson(characterToFoundryHero(character, idx), `${file}-foundryvtt.json`);
+            } catch (err) {
+              console.error('[foundry-export]', err);
+              alert('Export failed: ' + (err?.message || err));
+            }
+          }}>EXPORT</Button>
           {canEdit && onEdit && <Button kind="ghost" small onClick={onEdit}>EDIT</Button>}
           {canEdit && <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>}
         </div>
@@ -345,7 +357,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                       <div className="trait-name">Skills</div>
                       {benefits.skills.map((s, i) => (
                         <div className="kv-row" key={i} style={{gridTemplateColumns:'110px 1fr', marginTop: i === 0 ? 4 : 6}}>
-                          <span className="k">{s.source}</span><span className="v" style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)', lineHeight:1.5}}>{s.text}</span>
+                          <span className="k">{s.source}</span><span className="v" style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5}}>{s.text}</span>
                         </div>
                       ))}
                     </div>
@@ -354,7 +366,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                     <div className="trait-name">Languages</div>
                     {benefits.languages.map((l, i) => (
                       <div className="kv-row" key={i} style={{gridTemplateColumns:'110px 1fr', marginTop: i === 0 ? 4 : 6}}>
-                        <span className="k">{l.source}</span><span className="v" style={{fontFamily:'var(--serif)', fontSize:13, color:'var(--ink-2)'}}>{l.text}</span>
+                        <span className="k">{l.source}</span><span className="v" style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)'}}>{l.text}</span>
                       </div>
                     ))}
                   </div>
@@ -363,20 +375,20 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                       <div className="trait-name">Perk</div>
                       <div className="trait-text">
                         {benefits.perk.chosen
-                          ? <><b style={{color:'var(--gold-2)'}}>{benefits.perk.chosen}</b> <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.18em'}}>({benefits.perk.group})</span></>
+                          ? <><b style={{color:'var(--gold-2)'}}>{benefits.perk.chosen}</b> <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.18em'}}>({benefits.perk.group})</span></>
                           : <><b style={{color:'var(--gold-2)'}}>{benefits.perk.group}</b> <span style={{color:'var(--ink-3)'}}>perk group</span></>}
                       </div>
                       {benefits.perk.chosen && benefits.perk.desc && (
-                        <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{benefits.perk.desc}</div>
+                        <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)', whiteSpace:'pre-line'}}>{benefits.perk.desc}</div>
                       )}
                       {levelUpPerks.map((lp, i) => (
                         <div className="perk-leveled" key={`${lp.level}-${lp.name}-${i}`}>
                           <div className="trait-text">
                             <b style={{color:'var(--gold-2)'}}>{lp.name}</b>{' '}
-                            <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize:10, letterSpacing:'0.18em'}}>({lp.group})</span>
+                            <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.18em'}}>({lp.group})</span>
                             <span className="perk-lvl-tag">LV {lp.level}</span>
                           </div>
-                          {lp.text && <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{lp.text}</div>}
+                          {lp.text && <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)', whiteSpace:'pre-line'}}>{lp.text}</div>}
                         </div>
                       ))}
                     </div>
@@ -702,7 +714,7 @@ function BiographyContent({ character }) {
     <div className="stack-12">
       <div style={{textAlign:'center'}}>
         <div className="h2-display">{id.name || 'Unnamed'}</div>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize:15, marginTop:6}}>{id.pronouns}</div>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.9375rem', marginTop:6}}>{id.pronouns}</div>
       </div>
       <OrnDivider glyph="✠" size="small" />
       <div className="grid-3" style={{gap: 10}}>
@@ -714,25 +726,25 @@ function BiographyContent({ character }) {
       {id.appearance && (
         <div>
           <H4Meta>Appearance</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.55}}>{id.appearance}</div>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55}}>{id.appearance}</div>
         </div>
       )}
       {id.backstory && (
         <div>
           <H4Meta>Backstory</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.55, whiteSpace:'pre-wrap'}}>{id.backstory}</div>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, whiteSpace:'pre-wrap'}}>{id.backstory}</div>
         </div>
       )}
       {car && character.career.incident && (
         <div>
           <H4Meta>Inciting Incident</H4Meta>
-          <div style={{fontFamily:'var(--display-2)', fontSize:13, color:'var(--ink)', fontWeight:600, letterSpacing:'0.12em'}}>{character.career.incident}</div>
+          <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', color:'var(--ink)', fontWeight:600, letterSpacing:'0.12em'}}>{character.career.incident}</div>
         </div>
       )}
       {character.career.taken && (
         <div>
           <H4Meta>What Was Taken</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.55, fontStyle:'italic'}}>{character.career.taken}</div>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, fontStyle:'italic'}}>{character.career.taken}</div>
         </div>
       )}
     </div>
@@ -753,7 +765,7 @@ function LevelUpModal({ open, onClose, character, update }) {
         footer={<Button kind="primary" onClick={onClose}>CLOSE</Button>}>
         <div style={{textAlign:'center'}}>
           <GlyphRow>✠ · ❦ · ✠</GlyphRow>
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:18, color:'var(--ink-2)', marginTop:14, lineHeight:1.5}}>
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '1.125rem', color:'var(--ink-2)', marginTop:14, lineHeight:1.5}}>
             You stand at the height of mortal power. There are no more rungs to climb — only legends to write.
           </div>
         </div>
@@ -791,7 +803,7 @@ function LevelUpModal({ open, onClose, character, update }) {
       )}>
       <div className="stack-16">
         <div style={{textAlign:'center'}}>
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:18, color:'var(--gold-2)', lineHeight: 1.5, maxWidth: 480, margin: '0 auto'}}>
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '1.125rem', color:'var(--gold-2)', lineHeight: 1.5, maxWidth: 480, margin: '0 auto'}}>
             "Your Victories carry you to a new rung of power. Take a breath. The world has shifted."
           </div>
         </div>
@@ -823,7 +835,7 @@ function LevelUpModal({ open, onClose, character, update }) {
 
         <div className="orn-frame" style={{padding: '14px 18px'}}>
           <H4Meta>Note</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontSize:13.5, color:'var(--ink-2)', lineHeight:1.55}}>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.55}}>
             This prototype applies Stamina and characteristic increases mechanically. Other choices (new ability picks, perk selections, subclass features) should be made with your Director and recorded by hand — full level-up flows arrive in a future chapter.
           </div>
         </div>
@@ -835,10 +847,10 @@ function LevelUpModal({ open, onClose, character, update }) {
 function BenefitRow({ icon, title, body }) {
   return (
     <div style={{display:'grid', gridTemplateColumns:'40px 1fr', gap: 14, alignItems:'flex-start'}}>
-      <div style={{width:36, height:36, border:'1px solid var(--gold)', display:'grid', placeItems:'center', fontFamily:'var(--display)', fontSize:18, color:'var(--gold)'}}>{icon}</div>
+      <div style={{width:36, height:36, border:'1px solid var(--gold)', display:'grid', placeItems:'center', fontFamily:'var(--display)', fontSize: '1.125rem', color:'var(--gold)'}}>{icon}</div>
       <div>
-        <div style={{fontFamily:'var(--display-2)', fontSize:13, fontWeight:700, letterSpacing:'0.16em', color:'var(--ink)'}}>{title.toUpperCase()}</div>
-        <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.55, marginTop: 4}}>{body}</div>
+        <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.16em', color:'var(--ink)'}}>{title.toUpperCase()}</div>
+        <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, marginTop: 4}}>{body}</div>
       </div>
     </div>
   );
@@ -875,12 +887,12 @@ const PLAY_CSS = `
 
 .brand-mark { display: flex; align-items: center; gap: 11px; }
 .brand-mark .brand-glyph {
-  font-family: var(--display); font-size: 22px; color: var(--gold);
+  font-family: var(--display); font-size: 1.375rem; color: var(--gold);
   width: 40px; height: 40px; display: grid; place-items: center;
   border: 1px solid var(--gold-deep); background: var(--surface-vital, rgba(176,138,72,0.05));
 }
-.brand-mark .brand-name { font-family: var(--display); font-size: 16px; letter-spacing: 0.24em; color: var(--gold-2); white-space: nowrap; }
-.brand-mark .brand-sub { font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+.brand-mark .brand-name { font-family: var(--display); font-size: 1rem; letter-spacing: 0.24em; color: var(--gold-2); white-space: nowrap; }
+.brand-mark .brand-sub { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
 
 .hero-masthead {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
@@ -896,14 +908,14 @@ const PLAY_CSS = `
   display: grid; place-items: center;
   box-shadow: 0 0 22px var(--gold-glow), inset 0 0 0 1px rgba(0,0,0,0.5);
 }
-.hb-portrait .hb-glyph { font-family: var(--display); font-size: 46px; color: var(--gold); opacity: 0.45; }
-.hb-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-2); margin-bottom: 6px; }
-.hb-name { font-family: var(--display); font-size: 40px; line-height: 1; letter-spacing: 0.04em; color: var(--ink); text-wrap: balance; }
-.hb-meta { font-family: var(--display-2); font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); margin-top: 10px; }
+.hb-portrait .hb-glyph { font-family: var(--display); font-size: 2.875rem; color: var(--gold); opacity: 0.45; }
+.hb-eyebrow { font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-2); margin-bottom: 6px; }
+.hb-name { font-family: var(--display); font-size: 2.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink); text-wrap: balance; }
+.hb-meta { font-family: var(--display-2); font-size: 0.9375rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); margin-top: 10px; }
 .hb-meta .hb-sub { color: var(--gold-2); }
 .hb-level { text-align: center; flex: none; padding-left: 22px; border-left: 1px solid var(--line-2); }
-.hb-level-num { font-family: var(--display); font-size: 46px; line-height: 1; color: var(--gold-2); }
-.hb-level-lbl { font-family: var(--mono); font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.hb-level-num { font-family: var(--display); font-size: 2.875rem; line-height: 1; color: var(--gold-2); }
+.hb-level-lbl { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
 
 .play-body {
   position: relative; overflow-y: auto;
@@ -935,7 +947,7 @@ const PLAY_CSS = `
 .play-readonly .vitals button,
 .play-readonly .vitals input { pointer-events: none; opacity: 0.5; }
 .play-readonly-tag {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 3px;
   padding: 4px 8px; margin-right: 6px; white-space: nowrap;
 }
@@ -945,13 +957,13 @@ const PLAY_CSS = `
   padding: 12px 14px;
 }
 .vital-head { display: flex; justify-content: space-between; align-items: baseline; }
-.vital-lbl { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
-.vital-num { font-family: var(--display); font-size: 22px; color: var(--ink); }
+.vital-lbl { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
+.vital-num { font-family: var(--display); font-size: 1.375rem; color: var(--ink); }
 .vital-num .muted { color: var(--ink-3); font-weight: 400; }
 .vital-cur.editable { cursor: text; border-bottom: 1px dashed transparent; transition: border-color .15s; }
 .vital-cur.editable:hover { border-bottom-color: var(--gold-deep); }
 .vital-edit {
-  width: 2.6em; font-family: var(--display); font-size: 22px; line-height: 1;
+  width: 2.6em; font-family: var(--display); font-size: 1.375rem; line-height: 1;
   color: var(--ink); background: rgba(0,0,0,0.45); border: 1px solid var(--gold-deep);
   text-align: right; padding: 0 2px; -moz-appearance: textfield;
 }
@@ -963,7 +975,7 @@ const PLAY_CSS = `
 .vital-ctl { display: flex; gap: 4px; margin-top: 8px; }
 .vital-ctl button {
   flex: 1; padding: 5px 0; background: var(--bg-2); border: 1px solid var(--line-2);
-  color: var(--ink-2); font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--ink-2); font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
   cursor: pointer; letter-spacing: 0.06em;
 }
 .vital-ctl button:hover { border-color: var(--gold); color: var(--ink); }
@@ -974,13 +986,13 @@ const PLAY_CSS = `
   padding: 12px 14px; display: flex; flex-direction: column;
   align-items: center; text-align: center;
 }
-.cnt-lbl { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
-.cnt-val { font-family: var(--display); font-size: 26px; color: var(--gold-2); margin: 4px 0 6px; font-weight: 700; }
-.cnt-tot { font-size: 14px; color: var(--ink-3); font-weight: 400; }
+.cnt-lbl { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
+.cnt-val { font-family: var(--display); font-size: 1.625rem; color: var(--gold-2); margin: 4px 0 6px; font-weight: 700; }
+.cnt-tot { font-size: 0.875rem; color: var(--ink-3); font-weight: 400; }
 .cnt-ctl { display: flex; gap: 4px; margin-top: auto; width: 100%; }
 .cnt-ctl button {
   flex: 1; padding: 5px 0; background: var(--bg-2); border: 1px solid var(--line-2);
-  color: var(--ink-2); font-family: var(--mono); font-size: 13px; cursor: pointer;
+  color: var(--ink-2); font-family: var(--mono); font-size: 0.8125rem; cursor: pointer;
 }
 .cnt-ctl button:hover { border-color: var(--gold); color: var(--ink); }
 
@@ -998,8 +1010,8 @@ const PLAY_CSS = `
   padding: 12px 18px; border-bottom: 1px solid var(--line);
   background: linear-gradient(90deg, var(--tint-accent), transparent);
 }
-.panel-title { font-family: var(--display-2); font-size: 13px; font-weight: 700; letter-spacing: 0.24em; color: var(--gold-2); text-transform: uppercase; }
-.panel-orn { font-family: var(--display); font-size: 14px; color: var(--gold); opacity: 0.5; }
+.panel-title { font-family: var(--display-2); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.24em; color: var(--gold-2); text-transform: uppercase; }
+.panel-orn { font-family: var(--display); font-size: 0.875rem; color: var(--gold); opacity: 0.5; }
 .panel-body { padding: 16px 18px; }
 .panel-head-btn {
   appearance: none; -webkit-appearance: none; background: linear-gradient(90deg, var(--tint-accent), transparent);
@@ -1012,7 +1024,7 @@ const PLAY_CSS = `
 .panel.collapsed { padding-bottom: 0; }
 .panel.collapsed .panel-head, .panel.collapsed .panel-head-btn { border-bottom: 0; }
 .panel-chevron {
-  font-family: var(--display); font-size: 14px; color: var(--gold); opacity: 0.55;
+  font-family: var(--display); font-size: 0.875rem; color: var(--gold); opacity: 0.55;
   transition: transform 180ms ease, opacity 180ms ease, color 180ms ease;
   line-height: 1;
 }
@@ -1021,15 +1033,15 @@ const PLAY_CSS = `
 
 .chars-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .char-box { border: 1px solid var(--line-2); background: var(--bg-2); padding: 10px 6px; text-align: center; }
-.ch-name { font-family: var(--mono); font-size: 9px; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
-.ch-val { font-family: var(--display); font-size: 32px; font-weight: 700; color: var(--ink); margin-top: 6px; }
+.ch-name { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
+.ch-val { font-family: var(--display); font-size: 2rem; font-weight: 700; color: var(--ink); margin-top: 6px; }
 .potency-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 
-.empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: 14px; padding: 14px; text-align: center; }
+.empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: 0.875rem; padding: 14px; text-align: center; }
 
 .cond-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .cond {
-  font-family: var(--mono); font-size: 10px; padding: 8px 6px;
+  font-family: var(--mono); font-size: 0.625rem; padding: 8px 6px;
   background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink-2);
   cursor: pointer; letter-spacing: 0.18em; text-transform: uppercase;
   transition: all .12s;
@@ -1043,30 +1055,30 @@ const PLAY_CSS = `
 .perk-leveled { margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--line); }
 .perk-lvl-tag {
   display: inline-block; margin-left: 8px; vertical-align: middle;
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.16em;
   color: var(--gold-2); border: 1px solid var(--line-2); border-radius: 2px;
   padding: 2px 6px; line-height: 1;
 }
 .trait-name {
-  font-family: var(--display-2); font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
+  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.14em;
   color: var(--ink); display: flex; align-items: center; gap: 8px; text-transform: uppercase;
 }
 .sig-tag, .cost-tag {
-  font-family: var(--mono); font-size: 9px; padding: 2px 6px;
+  font-family: var(--mono); font-size: 0.5625rem; padding: 2px 6px;
   border: 1px solid var(--gold); color: var(--gold-2); letter-spacing: 0.18em;
   text-transform: uppercase; font-weight: 500;
 }
 .cost-tag { border-color: var(--line-2); color: var(--ink-3); }
-.trait-text { font-family: var(--serif); font-size: 13.5px; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
+.trait-text { font-family: var(--serif); font-size: 0.84375rem; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
 .sig-option-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.sig-option-label { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
+.sig-option-label { font-family: var(--mono); font-size: 0.59375rem; color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
 .sig-option-select {
-  font-family: var(--display-2); font-size: 12.5px; font-weight: 700; letter-spacing: 0.08em;
+  font-family: var(--display-2); font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.08em;
   color: var(--gold-2); background: var(--panel, transparent); border: 1px solid var(--gold);
   padding: 5px 10px; cursor: pointer; text-transform: uppercase;
 }
 .sig-option-select:focus { outline: none; border-color: var(--gold-2); }
-.kit-meta-line { font-family: var(--mono); font-size: 9.5px; color: var(--gold-2); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 5px; }
+.kit-meta-line { font-family: var(--mono); font-size: 0.59375rem; color: var(--gold-2); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 5px; }
 
 /* Progression panel */
 .prog-list { display: flex; flex-direction: column; gap: 12px; }
@@ -1077,26 +1089,26 @@ const PLAY_CSS = `
 .prog-row:last-child { border-bottom: none; padding-bottom: 0; }
 .prog-row:first-child { padding-top: 0; }
 .prog-badge {
-  font-family: var(--display); font-size: 13px; letter-spacing: 0.06em;
+  font-family: var(--display); font-size: 0.8125rem; letter-spacing: 0.06em;
   color: var(--gold-2); border: 1px solid var(--line-2); border-radius: 2px;
   padding: 4px 8px; white-space: nowrap; line-height: 1;
 }
 .prog-detail { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .prog-pick { display: flex; flex-direction: column; gap: 1px; }
 .prog-pick-k {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--ink-3);
 }
-.prog-pick-v { font-family: var(--serif); font-size: 13px; color: var(--ink); line-height: 1.4; }
+.prog-pick-v { font-family: var(--serif); font-size: 0.8125rem; color: var(--ink); line-height: 1.4; }
 .prog-edit {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--ink-2); background: transparent; border: 1px solid var(--line-2);
   border-radius: 2px; padding: 5px 10px; cursor: pointer; white-space: nowrap;
   transition: border-color .12s, color .12s, box-shadow .12s;
 }
 .prog-edit:hover { color: var(--gold-2); border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow); }
-.kv-row { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 4px 12px; align-items: baseline; font-family: var(--mono); font-size: 11px; }
-.kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: 10px; text-transform: uppercase; }
+.kv-row { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 4px 12px; align-items: baseline; font-family: var(--mono); font-size: 0.6875rem; }
+.kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: 0.625rem; text-transform: uppercase; }
 .kv-row .v { color: var(--ink); }
 `;
 
