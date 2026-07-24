@@ -1,6 +1,6 @@
 import React from 'react';
 import { OrnDivider, GlyphRow, Button, H3, H4Meta, Modal, AbilityCard } from './theme.jsx';
-import { classDef, collectSkillPicks, collectPerkPicks } from './app.jsx';
+import { classDef, collectSkillPicks, collectPerkPicks, computeDerived } from './app.jsx';
 // Per-class level-up tables defined in their own modules. Imported (not window-
 // installed) so registration is deterministic and survives HMR re-evaluation.
 import { troubadour } from './levelup-troubadour.jsx';
@@ -1184,7 +1184,8 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
   const ctx = makeContext(character);
   const autoFeatures = typeof data.autoFeatures === 'function' ? data.autoFeatures(ctx) : (data.autoFeatures || []);
   const autoAbilities = typeof data.autoAbilities === 'function' ? data.autoAbilities(ctx) : (data.autoAbilities || []);
-  const newStamina = cls.starting.stamina1 + (nextLevel - 1) * cls.starting.staminaPer;
+  // Full derived max at the new level, so kit/trait/feature bonuses are included.
+  const newStamina = computeDerived({ ...character, level: nextLevel }).staminaMax;
 
   return (
     <div className="stack-16">
@@ -1375,7 +1376,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
   const ctx = makeContext(character);
   const autoFeatures = typeof data.autoFeatures === 'function' ? data.autoFeatures(ctx) : (data.autoFeatures || []);
   const autoAbilities = typeof data.autoAbilities === 'function' ? data.autoAbilities(ctx) : (data.autoAbilities || []);
-  const newStamina = cls.starting.stamina1 + (nextLevel - 1) * cls.starting.staminaPer;
+  const newStamina = computeDerived({ ...character, level: nextLevel }).staminaMax;
   const charInc = data.autoCharacteristicIncrease
     ? Object.entries(data.autoCharacteristicIncrease).filter(([k]) => k !== 'max')
     : [];

@@ -286,6 +286,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                   <StatTile label="Winded" value={derived.winded} />
                   <StatTile label="Speed" value={derived.speed} />
                   <StatTile label="Stability" value={derived.stability} />
+                  <StatTile label="Disengage" value={derived.disengage} />
                   <StatTile label="Size" value={anc?.size || '1M'} />
                   <StatTile label="Echelon" value={derived.echelon} />
                 </div>
@@ -813,7 +814,7 @@ function LevelUpModal({ open, onClose, character, update }) {
 
         <div className="stack-12">
           <BenefitRow icon="⌬" title="Stamina" body={
-            cls ? `+${cls.starting.staminaPer} maximum Stamina. (Total: ${cls.starting.stamina1 + (nextLevel - 1) * cls.starting.staminaPer})` : '—'
+            cls ? `+${cls.starting.staminaPer} maximum Stamina. (Total: ${computeDerived({ ...character, level: nextLevel }).staminaMax})` : '—'
           } />
 
           {benefitsAtLevel.charIncrease && (

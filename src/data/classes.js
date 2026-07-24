@@ -196,9 +196,9 @@ const DS_CLASSES = [
     prayers: [
       { name: 'Destruction', text: 'Your god infuses wrath within your being. You gain a +1 bonus to rolled damage with magic abilities.' },
       { name: 'Distance',    text: 'You have a +2 bonus to the distance of your ranged magic abilities.' },
-      { name: 'Soldier\'s Skill', text: 'You can wear light armor and wield light weapons effectively even without a kit. While you wear light armor you gain a +3 bonus to Stamina (increasing by 3 at 4th, 7th, and 10th levels); while you wield a light weapon you gain a +1 damage bonus with weapon abilities, including free strikes. You can use light armor and light weapon treasures. If you have a kit, you can\u2019t take this prayer.' },
-      { name: 'Speed',       text: 'You gain a +1 bonus to speed and to the distance you can shift when you take the Disengage move action.' },
-      { name: 'Steel',       text: 'You gain a +6 bonus to Stamina (increasing by 6 at 4th, 7th, and 10th levels) and a +1 bonus to stability.' },
+      { name: 'Soldier\'s Skill', text: 'You can wear light armor and wield light weapons effectively even without a kit. While you wear light armor you gain a +3 bonus to Stamina (increasing by 3 at 4th, 7th, and 10th levels); while you wield a light weapon you gain a +1 damage bonus with weapon abilities, including free strikes. You can use light armor and light weapon treasures. If you have a kit, you can\u2019t take this prayer.', bonuses: { sta_per: 3 } },
+      { name: 'Speed',       text: 'You gain a +1 bonus to speed and to the distance you can shift when you take the Disengage move action.', bonuses: { spd: 1, disengage: 1 } },
+      { name: 'Steel',       text: 'You gain a +6 bonus to Stamina (increasing by 6 at 4th, 7th, and 10th levels) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
     ],
     wards: [
       { name: 'Bastion',   text: 'Your god grants you a holy countenance, giving you a +1 bonus to saving throws.' },
@@ -342,7 +342,7 @@ const DS_CLASSES = [
     quickKit: 'Panther',
     features: [
       { name: 'Growing Ferocity', text: 'Your aspect grants benefits at 2/4/6 ferocity — bigger Knockback distances, free surges, edges on Might tests, and more. Lost at end of turn.' },
-      { name: 'Mighty Leaps', text: 'You can\'t roll lower than a tier 2 outcome on Might tests made to jump.' },
+      { name: 'Mighty Leap', text: 'You can\'t roll lower than a tier 2 outcome on Might tests made to jump.' },
     ],
     aspectActions: {
       berserker: ab('Lines of Force', {
@@ -549,11 +549,11 @@ const DS_CLASSES = [
       { name: 'Enchantment / Ward', text: 'Choose one Enchantment and one Elementalist Ward below. You can swap either by performing a complex ritual during a respite.', choose: 'enchantWard' },
     ],
     enchantments: [
-      { name: 'Enchantment of Battle', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities.' },
-      { name: 'Enchantment of Celerity', text: 'You gain a +1 bonus to speed and to the distance you shift when you Disengage.' },
+      { name: 'Enchantment of Battle', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities.', bonuses: { sta_per: 3 } },
+      { name: 'Enchantment of Celerity', text: 'You gain a +1 bonus to speed and to the distance you shift when you Disengage.', bonuses: { spd: 1, disengage: 1 } },
       { name: 'Enchantment of Destruction', text: 'You gain a +1 bonus to rolled damage with magic abilities.' },
       { name: 'Enchantment of Distance', text: 'You gain a +2 bonus to the distance of your ranged magic abilities.' },
-      { name: 'Enchantment of Permanence', text: 'You gain a +6 bonus to Stamina (increasing at 4th/7th/10th) and a +1 bonus to stability.' },
+      { name: 'Enchantment of Permanence', text: 'You gain a +6 bonus to Stamina (increasing at 4th/7th/10th) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
     ],
     wards: [
       { name: 'Ward of Delightful Consequences', text: 'The first time each round you take damage, you gain 1 surge.' },
@@ -677,15 +677,15 @@ const DS_CLASSES = [
       }) },
       { name: 'Discipline', text: 'At the start of combat you gain discipline equal to your Victories, then 2 at the start of each turn. You gain 1 more the first time each round an enemy in your Null Field takes a main action, and 1 the first time the Director spends Malice.' },
       { name: 'Discipline Mastery', text: 'Your tradition grants benefits as your discipline grows (2/4/6, with more at 4th/7th/10th level): free surges, edges and then double edges on the Grab and Knockback maneuvers, and more. Benefits last until the end of your turn. Using Inertial Shield also lets you Disengage (Chronokinetic), Grab (Cryokinetic), or Knockback (Metakinetic) as a free triggered action.' },
-      { name: 'Null Speed', text: 'You gain a bonus to speed and to the number of squares you can shift when you take the Disengage move action equal to your Agility score.' },
+      { name: 'Null Speed', text: 'You gain a bonus to speed and to the number of squares you can shift when you take the Disengage move action equal to your Agility score.', bonuses: { spdChar: 'Agility', disChar: 'Agility' } },
       { name: 'Psionic Augmentation', text: 'Your training has turned your body into the perfect psionic weapon, shaping pathways in your mind that enhance your physical form. Choose one of the following augmentations. You can change your augmentation by undergoing a psionic meditation as a respite activity.', choose: 'augment' },
       { name: 'Psionic Martial Arts', text: 'A Null forgoes a kit — your body is your weapon. Whenever you use the Knockback or Grab maneuver you use Intuition instead of Might (for the roll and for targeting larger creatures), and Knockback can slide the target instead of pushing.' },
     ],
     // Psionic Augmentation options (stored in cclass.enchantment, like the Talent's).
     enchantments: [
-      { name: 'Density Augmentation', text: 'You gain a +6 bonus to Stamina (increasing by 6 at 4th, 7th, and 10th levels) and a +1 bonus to stability.' },
+      { name: 'Density Augmentation', text: 'You gain a +6 bonus to Stamina (increasing by 6 at 4th, 7th, and 10th levels) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
       { name: 'Force Augmentation', text: 'Your damage-dealing psionic abilities gain a +1 bonus to rolled damage.' },
-      { name: 'Speed Augmentation', text: 'You gain a +1 bonus to speed and to the distance you can shift when you take the Disengage move action.' },
+      { name: 'Speed Augmentation', text: 'You gain a +1 bonus to speed and to the distance you can shift when you take the Disengage move action.', bonuses: { spd: 1, disengage: 1 } },
     ],
     sigCount: 2,
     signatures: [
@@ -1072,11 +1072,11 @@ const DS_CLASSES = [
       { id: 'telepathy',   name: 'Telepathy',   tag: 'Mind',  text: 'Communicate with, read, and influence the minds of other creatures. Grants Feedback Loop & Remote Assistance.' },
     ],
     enchantments: [
-      { name: 'Battle Augmentation', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities. Can\u2019t be taken if you have a kit.' },
-      { name: 'Density Augmentation', text: 'You gain a +6 bonus to Stamina (increasing at 4th/7th/10th) and a +1 bonus to stability.' },
+      { name: 'Battle Augmentation', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities. Can\u2019t be taken if you have a kit.', bonuses: { sta_per: 3 } },
+      { name: 'Density Augmentation', text: 'You gain a +6 bonus to Stamina (increasing at 4th/7th/10th) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
       { name: 'Distance Augmentation', text: 'Your ranged psionic abilities gain a +2 bonus to distance.' },
       { name: 'Force Augmentation', text: 'Your damage-dealing psionic abilities gain a +1 bonus to rolled damage.' },
-      { name: 'Speed Augmentation', text: 'You gain a +1 bonus to speed and to the distance you shift when you Disengage.' },
+      { name: 'Speed Augmentation', text: 'You gain a +1 bonus to speed and to the distance you shift when you Disengage.', bonuses: { spd: 1, disengage: 1 } },
     ],
     wards: [
       { name: 'Entropy Ward', text: 'Whenever a creature deals damage to you, their speed is reduced by your Reason score and they can\u2019t use triggered actions until the end of their next turn.' },
@@ -1085,7 +1085,7 @@ const DS_CLASSES = [
       { name: 'Vanishing Ward', text: 'Whenever you take damage, you become invisible until the end of your next turn.' },
     ],
     features: [
-      { name: 'Clarity & Strain', text: 'At the start of combat you gain clarity equal to your Victories, then 1d3 each turn; gain 1 the first time each round a creature is force moved. You can spend clarity you don\u2019t have, down to \u2212(1 + Reason); while clarity is below 0 you are strained and take 1 damage per negative point at end of turn. Some abilities have extra effects when strained.' },
+      { name: 'Clarity and Strain', text: 'At the start of combat you gain clarity equal to your Victories, then 1d3 each turn; gain 1 the first time each round a creature is force moved. You can spend clarity you don\u2019t have, down to \u2212(1 + Reason); while clarity is below 0 you are strained and take 1 damage per negative point at end of turn. Some abilities have extra effects when strained.' },
       { name: 'Mind Spike', ability: ab('Mind Spike', {
         flavor: 'A telepathic bolt instantly zaps a creature\u2019s brain. (Usable as a ranged free strike.)',
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',

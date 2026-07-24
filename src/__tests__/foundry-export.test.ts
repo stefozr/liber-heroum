@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { newCharacter, computeDerived } from '../app.jsx';
+import { DS_CLASSES } from '../data.jsx';
 import {
   characterToFoundryHero, officialOrGenerated, parseTiers, parseTierClause,
   parseDistance, parseTarget, skillId, langId, randomId, dsid,
@@ -188,11 +189,11 @@ describe('characterToFoundryHero', () => {
     });
   });
 
-  it('does not double-count kit speed/stability (Foundry re-applies the kit item)', () => {
-    const derived = computeDerived(censor());
-    // Mountain kit: stab +2, spd +0.
-    expect(doc.system.combat.stability).toBe(derived.stability - 2);
-    expect(doc.system.movement.value).toBe(derived.speed);
+  it('exports base speed/stability (Foundry re-applies kit/trait/feature item effects)', () => {
+    // Dwarf base: speed 5, stability 0. Mountain kit (+2 stab) and Grounded
+    // (+1 stab) live on embedded items whose ActiveEffects Foundry re-applies.
+    expect(doc.system.combat.stability).toBe(0);
+    expect(doc.system.movement.value).toBe(5);
     const [kit] = byType('kit');
     expect(kit.system.bonuses).toMatchObject({ stability: 2, stamina: 9 });
     expect(kit.system.bonuses.melee.damage).toEqual({ tier1: 0, tier2: 0, tier3: 4 });
@@ -424,6 +425,45 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     const dsids = doc.items.map((i: any) => i.system._dsid);
     expect(dsids).toEqual(expect.arrayContaining(['force-augmentation', 'steel-ward']));
     expect(doc.items.map((i: any) => i.name)).not.toContain('Augmentation / Ward');
+  });
+
+  it('exports Fury features matched officially, without the subclass composite', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'fury';
+    c.cclass.subclass = 'berserker';
+    c.kit.id = 'panther';
+    const doc: any = characterToFoundryHero(c, index);
+    // "Mighty Leap" must resolve to the official feature (official icon proves substitution).
+    const leap = doc.items.find((i: any) => i.system._dsid === 'mighty-leap');
+    expect(leap).toBeTruthy();
+    expect(leap.img).toMatch(/^(icons|systems|assets)\//);
+    // The synthetic "Primordial Aspect — Berserker" composite must not be exported;
+    // the official subclass document covers it.
+    expect(doc.items.map((i: any) => i.name)).not.toContain('Primordial Aspect — Berserker');
+    expect(doc.items.find((i: any) => i.type === 'subclass').name).toBe('Berserker');
+  });
+
+  it('drops the subclass composite for every class with subclasses', () => {
+    for (const cls of DS_CLASSES.filter((x: any) => x.subclasses)) {
+      const c: any = newCharacter('u-test', null);
+      c.cclass.id = cls.id;
+      const sub = cls.subclasses[0];
+      c.cclass.subclass = sub.id || sub.name;
+      const doc: any = characterToFoundryHero(c, index);
+      const composite = `${cls.subclassName || 'Subclass'} — ${sub.name}`;
+      expect(doc.items.map((i: any) => i.name), cls.id).not.toContain(composite);
+    }
+  });
+
+  it('matches domain features despite the "Domain:" name prefix', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'conduit';
+    c.cclass.domains = ['Creation', 'War'];
+    c.cclass.domainFeature = { domain: 'Creation', name: 'Hands of the Maker', text: 'stub' };
+    const doc: any = characterToFoundryHero(c, index);
+    const df = doc.items.find((i: any) => i.system._dsid === 'hands-of-the-maker');
+    expect(df).toBeTruthy();
+    expect(df.img).toMatch(/^(icons|systems|assets)\//);
   });
 
   it('keeps the composite prompt when nothing is chosen', () => {

@@ -418,10 +418,6 @@ function characterToFoundryHero(c, officialIndex = null) {
   const official = (type, itemName, generated) =>
     officialOrGenerated(officialIndex, type, itemName, generated, ctx, c.level || 1);
 
-  // Kit bonuses are folded into computeDerived's speed/stability but Foundry
-  // re-applies them from the embedded kit item — persist base values only.
-  const kb = (key) => Math.max(kit?.bonuses?.[key] || 0, kit2?.bonuses?.[key] || 0);
-
   // ── embedded items ──
   const items = [];
   let sort = 0;
@@ -550,9 +546,16 @@ function characterToFoundryHero(c, officialIndex = null) {
 
   // Class/subclass/domain features (text-only; active abilities are exported below).
   // officialOrGenerated also tries ability: for features that are abilities officially.
+  // The "Subclass Name — Pick" composite summarizeBenefits builds is skipped: the
+  // official subclass document is already exported above and covers it.
+  const subComposite = sub ? `${cls?.subclassName || 'Subclass'} — ${sub.name}` : null;
   for (const f of (benefits.features || [])) {
-    if (f.name === 'Heroic Resource' || expandedComposites.has(f.name)) continue;
-    add(official('feature', f.name, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
+    if (f.name === 'Heroic Resource' || f.name === subComposite || expandedComposites.has(f.name)) continue;
+    // Domain features arrive as "Creation: Hands of the Maker" — the official
+    // items key off the bare name, so try it stripped of the domain prefix too.
+    const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
+    const names = bare !== f.name ? [f.name, bare] : [f.name];
+    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
   }
 
   // Abilities, mirroring the Play view's collections (play.jsx:51-97).
@@ -620,13 +623,16 @@ function characterToFoundryHero(c, officialIndex = null) {
       height: parseMeasure(c.identity?.height, 'inches'),
       weight: parseMeasure(c.identity?.weight, 'pounds'),
     },
-    movement: { value: derived.speed - kb('spd'), types: ['walk'], hover: false, disengage: 1 },
+    // Base values only: kits, traits, complications, and feature picks are all
+    // embedded as items whose official ActiveEffects re-apply their bonuses in
+    // Foundry — exporting derived totals here would double-count them.
+    movement: { value: anc?.speed ?? 5, types: ['walk'], hover: false, disengage: 1 },
     combat: {
       size: (() => {
         const m = String(anc?.size || '1M').match(/^(\d+)\s*([TSMLH]?)$/i);
         return { value: m ? +m[1] : 1, letter: m ? (m[2] || '').toUpperCase() || 'M' : 'M' };
       })(),
-      stability: derived.stability - kb('stab'),
+      stability: anc?.stability ?? 0,
       turns: 1,
     },
   };

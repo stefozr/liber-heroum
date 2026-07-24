@@ -7,7 +7,7 @@ const DS_ANCESTRIES = [
     signature: { name: 'Silver Tongue', text: 'You have one skill of your choice from the interpersonal skill group, and you gain an edge on tests when attempting to discover an NPC\'s motivations and pitfalls during a negotiation.', skillChoice: { groups: ['interpersonal'], count: 1 } },
     traits: [
       { name: 'Barbed Tail', cost: 1, text: 'Once per round when you make a melee strike, you can deal extra damage equal to your highest characteristic score.' },
-      { name: 'Beast Legs', cost: 1, text: 'You have speed 6.' },
+      { name: 'Beast Legs', cost: 1, text: 'You have speed 6.', bonuses: { spdMin: 6 } },
       { name: 'Glowing Eyes', cost: 1, text: 'When you take damage from a creature, you can use a triggered action to deal that creature psychic damage equal to 1d10 + your level.' },
       { name: 'Hellsight', cost: 1, text: 'You don\'t take a bane on strikes made against creatures with concealment.' },
       { name: 'Impressive Horns', cost: 2, text: 'Whenever you make a saving throw, you succeed on a roll of 5 or higher.' },
@@ -40,8 +40,8 @@ const DS_ANCESTRIES = [
     ] } },
     traits: [
       { name: 'Great Fortitude', cost: 2, text: 'You can\'t be made weakened.' },
-      { name: 'Grounded', cost: 1, text: '+1 to stability.' },
-      { name: 'Spark Off Your Skin', cost: 2, text: '+6 bonus to Stamina, increasing by 6 at 4th, 7th, 10th levels.' },
+      { name: 'Grounded', cost: 1, text: '+1 to stability.', bonuses: { stab: 1 } },
+      { name: 'Spark Off Your Skin', cost: 2, text: '+6 bonus to Stamina, increasing by 6 at 4th, 7th, 10th levels.', bonuses: { sta_per: 6 } },
       { name: 'Stand Tough', cost: 1, text: 'Might counts as 1 higher for resisting potencies; edge on Might tests against environmental effects.' },
       { name: 'Stone Singer', cost: 1, text: 'With 1 hour of singing, you can reshape unworked stone within 3 squares.' },
     ],
@@ -56,7 +56,7 @@ const DS_ANCESTRIES = [
       { name: 'Quick and Brutal', cost: 1, text: 'On a critical hit, take an additional main action AND additional move action.' },
       { name: 'Otherworldly Grace', cost: 2, text: 'You succeed on saving throws on a roll of 5 or higher.' },
       { name: 'Revisit Memory', cost: 1, text: 'Edge on tests made to recall lore.' },
-      { name: 'Swift', cost: 1, text: 'You have speed 6.' },
+      { name: 'Swift', cost: 1, text: 'You have speed 6.', bonuses: { spdMin: 6 } },
       { name: 'The Wode Defends', cost: 2, text: 'Signature ability: ranged 10 strike, vines slow target (save ends).' },
     ],
   },
@@ -67,7 +67,7 @@ const DS_ANCESTRIES = [
     signature: { name: 'High Elf Glamor', text: 'Edge on Presence tests using Flirt or Persuade. You appear different to each creature — but never as someone else.' },
     traits: [
       { name: 'Glamor of Terror', cost: 2, text: 'When you take damage from a creature, use a triggered action to make them frightened of you (EoT).' },
-      { name: 'Graceful Retreat', cost: 1, text: '+1 to the distance you can shift when you Disengage.' },
+      { name: 'Graceful Retreat', cost: 1, text: '+1 to the distance you can shift when you Disengage.', bonuses: { disengage: 1 } },
       { name: 'High Senses', cost: 1, text: 'Edge on tests made to notice threats.' },
       { name: 'Otherworldly Grace', cost: 2, text: 'You succeed on saving throws on a roll of 5 or higher.' },
       { name: 'Revisit Memory', cost: 1, text: 'Edge on tests made to recall lore.' },
@@ -97,7 +97,7 @@ const DS_ANCESTRIES = [
       { name: 'Determination', cost: 2, text: 'If you are frightened, slowed, or weakened, you can use a maneuver to end one of those conditions.' },
       { name: 'Perseverance', cost: 1, text: 'Edge on Endurance tests. When slowed, speed is reduced to 3 instead of 2.' },
       { name: 'Resist the Unnatural', cost: 1, text: 'When you take typed damage, use a triggered action to take half the damage.' },
-      { name: 'Staying Power', cost: 2, text: '+2 to your number of Recoveries.' },
+      { name: 'Staying Power', cost: 2, text: '+2 to your number of Recoveries.', bonuses: { rec: 2 } },
     ],
   },
   { id: 'memonek', name: 'Memonek', glyph: '◇', points: 4, quick: ['Lightning Nimbleness','Nonstop'],
@@ -112,7 +112,7 @@ const DS_ANCESTRIES = [
     traits: [
       { name: 'I Am Law', cost: 1, text: 'Enemies can\'t move through your space unless you allow it.' },
       { name: 'Keeper of Order', cost: 2, text: 'Once per round, use a free triggered action to remove an edge or bane on a power roll within reach.' },
-      { name: 'Lightning Nimbleness', cost: 2, text: 'Speed 7.' },
+      { name: 'Lightning Nimbleness', cost: 2, text: 'Speed 7.', bonuses: { spdMin: 7 } },
       { name: 'Nonstop', cost: 2, text: 'You can\'t be made slowed.' },
       { name: 'Systematic Mind', cost: 1, text: 'Edge on tests with schematics, maps, and ordered documents. Treat unknown languages as related ones.' },
       { name: 'Unphased', cost: 1, text: 'You can\'t be made surprised.' },
@@ -127,7 +127,7 @@ const DS_ANCESTRIES = [
     traits: [
       { name: 'Bloodfire Rush', cost: 1, text: 'First time you take damage in a round, gain +2 to speed for the round.' },
       { name: 'Glowing Recovery', cost: 2, text: 'When you use Catch Breath, you can spend as many Recoveries as you like.' },
-      { name: 'Grounded', cost: 1, text: '+1 stability.' },
+      { name: 'Grounded', cost: 1, text: '+1 stability.', bonuses: { stab: 1 } },
       { name: 'Nonstop', cost: 2, text: 'You can\'t be made slowed.' },
       { name: 'Passionate Artisan', cost: 1, text: 'Choose two crafting skills. +2 on project rolls using those skills.' },
     ],
@@ -144,7 +144,7 @@ const DS_ANCESTRIES = [
     traits: [
       { name: 'Corruption Immunity', cost: 1, text: 'Corruption immunity equal to your level + 2.' },
       { name: 'Fearless', cost: 2, text: 'You can\'t be made frightened.' },
-      { name: 'Graceful Retreat', cost: 1, text: '+1 to the distance you can shift when you Disengage.' },
+      { name: 'Graceful Retreat', cost: 1, text: '+1 to the distance you can shift when you Disengage.', bonuses: { disengage: 1 } },
       { name: 'Nimblestep', cost: 2, text: 'Ignore difficult terrain; move at full speed while sneaking.' },
       { name: 'Polder Geist', cost: 1, text: 'When out of line of effect, gain +3 speed at the start of your turn.' },
       { name: 'Reactive Tumble', cost: 1, text: 'When force moved, shift 1 square afterwards as a free triggered action.' },

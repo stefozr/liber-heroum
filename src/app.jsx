@@ -1,5 +1,5 @@
 import React from 'react';
-import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS } from './data.jsx';
+import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES } from './data.jsx';
 import { ThemeStyles } from './theme.jsx';
 import { DS } from './backend.jsx';
 import { AccountStyles, AuthScreen, DisplayNamePrompt, AppBar } from './auth.jsx';
@@ -163,6 +163,45 @@ function migrateCharacterChars(c) {
   return { ...c, cclass: { ...c.cclass, characteristics: base, charModel: 'v2' } };
 }
 
+// Every always-on stat bonus the character has picked up outside their kit:
+// ancestry traits, the chosen prayer/ward/enchantment/augmentation, always-on
+// class features (Null Speed), the complication, and level-gated subclass
+// features from DS_LEVEL_BONUSES. Kits stay separate — Field Arsenal merges
+// the two kits' bonuses via max, while everything here stacks additively.
+function collectStatBonuses(c) {
+  const cls = classDef(c);
+  const anc = ancestryDef(c);
+  const comp = complicationDef(c);
+  const lvl = c.level || 1;
+  const out = [];
+
+  if (anc) {
+    for (const tName of c.ancestry.traits || []) {
+      const t = (anc.traits || []).find(x => x.name === tName);
+      if (t?.bonuses) out.push(t.bonuses);
+    }
+  }
+  if (cls) {
+    for (const f of cls.features || []) if (f.bonuses) out.push(f.bonuses);
+    // Chosen "choose one" options (prayer/ward/enchantment/augmentation/triggered).
+    const pick = (list, chosen) => {
+      const o = chosen && (list || []).find(x => x.name === chosen);
+      if (o?.bonuses) out.push(o.bonuses);
+    };
+    pick(cls.prayers, c.cclass?.prayer);
+    pick(cls.wards, c.cclass?.ward);
+    pick(cls.enchantments, c.cclass?.enchantment);
+    pick(cls.triggereds, c.cclass?.triggeredAction);
+    for (const row of DS_LEVEL_BONUSES) {
+      if (row.cls !== cls.id || lvl < row.level) continue;
+      if (row.sub && row.sub !== c.cclass?.subclass) continue;
+      out.push(row.bonuses);
+    }
+  }
+  if (comp?.bonuses) out.push(comp.bonuses);
+  return out;
+}
+
 function computeDerived(c) {
   const cls = classDef(c);
   const kit = kitDef(c);
@@ -175,47 +214,44 @@ function computeDerived(c) {
   const lvl = c.level || 1;
   const echelon = lvl <= 3 ? 1 : lvl <= 6 ? 2 : lvl <= 9 ? 3 : 4;
 
+  // Characteristics first — several bonuses scale with a characteristic score.
+  const base = { Might: 0, Agility: 0, Reason: 0, Intuition: 0, Presence: 0, ...c.cclass.characteristics };
+  const charBonuses = levelCharBonuses(c);
+  const chars = {};
+  for (const k of ['Might', 'Agility', 'Reason', 'Intuition', 'Presence']) chars[k] = (base[k] || 0) + (charBonuses[k] || 0);
+  const highest = Math.max(...Object.values(chars));
+  const charVal = (name) => (name === 'highest' ? highest : chars[name] || 0);
+
+  const bonuses = collectStatBonuses(c);
+  const sum = (key) => bonuses.reduce((s, b) => s + (b[key] || 0), 0);
+  const sumChar = (key) => bonuses.reduce((s, b) => s + (b[key] ? charVal(b[key]) : 0), 0);
+
   let staminaMax = 0;
   if (cls) {
     staminaMax = cls.starting.stamina1 + (lvl - 1) * cls.starting.staminaPer;
   }
-  // Kit stamina per echelon (best of equipped kits)
-  if (kit || kit2) {
-    staminaMax += kb('sta_per') * echelon;
-  }
-  // Ancestry: Spark Off Your Skin / Staying Power-style
-  if (anc) {
-    for (const t of c.ancestry.traits || []) {
-      // approximate +6 Stamina effects
-      if (/Spark Off Your Skin/.test(t)) staminaMax += 6 * echelon;
-    }
-  }
+  // Per-echelon stamina: best-of-kits + everything else (traits, augmentations, ...).
+  staminaMax += (kb('sta_per') + sum('sta_per')) * echelon;
+  staminaMax += sum('sta') + sum('sta_lvl') * lvl;
 
-  let recoveries = cls ? cls.starting.recoveries : 0;
-  if (anc && (c.ancestry.traits || []).includes('Staying Power')) recoveries += 2;
+  const recoveries = (cls ? cls.starting.recoveries : 0) + sum('rec');
 
-  let speed = anc ? anc.speed : 5;
-  if (anc && (c.ancestry.traits || []).includes('Beast Legs')) speed = Math.max(speed, 6);
-  if (anc && (c.ancestry.traits || []).includes('Swift')) speed = Math.max(speed, 6);
-  if (anc && (c.ancestry.traits || []).includes('Lightning Nimbleness')) speed = Math.max(speed, 7);
-  if (kit || kit2) speed += kb('spd');
+  // Speed: additive bonuses stack on the ancestry base; "you have speed N"
+  // traits (spdMin) then raise it to a minimum without stacking.
+  let speed = (anc ? anc.speed : 5) + kb('spd') + sum('spd') + sumChar('spdChar');
+  for (const b of bonuses) if (b.spdMin) speed = Math.max(speed, b.spdMin);
 
-  let stability = anc ? anc.stability : 0;
-  if (anc && (c.ancestry.traits || []).includes('Grounded')) stability += 1;
-  if (anc && (c.ancestry.traits || []).includes('Curse of Stone')) stability += 1;
-  if (kit || kit2) stability += kb('stab');
+  const stability = (anc ? anc.stability : 0) + kb('stab') + sum('stab') + sumChar('stabChar') + sum('stabLvl') * lvl;
 
-  const base = { Might: 0, Agility: 0, Reason: 0, Intuition: 0, Presence: 0, ...c.cclass.characteristics };
-  const bonuses = levelCharBonuses(c);
-  const chars = {};
-  for (const k of ['Might', 'Agility', 'Reason', 'Intuition', 'Presence']) chars[k] = (base[k] || 0) + (bonuses[k] || 0);
-  const highest = Math.max(...Object.values(chars));
-  const recoveryValue = Math.floor(staminaMax / 3);
+  const disengage = 1 + kb('disengage') + sum('disengage') + sumChar('disChar');
+
+  const recoveryValue = Math.floor(staminaMax / 3)
+    + bonuses.reduce((s, b) => s + (b.recBonusChar ? charVal(b.recBonusChar) : 0), 0);
   const winded = Math.floor(staminaMax / 2);
 
   return {
     staminaMax, recoveries, recoveryValue, winded,
-    speed, stability,
+    speed, stability, disengage,
     chars, highest, echelon,
     potency: cls ? {
       weak: highest - 2, average: highest - 1, strong: highest,
