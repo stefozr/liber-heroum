@@ -336,8 +336,9 @@ const DS_CLASSES = [
     subclasses: [
       { id: 'berserker',  name: 'Berserker',  tag: 'Might',   text: 'You channel ferocity into physical might, a living force shaping the world.', skill: 'Lift' },
       { id: 'reaver',     name: 'Reaver',     tag: 'Cunning', text: 'You channel ferocity into instinct, challenging the order of civilization.', skill: 'Hide' },
-      { id: 'stormwight', name: 'Stormwight', tag: 'Beast',   text: 'You channel ferocity into primordial storms and take the form of an animal.', skill: 'Track' },
+      { id: 'stormwight', name: 'Stormwight', tag: 'Beast',   text: 'You channel ferocity into primordial storms and take the form of an animal.', skill: 'Track', kitPool: 'stormwight' },
     ],
+    kitRequired: true,
     quickKit: 'Panther',
     features: [
       { name: 'Growing Ferocity', text: 'Your aspect grants benefits at 2/4/6 ferocity — bigger Knockback distances, free surges, edges on Might tests, and more. Lost at end of turn.' },

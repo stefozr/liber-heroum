@@ -1,6 +1,6 @@
 // wizard/steps/class.jsx — ClassStep (split out of the former wizard.jsx).
 import React from 'react';
-import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
+import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
@@ -176,7 +176,13 @@ function ClassSubclassPicker({ character, update }) {
   if (!cls || (!cls.subclasses && !cls.pickTwoDomains)) return null;
 
   const isMulti = cls.pickTwoDomains;
-  const setSub = (id) => update(c => ({ ...c, cclass: { ...c.cclass, subclass: id } }));
+  const setSub = (id) => update(c => {
+    // Subclass can scope the kit pool (e.g. Fury's Stormwight) — drop kit picks
+    // that fall outside the new subclass's pool.
+    const pool = kitPoolFor(cls, id);
+    const keep = (kit) => (kit?.id && pool.some(k => k.id === kit.id)) ? kit : { id: null };
+    return { ...c, cclass: { ...c.cclass, subclass: id }, kit: keep(c.kit), kit2: keep(c.kit2) };
+  });
   const toggleDomain = (name) => update(c => {
     const cur = c.cclass.domains || [];
     // Dropping a domain clears any domain feature/ability tied to it.
@@ -566,12 +572,17 @@ function AbilityPicker({ character, update }) {
 
 function ClassKitPicker({ character, update }) {
   const cls = classDef(character);
+  const pool = kitPoolFor(cls, character.cclass.subclass);
   const sel = character.kit.id;
   const sel2 = character.kit2?.id;
   const setKit = (id) => update(c => ({ ...c, kit: { id } }));
-  const sug = cls && cls.quickKit;
-  const sug2 = cls && cls.quickKit2;
+  // Suggested kits only make sense while they're in the active pool
+  // (Fury suggests Panther, which a Stormwight can't take).
+  const inPool = (name) => name && pool.some(k => k.name === name);
+  const sug = cls && inPool(cls.quickKit) && cls.quickKit;
+  const sug2 = cls && inPool(cls.quickKit2) && cls.quickKit2;
   const dual = cls && cls.kit2Required;
+  const stormwight = pool.length > 0 && pool.every(k => k.pool === 'stormwight');
 
   // Dual-kit (e.g. Tactician's Field Arsenal): one selection group, pick two.
   // Clicking toggles a kit in/out of the pair; picking a third drops the oldest.
@@ -588,7 +599,7 @@ function ClassKitPicker({ character, update }) {
 
   const KitGrid = ({ selected, onPick, disabledId, dualSel }) => (
     <div className="grid-3" style={{marginTop: 14}}>
-      {DS_KITS.map(k => {
+      {pool.map(k => {
         const blocked = disabledId && k.id === disabledId;
         const order = dualSel ? orderOf(k.id) : 0;
         const isSel = dualSel ? order > 0 : selected === k.id;
@@ -650,6 +661,8 @@ function ClassKitPicker({ character, update }) {
         </div>
         <Deck>{dual
           ? `Field Arsenal lets the ${cls.name.toLowerCase()} equip two kits at once, gaining both signature abilities. Pick any two below — when both grant the same benefit, you take the higher of the two.`
+          : stormwight
+          ? `A stormwight kit channels your primordial ferocity into an animal form — no armor or weapons, but a signature technique and a primordial damage type all your own.`
           : `A kit is the ${cls ? cls.name.toLowerCase() : ''}'s fighting style — armor, weapons, and a signature technique. Bonuses apply to weapon abilities that match the kit.`}</Deck>
         {dual
           ? <KitGrid onPick={pickDual} dualSel />

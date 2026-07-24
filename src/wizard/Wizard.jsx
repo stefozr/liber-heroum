@@ -1,6 +1,6 @@
 // wizard/Wizard.jsx — the orchestrator: main Wizard + CharacterPreview + isStepValid + the step map.
 import React from 'react';
-import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../app.jsx';
+import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../app.jsx';
 import { timeString, parseCareerSkills } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
@@ -204,8 +204,12 @@ function isStepValid(c, idx) {
       if ((c.cclass.signatures || []).length < sigsRequired) return false;
       if (cls.deep && !c.cclass.heroic3) return false;
       if (cls.deep && !c.cclass.heroic5) return false;
-      if (cls.kitRequired && !c.kit.id) return false;
-      if (cls.kit2Required && !c.kit2?.id) return false;
+      // Kit picks must come from the pool the chosen subclass allows
+      // (Fury's Stormwight is limited to stormwight kits).
+      const kitPool = kitPoolFor(cls, c.cclass.subclass);
+      const inKitPool = (id) => kitPool.some(k => k.id === id);
+      if (cls.kitRequired && !(c.kit.id && inKitPool(c.kit.id))) return false;
+      if (cls.kit2Required && !(c.kit2?.id && inKitPool(c.kit2.id))) return false;
       // Prayer/Ward (Conduit) and Enchantment/Ward (Elementalist) feature choices.
       if (cls.prayers && !c.cclass.prayer) return false;
       if (cls.enchantments && !c.cclass.enchantment) return false;

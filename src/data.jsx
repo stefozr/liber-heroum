@@ -7,7 +7,7 @@ import { DS_ANCESTRIES } from './data/ancestries.js';
 import { DS_CULTURES } from './data/cultures.js';
 import { DS_CAREERS } from './data/careers.js';
 import { DS_CLASSES } from './data/classes.js';
-import { DS_KITS } from './data/kits.js';
+import { DS_KITS, kitPoolFor } from './data/kits.js';
 import { DS_COMPLICATIONS } from './data/complications.js';
 import { DS_STEPS } from './data/steps.js';
 
@@ -17,4 +17,5 @@ Object.assign(window, {
 
 export {
   DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS,
+  kitPoolFor,
 };

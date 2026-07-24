@@ -84,8 +84,35 @@ const DS_KITS = [
     desc: 'A fast warrior who lashes foes with whip or chain.',
     bonuses: { spd: 3, melee: '+1/+1/+1', mDist: 1, disengage: 1 },
     sig: 'Extension of My Arm — melee 3; 4/7/10 + M or A; vertical pull 1/2/3.' },
+
+  // Stormwight kits (Fury: Stormwight aspect only) — animal forms, no armor or weapons.
+  { id: 'boren', name: 'Boren', armor: 'None', weapon: 'None', pool: 'stormwight',
+    desc: 'Stormwight kit — bear form. Large, durable, imposing; pull foes instead of pushing. Primordial damage: cold.',
+    bonuses: { sta_per: 9, stab: 2, melee: '+0/+0/+4' },
+    sig: 'Bear Claws — melee 1; 2/5/7 + M; M<W/A/S, grabbed.' },
+  { id: 'corven', name: 'Corven', armor: 'None', weapon: 'None', pool: 'stormwight',
+    desc: 'Stormwight kit — crow form. Stealthy and quick; edge on hide and sneak. Primordial damage: fire.',
+    bonuses: { sta_per: 3, spd: 3, melee: '+2/+2/+2', disengage: 1 },
+    sig: 'Wing Buffet — melee burst 1 (all enemies); 1/4/6 damage.' },
+  { id: 'raden', name: 'Raden', armor: 'None', weapon: 'None', pool: 'stormwight',
+    desc: 'Stormwight kit — rat form. Mobile and elusive; ignore difficult terrain. Primordial damage: corruption.',
+    bonuses: { sta_per: 3, spd: 3, melee: '+2/+2/+2', disengage: 1 },
+    sig: 'Driving Pounce — melee 1; 2/5/7 + A; push 0/1/2.' },
+  { id: 'vuken', name: 'Vuken', armor: 'None', weapon: 'None', pool: 'stormwight',
+    desc: 'Stormwight kit — wolf form. A fleet-footed pack hunter. Primordial damage: lightning.',
+    bonuses: { sta_per: 9, spd: 2, melee: '+2/+2/+2', disengage: 1 },
+    sig: 'Unbalancing Attack — melee 1; 2/5/7 + M; A<W/A/S, prone.' },
 ];
+
+// Kits available to a class given its chosen subclass. Subclasses may scope the
+// selection to a named pool (e.g. Fury's Stormwight → stormwight kits only);
+// everything else draws from the standard kits.
+function kitPoolFor(cls, subclassId) {
+  const sub = (cls?.subclasses || []).find(s => (s.id || s.name) === subclassId);
+  const pool = sub?.kitPool || 'standard';
+  return DS_KITS.filter(k => (k.pool || 'standard') === pool);
+}
 
 // ───────── Complications (curated subset) ─────────
 
-export { DS_KITS };
+export { DS_KITS, kitPoolFor };
