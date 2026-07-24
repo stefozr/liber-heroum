@@ -13,7 +13,7 @@ import { ReviewStep } from './steps/review.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-function Wizard({ character, update, onExit, onComplete }) {
+function Wizard({ character, update, saveState, onExit, onComplete }) {
   const rawStep = character.wizardStep || 0;
   const stepIndex = Math.max(0, Math.min(DS_STEPS.length - 1, rawStep));
   const step = DS_STEPS[stepIndex];
@@ -63,13 +63,19 @@ function Wizard({ character, update, onExit, onComplete }) {
           <Crest glyph="✠" portrait={character.portrait || undefined} />
           <div>
             <div className="brand-text">DRAW · STEEL</div>
-            <div style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
               {character.identity.name || character.name || 'NEW HERO'}
             </div>
           </div>
         </div>
         <div className="right">
-          <Pill kind="live">SAVED · {timeString()}</Pill>
+          {saveState?.status === 'error' ? (
+            <Pill kind="rubric">SAVE FAILED</Pill>
+          ) : saveState?.status === 'pending' ? (
+            <Pill kind="muted">SAVING…</Pill>
+          ) : (
+            <Pill kind="live">SAVED{saveState?.at ? ` · ${timeString(saveState.at)}` : ''}</Pill>
+          )}
           <Button small kind="ghost" onClick={onExit}>◂ ROSTER</Button>
         </div>
       </div>
@@ -133,11 +139,11 @@ function Wizard({ character, update, onExit, onComplete }) {
           </>
         )}
       >
-        <div style={{fontFamily:'var(--serif)', fontSize:14, color:'var(--ink-2)', lineHeight:1.6}}>
+        <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.6}}>
           A few rites remain unfinished. You can keep editing, or save this hero as a <b style={{color:'var(--gold-2)'}}>draft</b> and return to the Liber later — it won't be playable until completed.
         </div>
         <div style={{marginTop: 16}}>
-          <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>Still to finish</div>
+          <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>Still to finish</div>
           <div className="stack-12">
             {incompleteSteps.map(({ s, i }) => (
               <div
@@ -146,10 +152,10 @@ function Wizard({ character, update, onExit, onComplete }) {
                 className="card"
                 style={{padding:'10px 14px', display:'flex', alignItems:'center', gap: 12, cursor:'pointer'}}
               >
-                <div style={{fontFamily:'var(--mono)', fontSize:11, color:'var(--rubric-2)', letterSpacing:'0.18em'}}>{String(i+1).padStart(2,'0')}</div>
-                <div style={{fontFamily:'var(--display-2)', fontSize:14, fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)'}}>{s.name}</div>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--rubric-2)', letterSpacing:'0.18em'}}>{String(i+1).padStart(2,'0')}</div>
+                <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)'}}>{s.name}</div>
                 <div style={{flex:1}}></div>
-                <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em'}}>FIX ▸</div>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em'}}>FIX ▸</div>
               </div>
             ))}
           </div>
@@ -249,7 +255,7 @@ function CharacterPreview({ character }) {
         <div className="pp-name">{heroName}</div>
       </div>
 
-      <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', textAlign:'center'}}>
+      <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', textAlign:'center'}}>
         {sub || 'Begin the rites'}
       </div>
 
@@ -272,8 +278,8 @@ function CharacterPreview({ character }) {
         <div className="grid-3" style={{gap: 6, gridTemplateColumns: 'repeat(5, 1fr)'}}>
           {['Might','Agility','Reason','Intuition','Presence'].map(k => (
             <div key={k} className="stat-tile" style={{textAlign:'center', padding:'10px 4px'}}>
-              <div className="lbl" style={{fontSize: 8}}>{k.slice(0,3).toUpperCase()}</div>
-              <div className="val" style={{fontSize: 18}}>
+              <div className="lbl" style={{fontSize: '0.5rem'}}>{k.slice(0,3).toUpperCase()}</div>
+              <div className="val" style={{fontSize: '1.125rem'}}>
                 {derived.chars[k] != null ? (derived.chars[k] > 0 ? '+' + derived.chars[k] : derived.chars[k]) : '—'}
               </div>
             </div>
@@ -288,10 +294,10 @@ function CharacterPreview({ character }) {
             padding:'10px 14px', border:'1px solid var(--rubric)',
             background:'rgba(193,74,58,0.08)',
           }}>
-            <div style={{fontFamily:'var(--display)', fontSize:18, letterSpacing:'0.12em', color: 'var(--rubric-2)'}}>
+            <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.12em', color: 'var(--rubric-2)'}}>
               {cls.resource.toUpperCase()}
             </div>
-            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize:13, color: 'var(--ink-2)', marginTop: 2}}>
+            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color: 'var(--ink-2)', marginTop: 2}}>
               The {cls.name.toLowerCase()}'s fuel for greatness.
             </div>
           </div>
@@ -302,14 +308,14 @@ function CharacterPreview({ character }) {
         <div>
           <H4Meta>{kit2 ? 'Kits' : 'Kit'}</H4Meta>
           <div style={{padding:'10px 14px', border:'1px solid var(--line-2)', background:'var(--bg-2)'}}>
-            <div style={{fontFamily:'var(--display)', fontSize:14, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{kit.name.toUpperCase()}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:4}}>
+            <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.14em', color:'var(--gold-2)'}}>{kit.name.toUpperCase()}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:4}}>
               {kit.armor} · {kit.weapon}
             </div>
             {kit2 && (
               <>
-                <div style={{fontFamily:'var(--display)', fontSize:14, letterSpacing:'0.14em', color:'var(--gold-2)', marginTop:8, paddingTop:8, borderTop:'1px dashed var(--line)'}}>{kit2.name.toUpperCase()}</div>
-                <div style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:4}}>
+                <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.14em', color:'var(--gold-2)', marginTop:8, paddingTop:8, borderTop:'1px dashed var(--line)'}}>{kit2.name.toUpperCase()}</div>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:4}}>
                   {kit2.armor} · {kit2.weapon}
                 </div>
               </>

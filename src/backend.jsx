@@ -194,6 +194,36 @@ async function upsertCharacter(c) {
   const { error } = await supabase.from('characters').upsert(charRow(c));
   if (error) throw new Error(error.message);
 }
+
+// ── unload-safe save ─────────────────────────────────────────────────────────
+// The supabase-js client can't be relied on during pagehide (its fetch is
+// cancelled with the document). This variant posts straight to PostgREST with
+// keepalive:true so the browser finishes the request across a refresh/close.
+// The access token is mirrored synchronously here because auth.getSession() is
+// async and would never resolve inside an unload handler.
+let accessToken = null;
+supabase.auth.onAuthStateChange((_event, session) => {
+  accessToken = session ? session.access_token : null;
+});
+
+function upsertCharacterKeepalive(c) {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anon || !accessToken) return Promise.reject(new Error('No session for keepalive save'));
+  return fetch(`${url}/rest/v1/characters?on_conflict=id`, {
+    method: 'POST',
+    keepalive: true,
+    headers: {
+      apikey: anon,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify(charRow(c)),
+  }).then(res => {
+    if (!res.ok) return res.text().then(t => { throw new Error(t || `HTTP ${res.status}`); });
+  });
+}
 async function deleteCharacter(id) {
   const { error } = await supabase.from('characters').delete().eq('id', id);
   if (error) throw new Error(error.message);
@@ -285,7 +315,7 @@ const DS = {
   init, onAuthChange,
   signInWithProvider, signOut, setDisplayName,
   loadAll,
-  upsertCharacter, deleteCharacter, subscribeCharacters, uploadPortrait,
+  upsertCharacter, upsertCharacterKeepalive, deleteCharacter, subscribeCharacters, uploadPortrait,
   createCampaign, joinByCode, updateCampaign, regenInviteCode,
   leaveCampaign, removeMember, disbandCampaign,
 };
