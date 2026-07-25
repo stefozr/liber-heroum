@@ -173,7 +173,6 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
       {/* Top bar */}
       <div className="play-top">
         <div className="left">
-          <Button kind="ghost" small onClick={onExit}>◂ LIBER</Button>
           <div className="brand-mark">
             <span className="brand-glyph">
               <svg viewBox="0 0 100 100" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
@@ -206,6 +205,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
           }}>EXPORT</Button>
           {canEdit && onEdit && <Button kind="ghost" small onClick={onEdit}>EDIT</Button>}
           {canEdit && <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>}
+          <Button kind="ghost" small onClick={onExit}>◂ LIBER</Button>
         </div>
       </div>
 
@@ -766,6 +766,9 @@ const PLAY_CSS = `
   align-items: center; padding: 14px 28px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-top); backdrop-filter: blur(6px);
+  /* lift above .play-bg — fixed elements otherwise paint over the in-flow bar
+     (same arrangement as .wiz-topbar over .step-bg). */
+  position: relative; z-index: 10;
 }
 .play-top .left, .play-top .right { display: flex; align-items: center; gap: 12px; }
 .play-top .right { justify-content: flex-end; }
@@ -809,7 +812,7 @@ const PLAY_CSS = `
 .play-bg {
   /* fixed, not absolute: .play-body scrolls, and the art must stay locked
      to the viewport (same pattern as the wizard's .step-bg). */
-  position: fixed; inset: 0; pointer-events: none;
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-size: cover; background-position: center top; opacity: 0.8;
 }
 .play-bg::after {

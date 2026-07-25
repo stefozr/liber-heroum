@@ -1112,7 +1112,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
     : currentChoice && currentChoice.kind === 'perk' ? takenPerks : null;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? `Edit Level ${nextLevel} \u2014 ${cls.name}` : `Level ${nextLevel} \u2014 ${cls.name}`} width={720}
+    <Modal open={open} onClose={onClose} title={isEditing ? `Edit Level ${nextLevel} \u2014 ${cls.name}` : `Level ${nextLevel} \u2014 ${cls.name}`} width={960}
       footer={(
         <>
           <Button kind="ghost" onClick={isFirst ? onClose : back}>{isFirst ? (isEditing ? 'CANCEL' : 'NOT YET') : '\u25C2 BACK'}</Button>
