@@ -9,6 +9,7 @@ import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from '.
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
+import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants } from './wizard/helpers.js';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
 
 const { useState, useEffect, useMemo, useReducer, useCallback } = React;
@@ -87,6 +88,21 @@ function complicationDef(c) { return c.complication.id ? DS_COMPLICATIONS.find(x
 // increases are NOT written there; instead they're replayed here from the character's level
 // and stored level choices, so re-editing in the wizard always sees a valid level-1 spread.
 const CHAR_KEYS = ['Might', 'Agility', 'Reason', 'Intuition', 'Presence'];
+// Characteristics picked via any char-bonus choice recorded at level l. Choice ids vary
+// by class and level (char-bonus-4 today), so match on the choice's kind, not its id.
+function charBonusPicksAt(d, c, l) {
+  const picks = c.levelChoices && c.levelChoices[l] && c.levelChoices[l].picks;
+  if (!d || !picks) return [];
+  const out = [];
+  for (const ch of d.choices || []) {
+    if (ch.kind !== 'char-bonus') continue;
+    const pick = picks[ch.id];
+    if (!pick) continue;
+    const k = pick.id || pick.name || pick;
+    if (CHAR_KEYS.includes(k)) out.push(k);
+  }
+  return out;
+}
 function levelCharBonuses(c) {
   const out = { Might: 0, Agility: 0, Reason: 0, Intuition: 0, Presence: 0 };
   const cls = classDef(c);
@@ -108,11 +124,7 @@ function levelCharBonuses(c) {
       const { delta, max } = d.autoCharIncreaseAll;
       for (const k of CHAR_KEYS) total[k] = Math.min(max, total[k] + delta);
     }
-    const pick = c.levelChoices && c.levelChoices[l] && c.levelChoices[l].picks && c.levelChoices[l].picks['char-bonus-4'];
-    if (pick) {
-      const k = pick.id || pick.name || pick;
-      if (CHAR_KEYS.includes(k)) total[k] = Math.min(3, total[k] + 1);
-    }
+    for (const k of charBonusPicksAt(d, c, l)) total[k] = Math.min(3, total[k] + 1);
   }
   for (const k of CHAR_KEYS) out[k] = total[k] - base[k];
   return out;
@@ -144,8 +156,7 @@ function migrateCharacterChars(c) {
         const d = data[l];
         if (!d) continue;
         if (d.autoCharIncreaseAll) b += d.autoCharIncreaseAll.delta;
-        const pick = c.levelChoices && c.levelChoices[l] && c.levelChoices[l].picks && c.levelChoices[l].picks['char-bonus-4'];
-        if (pick && (pick.id || pick.name || pick) === k) b += 1;
+        if (charBonusPicksAt(d, c, l).includes(k)) b += 1;
       }
       base[k] = (baked[k] || 0) - b;
     }
@@ -199,6 +210,13 @@ function collectStatBonuses(c) {
     }
   }
   if (comp?.bonuses) out.push(comp.bonuses);
+  // Level-up picks (features/abilities chosen in the level-up flow) that carry stat
+  // bonuses. None of the current LEVELUP_DATA options do, but the pipeline honors them.
+  for (let l = 2; l <= lvl; l++) {
+    const picks = c.levelChoices?.[l]?.picks;
+    if (!picks) continue;
+    for (const p of Object.values(picks)) if (p?.bonuses) out.push(p.bonuses);
+  }
   return out;
 }
 
@@ -754,10 +772,18 @@ function summarizeBenefits(c) {
 
   // Skills: collect descriptions from each source. Prefer concrete picks where stored.
   const skills = [];
-  if (cls && cls.quickSkills?.length) skills.push({ source: cls.name, text: cls.quickSkills.join(' \u00b7 ') });
+  // Duplicate-grant swaps display as "Original \u2192 Replacement".
+  const swapLabel = (originals, effective) => originals.map((s, i) => (effective[i] !== s ? `${s} \u2192 ${effective[i]}` : s));
+  if (cls) {
+    const sub = (cls.subclasses || []).find(s => s.id === c.cclass?.subclass || s.name === c.cclass?.subclass);
+    const granted = [...(cls.grantedSkills || []), ...(sub?.skill ? [sub.skill] : [])];
+    const clsSkills = [...swapLabel(granted, effectiveClassGrants(c)), ...(c.cclass?.skills || [])];
+    if (clsSkills.length) skills.push({ source: cls.name, text: clsSkills.join(' \u00b7 ') });
+    else if (cls.quickSkills?.length) skills.push({ source: cls.name, text: 'Suggested: ' + cls.quickSkills.join(' \u00b7 ') });
+  }
   if (car) {
     const carPicks = (c.career?.skills || []);
-    if (carPicks.length) skills.push({ source: car.name, text: carPicks.join(' \u00b7 ') });
+    if (carPicks.length) skills.push({ source: car.name, text: swapLabel(carPicks, effectiveCareerSkills(c)).join(' \u00b7 ') });
     else skills.push({ source: car.name, text: car.skills });
   }
   if (cu && cu.skills && Object.keys(cu.skills).length) {
@@ -868,11 +894,17 @@ function collectSkillPicks(c) {
   const out = [];
   const push = (name, source, key) => { if (name) out.push({ name, source, key }); };
   Object.entries((c.culture && c.culture.skills) || {}).forEach(([k, s]) => push(s, 'Culture', 'culture:' + k));
-  ((c.career && c.career.skills) || []).forEach(s => push(s, 'Career', 'career'));
+  // Career skills with duplicate-grant swaps applied ("choose another instead").
+  effectiveCareerSkills(c).forEach(s => push(s, 'Career', 'career'));
   if (c.cclass && c.cclass.domainSkill) push(c.cclass.domainSkill, 'Domain', 'domain');
   Object.entries((c.ancestry && c.ancestry.sigSkills) || {}).forEach(([sig, arr]) =>
     (arr || []).forEach(s => push(s, sig, 'sig:' + sig)));
   const cls = classDef(c);
+  if (cls) {
+    // Class skills: grants (with swaps applied) and the picker's choices.
+    for (const s of effectiveClassGrants(c)) push(s, cls.name, 'class');
+    for (const s of c.cclass?.skills || []) push(s, cls.name, 'class');
+  }
   const lvl = cls && typeof window !== 'undefined' && window.LEVELUP_DATA && window.LEVELUP_DATA[cls.id];
   if (lvl) Object.entries(c.levelChoices || {}).forEach(([L, stored]) => {
     for (const ch of ((lvl[L] && lvl[L].choices) || [])) {

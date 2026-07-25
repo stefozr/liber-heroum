@@ -11,7 +11,7 @@ const DS_LEVEL_BONUSES = [
   { cls: 'elementalist', sub: 'earth',     level: 2,  name: 'Disciple of Earth',          bonuses: { sta_lvl: 3 } },
   { cls: 'elementalist', sub: 'earth',     level: 5,  name: 'The Mountain Does Not Move', bonuses: { stabLvl: 1 } },
   { cls: 'null',         sub: null,        level: 9,  name: 'I Am the Weapon',            bonuses: { sta: 21 } },
-  { cls: 'troubadour',   sub: 'green',     level: 10, name: 'Master of Green',            bonuses: { rec: 2 } },
+  { cls: 'elementalist', sub: 'green',     level: 10, name: 'Master of Green',            bonuses: { rec: 2 } },
 ];
 
 export { DS_LEVEL_BONUSES };

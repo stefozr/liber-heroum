@@ -3,8 +3,9 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
+import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import { SkillSwapBlock } from './skill-swap.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -24,6 +25,7 @@ function ClassStep({ character, update }) {
       domainFeature: null, domainAbility: null, domainSkill: null,
       characteristics: {}, charArrayIndex: 0,
       signatures: [], heroic3: null, heroic5: null,
+      skills: [], skillPicks: {}, skillSwaps: {},
       levelAbilities: {},
       prayer: null, ward: null, enchantment: null, triggeredAction: null,
     },
@@ -85,6 +87,9 @@ function ClassStep({ character, update }) {
 
           {/* Censor domain picker */}
           <CensorDomainPicker character={character} update={update} />
+
+          {/* Class skills */}
+          <ClassSkillPicker character={character} update={update} />
 
           {/* Characteristics */}
           <CharacteristicPicker character={character} update={update} />
@@ -181,7 +186,16 @@ function ClassSubclassPicker({ character, update }) {
     // that fall outside the new subclass's pool.
     const pool = kitPoolFor(cls, id);
     const keep = (kit) => (kit?.id && pool.some(k => k.id === kit.id)) ? kit : { id: null };
-    return { ...c, cclass: { ...c.cclass, subclass: id }, kit: keep(c.kit), kit2: keep(c.kit2) };
+    // Subclass can also grant a skill pick (Tactician doctrines) — drop chosen class
+    // skills that no longer fit any pick pool under the new subclass.
+    const newSub = (cls.subclasses || []).find(s => (s.id || s.name) === id);
+    const pools = classSkillPicks(cls, newSub).map(pickPool);
+    const skills = (c.cclass.skills || []).filter(s => pools.some(p => p.includes(s)));
+    const skillPicks = Object.fromEntries(Object.entries(c.cclass.skillPicks || {}).filter(([s]) => skills.includes(s)));
+    // Duplicate-grant swaps only survive for skills the new subclass still grants.
+    const grants = classGrantedSkills(cls, newSub);
+    const skillSwaps = Object.fromEntries(Object.entries(c.cclass.skillSwaps || {}).filter(([s]) => grants.includes(s)));
+    return { ...c, cclass: { ...c.cclass, subclass: id, skills, skillPicks, skillSwaps }, kit: keep(c.kit), kit2: keep(c.kit2) };
   });
   const toggleDomain = (name) => update(c => {
     const cur = c.cclass.domains || [];
@@ -318,10 +332,113 @@ function ClassSubclassPicker({ character, update }) {
               {s.tag && <Tag>{s.tag}</Tag>}
             </div>
             <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{s.text}</div>
-            {s.skill && <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:8, textTransform:'uppercase'}}>+ Skill: {s.skill}</div>}
+            {(s.skill || s.skillGroup) && <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:8, textTransform:'uppercase'}}>+ Skill: {s.skill || `one ${s.skillGroup} skill`}</div>}
           </SelCard>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Class skills: auto-granted skills (class + chosen subclass) shown as locked chips,
+// plus one chip grid per pick group — same idiom as the career skills picker.
+function ClassSkillPicker({ character, update }) {
+  const cls = classDef(character);
+  const sub = cls ? (cls.subclasses || []).find(s => (s.id || s.name) === character.cclass.subclass) : null;
+  const picks = cls ? classSkillPicks(cls, sub) : [];
+  if (!cls || !picks.length) return null;
+
+  const granted = classGrantedSkills(cls, sub);
+  const chosen = character.cclass.skills || [];
+  // Skills held in any OTHER slot (culture, career, domain, ancestry sigs, level-ups).
+  const takenElsewhere = skillsTakenExcept(character, 'class');
+  const attribution = attributeCareerSkills({ auto: granted, picks }, chosen, character.cclass.skillPicks);
+  // Grants duplicated by an earlier slot — official rules allow a same-group swap.
+  const collisions = classGrantCollisions(character);
+  const swaps = character.cclass.skillSwaps || {};
+  const setSwap = (skill, name) => update(c => {
+    const next = { ...(c.cclass.skillSwaps || {}) };
+    if (name) next[skill] = name; else delete next[skill];
+    return { ...c, cclass: { ...c.cclass, skillSwaps: next } };
+  });
+
+  const toggleSkill = (pickIdx, skillName) => {
+    const isOn = attribution.get(skillName) === pickIdx;
+    update(c => {
+      const skills = c.cclass.skills || [];
+      const sp = { ...(c.cclass.skillPicks || {}) };
+      let next;
+      if (isOn) {
+        next = skills.filter(s => s !== skillName);
+        delete sp[skillName];
+      } else if (skills.includes(skillName)) {
+        return c;   // already held by a sibling pick group — rendered blocked
+      } else {
+        next = [...skills, skillName];
+        sp[skillName] = pickIdx;
+      }
+      return { ...c, cclass: { ...c.cclass, skills: next, skillPicks: sp } };
+    });
+  };
+
+  return (
+    <div className="orn-frame" style={{padding:'18px 22px'}}>
+      <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+        <H3>Class Skills</H3>
+        {cls.quickSkills?.length > 0 && (
+          <button type="button" className="quick-pick-btn" onClick={() => {
+            // Quick build: the class's suggested skills, minus autos and duplicates elsewhere.
+            const next = cls.quickSkills.filter(s => !granted.includes(s) && !takenElsewhere.has(s));
+            update(c => ({ ...c, cclass: { ...c.cclass, skills: next, skillPicks: {} } }));
+          }}>Use Quick Build</button>
+        )}
+      </div>
+      <Deck>
+        {cls.skillNote}{' '}
+        {granted.length > 0 && <>Granted: <b style={{color:'var(--gold-2)'}}>{granted.join(', ')}</b>.</>}
+      </Deck>
+      <div className="stack-12" style={{marginTop: 14}}>
+        {picks.map((p, idx) => {
+          const pool = pickPool(p);
+          const pickedCount = chosen.filter(s => attribution.get(s) === idx).length;
+          return (
+            <div key={idx}>
+              <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:6}}>
+                {p.label} — picked <b style={{color: pickedCount === p.count ? 'var(--gold-2)' : 'var(--ink)'}}>{pickedCount}</b> / {p.count}
+              </div>
+              <div className="skill-chip-grid">
+                {pool.map(s => {
+                  const isAuto = granted.includes(s);
+                  const on = !isAuto && attribution.get(s) === idx;
+                  const elsewhere = !on && !isAuto && takenElsewhere.has(s);
+                  // Already claimed by a sibling pick group of this picker.
+                  const inOtherPick = !on && !isAuto && chosen.includes(s);
+                  const blocked = elsewhere || inOtherPick || (!on && !isAuto && pickedCount >= p.count);
+                  return (
+                    <button
+                      type="button"
+                      key={s}
+                      className={`skill-chip${on ? ' on' : ''}${isAuto ? ' auto' : ''}${blocked ? ' blocked' : ''}`}
+                      onClick={() => !isAuto && !blocked && toggleSkill(idx, s)}
+                      disabled={isAuto || blocked}
+                      title={isAuto ? 'Granted by class' : elsewhere ? `Already chosen — ${takenElsewhere.get(s)}` : inOtherPick ? 'Already chosen — class' : blocked ? `Already picked ${p.count}` : ''}
+                    >
+                      {isAuto && swaps[s] && collisions.some(x => x.skill === s) ? `${s} → ${swaps[s]}` : s}{isAuto ? ' ✓' : ''}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <SkillSwapBlock
+        collisions={collisions}
+        swaps={swaps}
+        taken={takenElsewhere}
+        ownNames={[...granted, ...chosen]}
+        onSwap={setSwap}
+      />
     </div>
   );
 }
@@ -431,6 +548,8 @@ function CharacteristicPicker({ character, update }) {
   const flexVals = flex.map(k => (typeof chars[k] === 'number' ? chars[k] : 0));
   const spent = flexVals.reduce((s, v) => s + v, 0);
   const remaining = budget - spent;
+  // Lesser-sum official arrays (e.g. 2/−1/−1) are legal even though they underspend.
+  const isOfficialArray = remaining > 0 && matchesCharArray(cls, flexVals);
 
   const setStat = (key, val) => {
     val = Math.max(CHAR_MIN, Math.min(CHAR_MAX, val));
@@ -446,7 +565,7 @@ function CharacteristicPicker({ character, update }) {
       <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', flexWrap:'wrap', gap: 10}}>
         <H3>Characteristic Array</H3>
         <div style={{display:'flex', alignItems:'center', gap: 12}}>
-          <Pill kind={remaining > 0 ? 'gold' : 'muted'}>{remaining} POINTS LEFT</Pill>
+          <Pill kind={remaining > 0 && !isOfficialArray ? 'gold' : 'muted'}>{isOfficialArray ? 'OFFICIAL ARRAY' : `${remaining} POINTS LEFT`}</Pill>
           <button type="button" className="pb-reset" onClick={reset}>RESET</button>
         </div>
       </div>

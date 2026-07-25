@@ -97,6 +97,26 @@ const ACT_ABILITY_9 = {
   ],
 };
 
+// ── Shared heroic-ability pools (not class-act gated) — official Heroes data ──
+const DRAMA_7 = [
+  { name: 'Extensive Rewrites', cost: 7, resource: 'Drama', flavor: 'No, this isn’t right. That foe was over there!', keywords: ['Area','Magic'], type: 'Maneuver', distance: '4 burst', target: 'Each enemy in the area', powerRoll: 'Presence', tiers: t('Slide 3; P<WEAK, the slide ignores stability','Slide 5; P<AVERAGE, the slide ignores stability','Slide 7; P<STRONG, the slide ignores stability'), effect: 'Instead of sliding a target, you can swap their location with another target as long as each can fit into the other’s space. You can’t slide targets into other creatures or objects using this ability.' },
+  { name: 'Infernal Gavotte', cost: 7, resource: 'Drama', flavor: 'A spicy performance lights a fire under your allies’ feet.', keywords: ['Area','Magic','Melee','Weapon'], type: 'Main action', distance: '3 burst', target: 'Each enemy in the area', powerRoll: 'Agility', tiers: t('5 + A fire; A<WEAK, weakened (save)','7 + A fire; A<AVERAGE, weakened (save)','10 + A fire; A<STRONG, weakened (save)'), effect: 'Each ally in the area can shift up to 2 squares.' },
+  { name: 'Star Solo', cost: 7, resource: 'Drama', flavor: 'Your performance travels and doesn’t stop moving until your audience is completely rocked.', keywords: ['Magic','Melee','Ranged','Strike','Weapon'], type: 'Main action', distance: 'Melee 1 or ranged 10', target: 'One creature or object', powerRoll: 'Presence', tiers: t('5 + P damage','8 + P damage; push 3','11 + P damage; push 5'), effect: 'You can choose to have this ability deal sonic damage. Additionally, you can use this ability against the same target for the next 2 combat rounds without spending drama.' },
+  { name: 'We Meet at Last', cost: 7, resource: 'Drama', flavor: 'You magically intertwine your fate with another creature — for better or worse.', keywords: ['Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'One creature', effect: 'Until the end of the encounter, you and the target can target each other with abilities even beyond distance, using this ability’s distance instead (the target can’t be force moved by an ability used beyond distance this way). Additionally, once on each of your turns, you can use a free maneuver to send the target a motivating or dispiriting message: they gain 2 surges, or take a bane on the next ability roll they make before the start of your next turn.' },
+];
+const DRAMA_9 = [
+  { name: 'Action Hero', cost: 9, resource: 'Drama', flavor: 'You wield your weapon at blistering speed, leaving everyone around you fighting for their lives.', keywords: ['Area','Melee','Weapon'], type: 'Main action', distance: '3 burst', target: 'Each enemy in the area', powerRoll: 'Agility', tiers: t('10 damage','14 damage','20 damage'), effect: 'Unless you score a critical hit, this ability can’t reduce a non-minion target below 1 Stamina.' },
+  { name: 'Continuity Error', cost: 9, resource: 'Drama', flavor: 'Your subject is written into two places at once.', keywords: ['Magic','Ranged'], type: 'Main action', distance: 'Ranged 10', target: 'One enemy or object', effect: 'The target splits into two entities: one stays in the target’s space, the other appears in an unoccupied space of your choice within distance (a split creature is under the Director’s control). Each entity has half the original’s Stamina, is weakened, and takes 1d6 corruption damage at the start of each of their turns. If either entity drops to 0 Stamina, the other persists as the original and the effect ends; if both occupy the same space, they merge and combine their current Stamina.' },
+  { name: 'Love Song', cost: 9, resource: 'Drama', flavor: 'You play a small ditty that plants you inside your target’s heart.', keywords: ['Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'One creature or object', effect: 'The target gains 20 temporary Stamina. Until the end of the encounter, whenever the target takes damage while you’re within distance, you can choose to take the damage instead of the target.' },
+  { name: 'Patter Song', cost: 9, resource: 'Drama', flavor: 'Dazzle them with your fancy patter and they forget where they were.', keywords: ['Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special', powerRoll: 'Presence', tiers: t('One ally within distance can take their turn immediately after yours','Two allies within distance can take their turns immediately after yours, in any order','Three allies within distance can take their turns immediately after yours, in any order; one of them can have already taken a turn this round') },
+];
+const DRAMA_11 = [
+  { name: 'Dramatic Reveal', cost: 11, resource: 'Drama', flavor: 'A little stage trickery, and where once stood a foe, now stands a friend!', keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self', effect: 'Until the end of the encounter, whenever you reduce a creature to 0 Stamina using an ability, you can use a free triggered action to teleport an ally within that ability’s distance into the creature’s space in a plume of rose petals. You or the teleported ally can then make a melee free strike.' },
+  { name: 'Power Ballad', cost: 11, resource: 'Drama', flavor: 'A song for the brokenhearted wraps itself around the target and blossoms into a ward of thorns.', keywords: ['Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally', effect: 'Until the end of the encounter, whenever the target takes damage while winded, they can use a free triggered action to deal half the damage they took to the source of the damage.' },
+  { name: 'Saved in the Edit', cost: 11, resource: 'Drama', flavor: 'You shout a word of power that allows you to rewrite reality to your whims.', keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self', effect: 'Until the end of the encounter, whenever you deal rolled damage to a creature or object, or enable a creature to spend a Recovery, you can use a free triggered action to give them one of the following until the start of your next turn: damage weakness equal to your Presence score against magic, psionic, or weapon abilities; damage immunity equal to your Presence score; a bonus to stability and penalty to speed equal to your Presence score; or a bonus to speed and penalty to stability equal to your Presence score.' },
+  { name: 'The Show Must Go On', cost: 11, resource: 'Drama', flavor: 'You shine a bright light on the players on the stage and compel them to finish the performance.', keywords: ['Area','Magic','Ranged'], type: 'Maneuver', distance: '5 cube within 10', target: 'Each enemy in the area', powerRoll: 'Presence', tiers: t('6 damage; P<WEAK, the target can’t willingly leave the area (EoT)','8 damage; P<AVERAGE, the target can’t willingly leave the area (save)','12 damage; the target can’t willingly leave the area (EoT), or P<STRONG (save)'), effect: 'Each ally within distance can’t obtain lower than a tier 2 outcome on the next test they make before the start of your next turn.' },
+];
+
 export const troubadour = {
   2: {
     summary: 'You learn to coax the muses — and bend a battle\u2019s drama to your will.',
@@ -115,7 +135,7 @@ export const troubadour = {
     staminaGain: 6,
     autoFeatures: ({ sub }) => ACT_FEATURE_3[sub] || [],
     choices: [
-      { id: 'drama-7', label: '7-Drama Ability', help: 'Choose one heroic ability that costs 7 drama.', kind: 'ability', options: () => (window.classDef ? [] : []) , },
+      { id: 'drama-7', label: '7-Drama Ability', help: 'Choose one heroic ability that costs 7 drama.', kind: 'ability', options: DRAMA_7 },
     ],
   },
   4: {
@@ -137,6 +157,7 @@ export const troubadour = {
     staminaGain: 6,
     choices: [
       { id: 'act-feature-5', label: '5th-Level Class Act Feature', help: 'Your class act grants your choice of one of two features.', kind: 'feature', options: ({ sub }) => ACT_FEATURE_5[sub] || [] },
+      { id: 'drama-9', label: '9-Drama Ability', help: 'Choose one heroic ability that costs 9 drama.', kind: 'ability', options: DRAMA_9 },
     ],
   },
   6: {
@@ -169,6 +190,7 @@ export const troubadour = {
     autoFeatures: ({ sub }) => ACT_FEATURE_8[sub] || [],
     choices: [
       { id: 'perk-8', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
+      { id: 'drama-11', label: '11-Drama Ability', help: 'Choose one heroic ability that costs 11 drama.', kind: 'ability', options: DRAMA_11 },
     ],
   },
   9: {
@@ -197,11 +219,3 @@ export const troubadour = {
     ],
   },
 };
-
-// 7-drama abilities for level 3 (shared, not class-act gated).
-troubadour[3].choices[0].options = () => ([
-  { name: 'Harsh Critic', cost: 7, resource: 'Drama', flavor: 'One bad review will ruin their day.', keywords: ['Magic','Melee','Ranged','Strike'], type: 'Main action', distance: 'Melee 1 or ranged 10', target: 'One creature or object', powerRoll: 'Presence', tiers: t('7 + P sonic','10 + P sonic','13 + P sonic'), effect: 'The first time the target uses an ability before your next turn, its non-damage tier outcomes are negated for all targets.' },
-  { name: 'Hypnotic Overtones', cost: 7, resource: 'Drama', flavor: 'An entrancing note twists the senses.', keywords: ['Area','Magic'], type: 'Main action', distance: '2 burst', target: 'Each enemy in the area', powerRoll: 'Presence', tiers: t('Slide 1; I<WEAK, dazed (save)','Slide 1; I<AVERAGE, dazed (save)','Slide 2; I<STRONG, dazed (save)'), effect: 'Spend 2+ drama: the burst grows by 1 per 2 drama.' },
-  { name: 'Quick Rewrite', cost: 7, resource: 'Drama', flavor: 'You write something unexpected into the scene.', keywords: ['Area','Magic','Ranged'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area', powerRoll: 'Presence', tiers: t('4; P<WEAK, slowed (save)','5; P<AVERAGE, slowed (save)','6; P<STRONG, restrained (save)'), effect: 'The area is difficult terrain for enemies.' },
-  { name: 'Upstage', cost: 7, resource: 'Drama', flavor: 'You leave the audience wanting more.', keywords: ['Melee','Strike','Weapon'], type: 'Maneuver', distance: 'Self; see below', target: 'Self', powerRoll: 'Agility or Presence', tiers: t('Taunted (EoT); A<WEAK, prone','Taunted (EoT); A<AVERAGE, prone','Taunted (EoT); A<STRONG, prone & can\u2019t stand'), effect: 'You shift up to your speed and make one power roll against each enemy you move adjacent to.' },
-]);

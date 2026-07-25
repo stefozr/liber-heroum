@@ -1,5 +1,7 @@
 // wizard/helpers.js — pure helpers + shared constants for the creation wizard.
 import { DS_SKILL_GROUPS } from '../data.jsx';
+import { DS_CAREERS } from '../data/careers.js';
+import { DS_CLASSES } from '../data/classes.js';
 
 function timeString(at) {
   const d = at != null ? new Date(at) : new Date();
@@ -41,6 +43,92 @@ function parseCareerSkills(career) {
   return { auto, picks };
 }
 
+// Resolve a pick group's selectable pool: every member of its named groups plus any
+// extra named options (Tactician's list, Shadow's Criminal Underworld).
+function pickPool(p) {
+  return Array.from(new Set([...(p.groups || []).flatMap(g => DS_SKILL_GROUPS[g] || []), ...(p.options || [])]));
+}
+
+// Class skill choice groups for a class + chosen subclass: the class's own skillPicks
+// plus one extra single pick when the subclass grants a skill-group choice
+// (Tactician doctrines). Same {count, groups, options?, label} shape as career picks.
+const NUM_NAMES = ['zero', 'one', 'two', 'three', 'four', 'five'];
+function classSkillPicks(cls, sub) {
+  const picks = (cls?.skillPicks || []).map(p => ({
+    ...p,
+    label: p.label || `${NUM_NAMES[p.count] || p.count} from ${(p.groups || []).join(' or ')}${p.options?.length ? ' (or the listed extras)' : ''}`,
+  }));
+  if (sub?.skillGroup) {
+    picks.push({ count: 1, groups: [sub.skillGroup], label: `one ${sub.skillGroup} — from ${sub.name}` });
+  }
+  return picks;
+}
+
+// Skills a class auto-grants (class grants + the chosen subclass's fixed skill).
+function classGrantedSkills(cls, sub) {
+  return [...(cls?.grantedSkills || []), ...(sub?.skill ? [sub.skill] : [])];
+}
+
+// ── Duplicate-grant substitution ("choose another instead") ──
+// Auto-granted skills (career autos, class/subclass grants) can duplicate a skill the
+// hero already holds. Official rule: gain another skill from the same group instead.
+// The LATER-granting step resolves the collision (ancestry → culture → career → class);
+// the replacement lives in career.skillSwaps / cclass.skillSwaps as { original: swap }
+// and is applied at read time, so the stored skill lists stay untouched.
+
+// Group names that contain the given skill (Track and Handle Animals live in two).
+function groupsOfSkill(name) {
+  return Object.keys(DS_SKILL_GROUPS).filter(g => DS_SKILL_GROUPS[g].includes(name));
+}
+
+// Skills held by slots earlier than the career step: ancestry sig picks + culture.
+function heldBeforeCareer(c) {
+  const held = new Map();
+  Object.values(c.ancestry?.sigSkills || {}).forEach(arr => (arr || []).forEach(s => { if (s) held.set(s, 'Ancestry'); }));
+  Object.values(c.culture?.skills || {}).forEach(s => { if (s) held.set(s, 'Culture'); });
+  return held;
+}
+
+// Career auto-granted skills duplicated by an earlier slot → [{ skill, source }].
+function careerAutoCollisions(c) {
+  const car = DS_CAREERS.find(x => x.id === c.career?.id);
+  if (!car) return [];
+  const held = heldBeforeCareer(c);
+  return parseCareerSkills(car).auto
+    .filter(s => held.has(s))
+    .map(s => ({ skill: s, source: held.get(s) }));
+}
+
+// The career's skills with valid swaps applied (only colliding autos may swap).
+function effectiveCareerSkills(c) {
+  const skills = c.career?.skills || [];
+  const swaps = c.career?.skillSwaps || {};
+  const colliding = new Set(careerAutoCollisions(c).map(x => x.skill));
+  return skills.map(s => (colliding.has(s) && swaps[s]) ? swaps[s] : s);
+}
+
+// Class + subclass granted skills duplicated by any earlier slot → [{ skill, source }].
+function classGrantCollisions(c) {
+  const cls = DS_CLASSES.find(x => x.id === c.cclass?.id);
+  if (!cls) return [];
+  const sub = (cls.subclasses || []).find(s => (s.id || s.name) === c.cclass?.subclass);
+  const held = heldBeforeCareer(c);
+  for (const s of effectiveCareerSkills(c)) if (!held.has(s)) held.set(s, 'Career');
+  return classGrantedSkills(cls, sub)
+    .filter(s => held.has(s))
+    .map(s => ({ skill: s, source: held.get(s) }));
+}
+
+// The class grants with valid swaps applied.
+function effectiveClassGrants(c) {
+  const cls = DS_CLASSES.find(x => x.id === c.cclass?.id);
+  if (!cls) return [];
+  const sub = (cls.subclasses || []).find(s => (s.id || s.name) === c.cclass?.subclass);
+  const swaps = c.cclass?.skillSwaps || {};
+  const colliding = new Set(classGrantCollisions(c).map(x => x.skill));
+  return classGrantedSkills(cls, sub).map(s => (colliding.has(s) && swaps[s]) ? swaps[s] : s);
+}
+
 // Attribute each chosen career skill to exactly one pick group. Storage stays a flat
 // name array (everything downstream consumes it), but a couple of skills live in two
 // groups (Track: exploration+intrigue, Handle Animals: exploration+interpersonal) — so
@@ -53,7 +141,7 @@ function attributeCareerSkills(parsed, skills, skillPicks) {
   if (!parsed || !parsed.picks.length) return map;
   const chosen = (skills || []).filter(s => !parsed.auto.includes(s));
   const picked = skillPicks || {};
-  const pools = parsed.picks.map(p => p.options ? p.options : Array.from(new Set(p.groups.flatMap(g => DS_SKILL_GROUPS[g] || []))));
+  const pools = parsed.picks.map(pickPool);
   const counts = parsed.picks.map(() => 0);
   for (const s of chosen) {
     const idx = picked[s];
@@ -146,6 +234,14 @@ function charBudget(cls) {
   if (!cls || !cls.charArrays) return 0;
   return Math.max(...cls.charArrays.map(arr => arr.reduce((s, v) => s + v, 0)));
 }
+// True when the flex values are a permutation of one of the class's official arrays.
+// Official arrays don't all share a total (e.g. [2,-1,-1] vs [1,1,-1]) — a lesser-sum
+// array is still a legal build even though it underspends the point-buy budget.
+function matchesCharArray(cls, vals) {
+  const key = [...vals].sort((a, b) => a - b).join(',');
+  return (cls?.charArrays || []).some(arr => [...arr].sort((a, b) => a - b).join(',') === key);
+}
+
 // A valid default allocation that spends the full budget (mirrors the best array).
 
 function defaultFlexValues(cls) {
@@ -186,4 +282,4 @@ function fmtKitDmg(v) {
 
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
-export { timeString, parseCareerSkills, attributeCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg };
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg };

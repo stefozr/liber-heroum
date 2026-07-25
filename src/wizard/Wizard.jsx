@@ -1,7 +1,7 @@
 // wizard/Wizard.jsx — the orchestrator: main Wizard + CharacterPreview + isStepValid + the step map.
 import React from 'react';
-import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../app.jsx';
-import { timeString, parseCareerSkills } from './helpers.js';
+import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
+import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
 import { CultureStep } from './steps/culture.jsx';
@@ -166,6 +166,23 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
 }
 
 
+// Every duplicate-grant collision must carry a valid swap: a distinct same-group skill
+// that isn't held by any other slot or by this step's own grants/choices.
+function swapsResolved(c, collisions, swaps, ownKey, ownNames) {
+  if (!collisions.length) return true;
+  const taken = skillsTakenExcept(c, ownKey);
+  const used = [];
+  for (const { skill } of collisions) {
+    const swap = (swaps || {})[skill];
+    if (!swap || swap === skill) return false;
+    const pool = groupsOfSkill(skill).flatMap(g => DS_SKILL_GROUPS[g] || []);
+    if (!pool.includes(swap)) return false;
+    if (taken.has(swap) || ownNames.includes(swap) || used.includes(swap)) return false;
+    used.push(swap);
+  }
+  return true;
+}
+
 function isStepValid(c, idx) {
   const id = DS_STEPS[idx].id;
   switch (id) {
@@ -184,6 +201,8 @@ function isStepValid(c, idx) {
       if (skillCount < requiredCount) return false;
       if ((car.languages || 0) > 0 && (c.career.languages || []).length < car.languages) return false;
       if (!c.career.perk) return false;
+      // Auto-granted duplicates need their "choose another instead" swap.
+      if (!swapsResolved(c, careerAutoCollisions(c), c.career.skillSwaps, 'career', c.career.skills || [])) return false;
       return true;
     }
     case 'class': {
@@ -214,13 +233,23 @@ function isStepValid(c, idx) {
       if (cls.prayers && !c.cclass.prayer) return false;
       if (cls.enchantments && !c.cclass.enchantment) return false;
       if (cls.wards && !c.cclass.ward) return false;
-      // Point-buy: flex stats must spend the full budget, each within range.
+      // Class skill picks (plus the subclass's skill-group pick, e.g. Tactician doctrines).
+      {
+        const sub = (cls.subclasses || []).find(s => (s.id || s.name) === c.cclass.subclass);
+        const needSkills = classSkillPicks(cls, sub).reduce((s, p) => s + p.count, 0);
+        if ((c.cclass.skills || []).length < needSkills) return false;
+        // Grant duplicates need their "choose another instead" swap.
+        const ownNames = [...classGrantedSkills(cls, sub), ...(c.cclass.skills || [])];
+        if (!swapsResolved(c, classGrantCollisions(c), c.cclass.skillSwaps, 'class', ownNames)) return false;
+      }
+      // Point-buy: flex stats spend the full budget, each within range — OR match one of
+      // the official arrays exactly (some official arrays total less than the budget).
       if (cls.flexCharOrder) {
         const chars = c.cclass.characteristics || {};
         const vals = cls.flexCharOrder.map(k => chars[k]);
         if (vals.some(v => typeof v !== 'number' || v < -1 || v > 2)) return false;
         const budget = Math.max(...(cls.charArrays || [[0]]).map(arr => arr.reduce((s, v) => s + v, 0)));
-        if (vals.reduce((s, v) => s + v, 0) !== budget) return false;
+        if (vals.reduce((s, v) => s + v, 0) !== budget && !matchesCharArray(cls, vals)) return false;
       }
       return true;
     }
@@ -346,4 +375,4 @@ const STEP_COMPONENTS = {
 };
 
 
-export { Wizard };
+export { Wizard, isStepValid };

@@ -8,6 +8,7 @@ import {
   characterToFoundryHero, officialOrGenerated, parseTiers, parseTierClause,
   parseDistance, parseTarget, skillId, langId, randomId, dsid,
 } from '../foundry-export.js';
+import { buildValidCharacter } from './helpers/factories';
 
 // ───────── parsers ─────────
 
@@ -471,6 +472,55 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     c.cclass.id = 'elementalist';
     const doc: any = characterToFoundryHero(c, index);
     expect(doc.items.map((i: any) => i.name)).toContain('Enchantment / Ward');
+  });
+
+  // ── Layer F: blanket completeness — every class × subclass canonical build ──
+  // Items that are deliberately app-side composites and have no official counterpart.
+  // Anything else without an official icon is an unmatched feature — the bug class the
+  // Fury regression below caught for one class; this pins it for all of them.
+  const INTENTIONALLY_GENERATED = new Set([
+    'culture :: Culture',                  // aspect-combo cultures (only archetypes are official)
+    'feature :: Domain',                   // chosen-domain summary (censor)
+    'feature :: Domains',                  // chosen-domain summary (conduit)
+    'feature :: Discipline Mastery',       // null: summary of the mastery table inside official Discipline
+    'feature :: College Features',         // shadow: summary of what the official college doc grants
+  ]);
+  it('every class × subclass build exports with zero unexpected unmatched items', () => {
+    for (const cls of DS_CLASSES as any[]) {
+      const subs = (cls.subclasses || [null]).map((s: any) => s && (s.id || s.name));
+      for (const sub of subs) {
+        const c = buildValidCharacter({ cls: cls.id, subclass: sub });
+        const doc: any = characterToFoundryHero(c, index);
+        const unmatched = doc.items
+          .filter((i: any) => !/^(icons|systems|assets)\//.test(i.img || ''))
+          .map((i: any) => `${i.type} :: ${i.name}`)
+          .filter((k: string) => !INTENTIONALLY_GENERATED.has(k));
+        expect(unmatched, `${cls.id}/${sub} unmatched items`).toEqual([]);
+        // Chosen class skills reach the actor's skill list.
+        for (const s of c.cclass.skills) {
+          const id = skillId(s);
+          if (id) expect(doc.system.skills.value, `${cls.id}/${sub} class skill ${s}`).toContain(id);
+        }
+      }
+    }
+  });
+
+  it('a duplicate-grant swap exports the replacement skill, not a wasted duplicate', () => {
+    const c = buildValidCharacter({ cls: 'shadow', subclass: 'caustic-alchemy', career: 'agent' });
+    const replacement = c.cclass.skillSwaps.Sneak;
+    expect(replacement).toBeTruthy();
+    const doc: any = characterToFoundryHero(c, index);
+    expect(doc.system.skills.value).toContain(skillId(replacement));
+    expect(doc.system.skills.value).toContain(skillId('Sneak')); // career still grants it once
+  });
+
+  it('an archetype culture substitutes the official culture document', () => {
+    const c = buildValidCharacter({ environment: 'urban', organization: 'bureaucratic', upbringing: 'noble' });
+    c.culture.archetype = 'Noble house';
+    const doc: any = characterToFoundryHero(c, index);
+    const culture = doc.items.find((i: any) => i.type === 'culture');
+    expect(culture.name).toBe('Noble house');
+    expect(culture.img).toMatch(/^(icons|systems|assets)\//);
   });
 
   it('exports the Null’s chosen Psionic Augmentation from the null-scoped official doc', () => {

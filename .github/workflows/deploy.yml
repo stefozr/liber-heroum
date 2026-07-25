@@ -36,6 +36,9 @@ jobs:
       # `npm ci` choke on Linux (EBADPLATFORM on @esbuild/*-{netbsd,…}). `npm install`
       # reconciles and skips the non-matching optionals. CI only builds, so this is safe.
       - run: npm install --no-audit --no-fund
+      # A red suite or type error blocks the deploy.
+      - run: npm run typecheck
+      - run: npm test
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}

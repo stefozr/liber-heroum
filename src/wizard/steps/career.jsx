@@ -3,8 +3,9 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, attributeCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
+import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import { SkillSwapBlock } from './skill-swap.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -13,7 +14,7 @@ function CareerStep({ character, update }) {
   const setCareer = (id) => update(c => {
     const newCar = DS_CAREERS.find(x => x.id === id);
     const parsed = newCar ? parseCareerSkills(newCar) : { auto: [], picks: [] };
-    return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, languages: [], perk: '' } };
+    return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, skillSwaps: {}, languages: [], perk: '' } };
   });
   const setIncident = (v) => update(c => ({ ...c, career: { ...c.career, incident: v } }));
   const setTaken = (v) => update(c => ({ ...c, career: { ...c.career, taken: v } }));
@@ -34,6 +35,14 @@ function CareerStep({ character, update }) {
   const carLangs = character.career.languages || [];
   const cu = character.culture || {};
   const knownLangs = new Set(['Caelian', cu.language].filter(Boolean));
+  // Career autos duplicated by ancestry/culture — official rules allow a same-group swap.
+  const collisions = careerAutoCollisions(character);
+  const swaps = character.career.skillSwaps || {};
+  const setSwap = (skill, name) => update(c => {
+    const next = { ...(c.career.skillSwaps || {}) };
+    if (name) next[skill] = name; else delete next[skill];
+    return { ...c, career: { ...c.career, skillSwaps: next } };
+  });
 
   const toggleSkill = (pickIdx, skillName) => {
     const isOn = attribution.get(skillName) === pickIdx;
@@ -170,7 +179,7 @@ function CareerStep({ character, update }) {
                             disabled={isAuto || blocked}
                             title={isAuto ? 'Granted by career' : elsewhere ? `Already chosen — ${takenElsewhere.get(s)}` : inOtherPick ? 'Already chosen — career' : blocked ? `Already picked ${p.count}` : ''}
                           >
-                            {s}{isAuto ? ' \u2713' : ''}
+                            {isAuto && swaps[s] && collisions.some(x => x.skill === s) ? `${s} \u2192 ${swaps[s]}` : s}{isAuto ? ' \u2713' : ''}
                           </button>
                         );
                       })}
@@ -182,6 +191,13 @@ function CareerStep({ character, update }) {
                 <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.8125rem'}}>No skill choices to make.</div>
               )}
             </div>
+            <SkillSwapBlock
+              collisions={collisions}
+              swaps={swaps}
+              taken={takenElsewhere}
+              ownNames={carSkills}
+              onSwap={setSwap}
+            />
           </div>
 
           {/* Languages picker */}

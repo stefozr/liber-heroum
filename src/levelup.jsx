@@ -1090,42 +1090,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
   const setPick = (id, value) => setPicks(p => ({ ...p, [id]: value }));
 
   const apply = () => {
-    update(c => {
-      const next = isEditing ? { ...c } : { ...c, level: nextLevel };
-      // Characteristic increases are NOT baked into cclass.characteristics (the level-1
-      // point-buy). They're derived from level + levelChoices by levelCharBonuses() so the
-      // wizard's point-buy validator always sees a valid level-1 spread. The char-bonus pick
-      // is persisted below in levelChoices and read back when computing totals.
-
-      // Picked abilities → add to character's signatures / heroic lists
-      // We'll store all level-up ability picks in cclass.levelAbilities[level]
-      const levelAbilities = { ...(next.cclass.levelAbilities || {}) };
-      const learnedAtThisLevel = [];
-      // Auto-granted abilities (no selection): all options received.
-      const autoAbilities = typeof data.autoAbilities === 'function' ? data.autoAbilities(ctx) : (data.autoAbilities || []);
-      for (const a of autoAbilities) learnedAtThisLevel.push(a);
-      for (const ch of choices) {
-        const v = picks[ch.id];
-        if (!v) continue;
-        if (ch.kind === 'ability') {
-          learnedAtThisLevel.push(v);
-        }
-      }
-      // Replace (not append) this level's abilities so edits don't duplicate.
-      if (learnedAtThisLevel.length) levelAbilities[nextLevel] = learnedAtThisLevel;
-      else delete levelAbilities[nextLevel];
-      next.cclass = { ...next.cclass, levelAbilities };
-
-      // Store all level-up picks for transparency on the sheet
-      const levelChoices = { ...(next.levelChoices || {}) };
-      levelChoices[nextLevel] = { picks: { ...picks }, appliedAt: Date.now() };
-      next.levelChoices = levelChoices;
-
-      // When leveling up fresh, reset current stamina so it heals to the new max.
-      // When editing, leave current vitals untouched.
-      if (!isEditing) next.play = { ...next.play, stamina: null };
-      return next;
-    });
+    update(c => applyLevelUp(c, nextLevel, picks, { isEditing }));
     onClose();
   };
 
@@ -1175,6 +1140,58 @@ function makeContext(character) {
     character,
     cls,
   };
+}
+
+// The choices the level-up flow presents for a class at a level, with condition-gated
+// entries filtered by the character context (exactly what the UI shows).
+function levelChoicesFor(cls, level, ctx) {
+  const data = (cls && LEVELUP_DATA[cls.id]) ? LEVELUP_DATA[cls.id][level] : null;
+  return (data?.choices || []).filter(c => !c.condition || c.condition(ctx));
+}
+
+// Pure level-up reducer shared by the LevelUpFlow UI and tests: returns the next
+// character with `picks` applied at `nextLevel`.
+function applyLevelUp(character, nextLevel, picks, { isEditing = false } = {}) {
+  const cls = classDef(character);
+  const data = (cls && LEVELUP_DATA[cls.id]) ? LEVELUP_DATA[cls.id][nextLevel] : null;
+  if (!data) return character;
+  const ctx = makeContext(character);
+  const choices = levelChoicesFor(cls, nextLevel, ctx);
+
+  const next = isEditing ? { ...character } : { ...character, level: nextLevel };
+  // Characteristic increases are NOT baked into cclass.characteristics (the level-1
+  // point-buy). They're derived from level + levelChoices by levelCharBonuses() so the
+  // wizard's point-buy validator always sees a valid level-1 spread. The char-bonus pick
+  // is persisted below in levelChoices and read back when computing totals.
+
+  // Picked abilities → add to character's signatures / heroic lists.
+  // All level-up ability picks live in cclass.levelAbilities[level].
+  const levelAbilities = { ...(next.cclass.levelAbilities || {}) };
+  const learnedAtThisLevel = [];
+  // Auto-granted abilities (no selection): all options received.
+  const autoAbilities = typeof data.autoAbilities === 'function' ? data.autoAbilities(ctx) : (data.autoAbilities || []);
+  for (const a of autoAbilities) learnedAtThisLevel.push(a);
+  for (const ch of choices) {
+    const v = picks[ch.id];
+    if (!v) continue;
+    if (ch.kind === 'ability') {
+      learnedAtThisLevel.push(v);
+    }
+  }
+  // Replace (not append) this level's abilities so edits don't duplicate.
+  if (learnedAtThisLevel.length) levelAbilities[nextLevel] = learnedAtThisLevel;
+  else delete levelAbilities[nextLevel];
+  next.cclass = { ...next.cclass, levelAbilities };
+
+  // Store all level-up picks for transparency on the sheet
+  const levelChoices = { ...(next.levelChoices || {}) };
+  levelChoices[nextLevel] = { picks: { ...picks }, appliedAt: Date.now() };
+  next.levelChoices = levelChoices;
+
+  // When leveling up fresh, reset current stamina so it heals to the new max.
+  // When editing, leave current vitals untouched.
+  if (!isEditing) next.play = { ...next.play, stamina: null };
+  return next;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1405,7 +1422,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
             <div key={k}>· {k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
           ))}
           {data.autoCharIncreaseAll && <div>· All characteristics <b style={{color:'var(--gold-2)'}}>+{data.autoCharIncreaseAll.delta}</b> (max {data.autoCharIncreaseAll.max})</div>}
-          {otherPicks.filter(ch => ch.kind === 'characteristic').map(ch => {
+          {otherPicks.filter(ch => ch.kind === 'char-bonus').map(ch => {
             const p = picks[ch.id];
             return <div key={ch.id}>· +1 to <b style={{color:'var(--gold-2)'}}>{p.name || p.id || p}</b></div>;
           })}
@@ -1428,9 +1445,9 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
       )}
 
       {/* Other chosen benefits (perks, skills, features) */}
-      {otherPicks.filter(ch => ch.kind !== 'characteristic').length > 0 && (
+      {otherPicks.filter(ch => ch.kind !== 'char-bonus').length > 0 && (
         <div className="stack-12">
-          {otherPicks.filter(ch => ch.kind !== 'characteristic').map(ch => {
+          {otherPicks.filter(ch => ch.kind !== 'char-bonus').map(ch => {
             const pick = picks[ch.id];
             return (
               <div key={ch.id} className="orn-frame" style={{padding:'12px 16px'}}>
@@ -1516,4 +1533,4 @@ const LEVELUP_CSS = `
 function LevelUpStyles() { return <style>{LEVELUP_CSS}</style>; }
 
 Object.assign(window, { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 });
-export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };
+export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, levelChoicesFor, applyLevelUp, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };

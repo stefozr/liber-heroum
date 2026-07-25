@@ -752,121 +752,6 @@ function BiographyContent({ character }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LEVEL UP MODAL
-// ─────────────────────────────────────────────────────────────────────────────
-function LevelUpModal({ open, onClose, character, update }) {
-  const cls = classDef(character);
-  const nextLevel = character.level + 1;
-  const maxLevel = 10;
-
-  if (!open || nextLevel > maxLevel) {
-    return (
-      <Modal open={open && nextLevel > maxLevel} onClose={onClose} title="The Apex"
-        footer={<Button kind="primary" onClick={onClose}>CLOSE</Button>}>
-        <div style={{textAlign:'center'}}>
-          <GlyphRow>✠ · ❦ · ✠</GlyphRow>
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '1.125rem', color:'var(--ink-2)', marginTop:14, lineHeight:1.5}}>
-            You stand at the height of mortal power. There are no more rungs to climb — only legends to write.
-          </div>
-        </div>
-      </Modal>
-    );
-  }
-
-  const benefitsAtLevel = computeLevelUpBenefits(character, nextLevel);
-
-  const apply = () => {
-    update(c => {
-      const next = { ...c, level: nextLevel };
-      // Apply characteristic increases
-      if (benefitsAtLevel.charIncrease) {
-        const chars = { ...next.cclass.characteristics };
-        // +1 to each characteristic (Draw Steel granularly handled per class — we apply +1 to top 3)
-        const sorted = Object.entries(chars).sort((a,b) => b[1] - a[1]).slice(0, 3);
-        sorted.forEach(([k]) => { chars[k] = (chars[k] || 0) + 1; });
-        next.cclass = { ...next.cclass, characteristics: chars };
-      }
-      // Stamina is recomputed via computeDerived; restore current play stamina to max for fresh level
-      next.play = { ...next.play, stamina: null };
-      return next;
-    });
-    onClose();
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} title={`Level ${nextLevel}`} width={680}
-      footer={(
-        <>
-          <Button kind="ghost" onClick={onClose}>NOT YET</Button>
-          <Button kind="primary" onClick={apply}>ASCEND ▲</Button>
-        </>
-      )}>
-      <div className="stack-16">
-        <div style={{textAlign:'center'}}>
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '1.125rem', color:'var(--gold-2)', lineHeight: 1.5, maxWidth: 480, margin: '0 auto'}}>
-            "Your Victories carry you to a new rung of power. Take a breath. The world has shifted."
-          </div>
-        </div>
-        <OrnDivider glyph={`Lv ${character.level}  →  Lv ${nextLevel}`} size="small" />
-
-        <H3>What you gain</H3>
-
-        <div className="stack-12">
-          <BenefitRow icon="⌬" title="Stamina" body={
-            cls ? `+${cls.starting.staminaPer} maximum Stamina. (Total: ${computeDerived({ ...character, level: nextLevel }).staminaMax})` : '—'
-          } />
-
-          {benefitsAtLevel.charIncrease && (
-            <BenefitRow icon="✦" title="Characteristic Increase" body="Your three highest characteristics each gain +1." />
-          )}
-          {benefitsAtLevel.newAbility && (
-            <BenefitRow icon="✠" title="New Heroic Ability" body={`You unlock a new ${benefitsAtLevel.newAbility.cost}-${cls?.resource || 'resource'} ability. Pick one when next you train.`} />
-          )}
-          {benefitsAtLevel.perk && (
-            <BenefitRow icon="❦" title="Perk" body="Choose a new perk from your class's available categories." />
-          )}
-          {benefitsAtLevel.skill && (
-            <BenefitRow icon="✚" title="Skill Increase" body="Gain an additional skill of your choice." />
-          )}
-          {benefitsAtLevel.subclassFeature && (
-            <BenefitRow icon="◈" title={`${cls?.subclassName || 'Subclass'} Feature`} body="Your subclass grants you a new feature at this level." />
-          )}
-        </div>
-
-        <div className="orn-frame" style={{padding: '14px 18px'}}>
-          <H4Meta>Note</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.55}}>
-            This prototype applies Stamina and characteristic increases mechanically. Other choices (new ability picks, perk selections, subclass features) should be made with your Director and recorded by hand — full level-up flows arrive in a future chapter.
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function BenefitRow({ icon, title, body }) {
-  return (
-    <div style={{display:'grid', gridTemplateColumns:'40px 1fr', gap: 14, alignItems:'flex-start'}}>
-      <div style={{width:36, height:36, border:'1px solid var(--gold)', display:'grid', placeItems:'center', fontFamily:'var(--display)', fontSize: '1.125rem', color:'var(--gold)'}}>{icon}</div>
-      <div>
-        <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.16em', color:'var(--ink)'}}>{title.toUpperCase()}</div>
-        <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, marginTop: 4}}>{body}</div>
-      </div>
-    </div>
-  );
-}
-
-function computeLevelUpBenefits(character, nextLevel) {
-  // Simplified — based on common Draw Steel patterns from the censor/conduit/fury tables.
-  return {
-    charIncrease: [4,7,10].includes(nextLevel),
-    perk: [2,4,6,8,10].includes(nextLevel),
-    skill: [4,7,10].includes(nextLevel),
-    subclassFeature: [2,3,5,7,8].includes(nextLevel),
-    newAbility: nextLevel === 3 ? { cost: 7 } : nextLevel === 5 ? { cost: 9 } : nextLevel === 8 ? { cost: 11 } : null,
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PlayView CSS
@@ -922,7 +807,9 @@ const PLAY_CSS = `
   position: relative; overflow-y: auto;
 }
 .play-bg {
-  position: absolute; inset: 0; pointer-events: none;
+  /* fixed, not absolute: .play-body scrolls, and the art must stay locked
+     to the viewport (same pattern as the wizard's .step-bg). */
+  position: fixed; inset: 0; pointer-events: none;
   background-size: cover; background-position: center top; opacity: 0.8;
 }
 .play-bg::after {
@@ -988,9 +875,11 @@ const PLAY_CSS = `
   align-items: center; text-align: center;
 }
 .cnt-lbl { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
-.cnt-val { font-family: var(--display); font-size: 1.625rem; color: var(--gold-2); margin: 4px 0 6px; font-weight: 700; }
+/* margin-top: auto bottom-anchors the number next to the controls, so a
+   wrapping label (HERO TOKENS) can't push it out of line with its siblings. */
+.cnt-val { font-family: var(--display); font-size: 1.625rem; color: var(--gold-2); margin: 4px 0 6px; margin-top: auto; font-weight: 700; }
 .cnt-tot { font-size: 0.875rem; color: var(--ink-3); font-weight: 400; }
-.cnt-ctl { display: flex; gap: 4px; margin-top: auto; width: 100%; }
+.cnt-ctl { display: flex; gap: 4px; width: 100%; }
 .cnt-ctl button {
   flex: 1; padding: 5px 0; background: var(--bg-2); border: 1px solid var(--line-2);
   color: var(--ink-2); font-family: var(--mono); font-size: 0.8125rem; cursor: pointer;

@@ -20,6 +20,7 @@ function digest(x: any) {
 const TABLES = [
   'DS_LANGUAGES', 'DS_SKILL_GROUPS', 'DS_ANCESTRIES', 'DS_CULTURES',
   'DS_CAREERS', 'DS_CLASSES', 'DS_KITS', 'DS_COMPLICATIONS', 'DS_STEPS',
+  'DS_LEVEL_BONUSES',
 ] as const;
 
 describe('game data tables', () => {

@@ -587,9 +587,10 @@ function characterToFoundryHero(c, officialIndex = null) {
   for (const kt of [kit, kit2].filter(Boolean)) addAbility(kitSigAbility(kt), 'signature');
 
   // ── skills / languages ──
+  // collectSkillPicks covers class-granted skills, the subclass's fixed skill, and every
+  // chosen slot; quickSkills only backfill legacy saves made before the class skill picker.
   const skillNames = [
-    ...(cls?.quickSkills || []),
-    ...(sub?.skill ? [sub.skill] : []),
+    ...((c.cclass?.skills?.length) ? [] : (cls?.quickSkills || [])),
     ...collectSkillPicks(c).map(p => p.name),
   ];
   const skills = [...new Set(skillNames.map(skillId).filter(id => FOUNDRY_SKILL_IDS.has(id)))];
