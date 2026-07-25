@@ -104,7 +104,11 @@ async function currentProfile() {
     ({ data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle());
   }
   // Superuser? (admins table is readable; grants happen only via SQL — see migration.sql)
-  const { data: adm } = await supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  // Whitelisted? (allowed_emails has no policies; the is_allowed() RPC answers for us)
+  const [{ data: adm }, { data: allowed }] = await Promise.all([
+    supabase.from('admins').select('user_id').eq('user_id', user.id).maybeSingle(),
+    supabase.rpc('is_allowed'),
+  ]);
   return {
     id: user.id,
     email: user.email,
@@ -112,6 +116,9 @@ async function currentProfile() {
     provider: (prof && prof.provider) || 'email',
     avatar: prof && prof.avatar,
     isAdmin: !!adm,
+    // Email whitelist gate: strict — a missing/failed RPC reads as "not invited",
+    // so apply migration.sql before deploying this client. Admins always pass.
+    isAllowed: !!allowed || !!adm,
     // True once the user has explicitly chosen their in-app name (see setDisplayName).
     // Drives the one-time post-login Display Name prompt in app.jsx.
     displayNameSet: !!(user.user_metadata && user.user_metadata.display_name_set),

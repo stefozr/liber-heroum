@@ -64,6 +64,16 @@ create table if not exists public.admins (
   user_id uuid primary key references public.profiles on delete cascade
 );
 
+-- Invite whitelist. Only these emails (plus admins) may use the app. Managed ONLY
+-- via the SQL editor / service role — deliberately no RLS policies at all, so the
+-- table is invisible to clients (they ask via the is_allowed() RPC instead).
+-- Emails are stored lowercase (enforced by the check constraint).
+create table if not exists public.allowed_emails (
+  email       text primary key check (email = lower(email)),
+  note        text,                        -- who this is, for your own bookkeeping
+  created_at  timestamptz not null default now()
+);
+
 -- ─── Invite-code generator (ambiguity-free alphabet, format ABC-DEF) ──────────
 -- Used as the default for campaigns.invite_code. Loops until it finds a free
 -- code. Mirrors the old client-side makeInviteCode().
@@ -130,6 +140,26 @@ as $$
   );
 $$;
 
+-- May the caller use the app at all? Admins are implicitly allowed. Reads
+-- auth.users (SECURITY DEFINER) rather than trusting the JWT email claim, so it
+-- stays correct across email changes and provider quirks.
+create or replace function public.is_allowed()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.is_admin() or exists (
+    select 1
+    from auth.users u
+    join public.allowed_emails a on a.email = lower(u.email)
+    where u.id = auth.uid()
+  );
+$$;
+
+grant execute on function public.is_allowed() to authenticated;
+
 -- ─── Enable RLS ───────────────────────────────────────────────────────────────
 
 alter table public.profiles         enable row level security;
@@ -137,6 +167,7 @@ alter table public.campaigns         enable row level security;
 alter table public.campaign_members  enable row level security;
 alter table public.characters        enable row level security;
 alter table public.admins            enable row level security;
+alter table public.allowed_emails    enable row level security;
 
 -- ─── Policies: admins ────────────────────────────────────────────────────────
 -- Readable by any signed-in user (the client checks its own admin status). There is
@@ -147,23 +178,27 @@ create policy admins_select on public.admins
 
 -- ─── Policies: profiles ────────────────────────────────────────────────────
 -- Display name + avatar are low-sensitivity, and party screens need to show
--- co-members. Any signed-in user may read profiles; you may only edit your own.
--- INSERT is handled by the signup trigger (SECURITY DEFINER), so no insert policy.
+-- co-members. Any whitelisted user may read profiles; a non-whitelisted user may
+-- still read their OWN row (so the client can greet them on the invite-only
+-- screen) but sees nobody else. You may only edit your own row, and only if
+-- whitelisted. INSERT is handled by the signup trigger (SECURITY DEFINER).
 
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
-  for select to authenticated using (true);
+  for select to authenticated using (id = auth.uid() or public.is_allowed());
 
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles
-  for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+  for update to authenticated
+  using (id = auth.uid() and public.is_allowed())
+  with check (id = auth.uid() and public.is_allowed());
 
 -- The signup trigger creates profiles (SECURITY DEFINER, bypasses RLS). This
 -- policy only backstops the client's defensive self-upsert: you may insert your
 -- own row, never someone else's.
 drop policy if exists profiles_insert on public.profiles;
 create policy profiles_insert on public.profiles
-  for insert to authenticated with check (id = auth.uid());
+  for insert to authenticated with check (id = auth.uid() and public.is_allowed());
 
 -- ─── Policies: campaigns ────────────────────────────────────────────────────
 -- Members (and the GM) may read; only the GM may change/disband. Creation goes
@@ -172,17 +207,18 @@ create policy profiles_insert on public.profiles
 drop policy if exists campaigns_select on public.campaigns;
 create policy campaigns_select on public.campaigns
   for select to authenticated
-  using (gm_id = auth.uid() or public.is_member(id) or public.is_admin());
+  using (public.is_allowed() and (gm_id = auth.uid() or public.is_member(id) or public.is_admin()));
 
 drop policy if exists campaigns_update on public.campaigns;
 create policy campaigns_update on public.campaigns
   for update to authenticated
-  using (gm_id = auth.uid()) with check (gm_id = auth.uid());
+  using (gm_id = auth.uid() and public.is_allowed())
+  with check (gm_id = auth.uid() and public.is_allowed());
 
 drop policy if exists campaigns_delete on public.campaigns;
 create policy campaigns_delete on public.campaigns
   for delete to authenticated
-  using (gm_id = auth.uid());
+  using (gm_id = auth.uid() and public.is_allowed());
 
 -- ─── Policies: campaign_members ─────────────────────────────────────────────
 -- Members may read the roster. Joining is via join_campaign() RPC (no INSERT
@@ -192,12 +228,12 @@ create policy campaigns_delete on public.campaigns
 drop policy if exists members_select on public.campaign_members;
 create policy members_select on public.campaign_members
   for select to authenticated
-  using (public.is_member(campaign_id));
+  using (public.is_allowed() and public.is_member(campaign_id));
 
 drop policy if exists members_delete on public.campaign_members;
 create policy members_delete on public.campaign_members
   for delete to authenticated
-  using (user_id = auth.uid() or public.is_director(campaign_id));
+  using (public.is_allowed() and (user_id = auth.uid() or public.is_director(campaign_id)));
 
 -- ─── Policies: characters ───────────────────────────────────────────────────
 -- SELECT: owner, or any member of the character's campaign (party can see sheets).
@@ -205,27 +241,28 @@ create policy members_delete on public.campaign_members
 --   (encodes the "Director has full edit" rule).
 -- DELETE: owner only.
 -- A superuser (is_admin) bypasses all of these — full read/write/delete everywhere.
+-- Everything additionally requires is_allowed() — the email whitelist (admins pass it).
 
 drop policy if exists characters_select on public.characters;
 create policy characters_select on public.characters
   for select to authenticated
-  using (owner_id = auth.uid() or public.is_member(campaign_id) or public.is_admin());
+  using (public.is_allowed() and (owner_id = auth.uid() or public.is_member(campaign_id) or public.is_admin()));
 
 drop policy if exists characters_insert on public.characters;
 create policy characters_insert on public.characters
   for insert to authenticated
-  with check (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin());
+  with check (public.is_allowed() and (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin()));
 
 drop policy if exists characters_update on public.characters;
 create policy characters_update on public.characters
   for update to authenticated
-  using (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin())
-  with check (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin());
+  using (public.is_allowed() and (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin()))
+  with check (public.is_allowed() and (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin()));
 
 drop policy if exists characters_delete on public.characters;
 create policy characters_delete on public.characters
   for delete to authenticated
-  using (owner_id = auth.uid() or public.is_admin());
+  using (public.is_allowed() and (owner_id = auth.uid() or public.is_admin()));
 
 -- ─── RPC: create a campaign (campaign + director membership atomically) ──────
 
@@ -240,6 +277,9 @@ declare
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
+  end if;
+  if not public.is_allowed() then
+    raise exception 'This chronicle is invite-only.';
   end if;
   insert into public.campaigns (name, description, gm_id, invite_code)
   values (coalesce(nullif(trim(p_name), ''), 'Untitled Campaign'), coalesce(p_description, ''), auth.uid(), public.gen_invite_code())
@@ -267,6 +307,9 @@ begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
   end if;
+  if not public.is_allowed() then
+    raise exception 'This chronicle is invite-only.';
+  end if;
   -- normalize: uppercase, strip everything but A-Z0-9 (mirrors findByCode)
   norm := regexp_replace(upper(coalesce(p_code, '')), '[^A-Z0-9]', '', 'g');
   select * into c from public.campaigns
@@ -292,6 +335,9 @@ as $$
 declare
   new_code text;
 begin
+  if not public.is_allowed() then
+    raise exception 'This chronicle is invite-only.';
+  end if;
   if not public.is_director(p_campaign) then
     raise exception 'Only the Director may regenerate the sigil.';
   end if;
@@ -348,17 +394,17 @@ create policy portraits_read on storage.objects
 drop policy if exists portraits_insert on storage.objects;
 create policy portraits_insert on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (public.is_allowed() and bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
 
 drop policy if exists portraits_update on storage.objects;
 create policy portraits_update on storage.objects
   for update to authenticated
-  using (bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (public.is_allowed() and bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
 
 drop policy if exists portraits_delete on storage.objects;
 create policy portraits_delete on storage.objects
   for delete to authenticated
-  using (bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (public.is_allowed() and bucket_id = 'portraits' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ─── Realtime: stream character changes to party members ─────────────────────
 -- Adds public.characters to Supabase's realtime publication so the app can subscribe
@@ -384,3 +430,16 @@ end $$;
 --   on conflict do nothing;
 --
 -- Revoke with:  delete from public.admins where user_id = (select id from auth.users where email = 'you@example.com');
+
+-- ─── Whitelist a friend (run manually; do NOT commit real emails) ─────────────
+-- The app is invite-only: only emails in allowed_emails (plus admins, who are
+-- implicitly allowed) may use it. Others can sign in but see an "invitation
+-- required" screen and RLS blocks all their data access. Emails must be stored
+-- lowercase (the check constraint rejects otherwise); matching against the
+-- account's email is case-insensitive.
+--
+--   insert into public.allowed_emails (email, note)
+--   values (lower('friend@example.com'), 'Bob from the Tuesday table')
+--   on conflict do nothing;
+--
+-- Revoke with:  delete from public.allowed_emails where email = lower('friend@example.com');

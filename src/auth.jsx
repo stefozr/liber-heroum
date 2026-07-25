@@ -266,6 +266,42 @@ function DisplayNamePrompt({ defaultName, onConfirm }) {
   );
 }
 
+// ───────── Invite-only gate (signed in, but not on the whitelist) ─────────
+// Shown between AuthScreen and the app when currentUser.isAllowed is false.
+// Server-side RLS already blocks all data for these accounts; this is the UX.
+function NotInvitedScreen({ user, onSignOut }) {
+  return (
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
+        <h1 className="auth-title">LIBER HEROUM</h1>
+        <div className="auth-sub">This chronicle is bound by invitation</div>
+
+        <div className="auth-panel">
+          <span className="bc bc-tl"></span><span className="bc bc-tr"></span>
+          <span className="bc bc-bl"></span><span className="bc bc-br"></span>
+
+          <div className="auth-mode-label">Invitation Required</div>
+
+          <p style={{ fontFamily: 'var(--serif)', fontSize: '0.9375rem', color: 'var(--ink-2)', marginTop: 18, lineHeight: 1.6 }}>
+            You are signed in as <strong>{user.displayName}</strong>
+            {user.email ? <> ({user.email})</> : null}, but this account has not yet
+            been granted entry. Ask the keeper of this chronicle to add you.
+          </p>
+
+          <div style={{ marginTop: 20 }}>
+            <Button kind="primary" onClick={onSignOut} style={{ width: '100%', justifyContent: 'center' }}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+
+        <div className="auth-foot">Once invited, sign in again with the same account</div>
+      </div>
+    </div>
+  );
+}
+
 // ───────── App bar (top chrome for roster + campaign views) ─────────
 function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRename, isAdmin, allCount }) {
   return (
@@ -369,5 +405,5 @@ function AccountMenu({ user, onSignOut, onRename }) {
   );
 }
 
-Object.assign(window, { AccountStyles, Avatar, AuthField, AuthScreen, DisplayNamePrompt, AppBar, AccountMenu });
-export { AccountStyles, Avatar, AuthField, AuthScreen, DisplayNamePrompt, AppBar, AccountMenu };
+Object.assign(window, { AccountStyles, Avatar, AuthField, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, AccountMenu });
+export { AccountStyles, Avatar, AuthField, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, AccountMenu };

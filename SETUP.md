@@ -19,10 +19,12 @@ You only do this once. Budget ~30 minutes (most of it is the two OAuth apps).
 
 1. In the project: **SQL Editor → New query**.
 2. Paste the entire contents of [`supabase/migration.sql`](./supabase/migration.sql) and **Run**.
-3. It creates the `profiles`, `campaigns`, `campaign_members`, `characters`
-   tables, all Row-Level-Security policies, the `create_campaign` / `join_campaign`
-   / `regen_invite_code` functions, the signup trigger, and the public
-   `portraits` storage bucket. You should see "Success. No rows returned."
+3. It creates the `profiles`, `campaigns`, `campaign_members`, `characters`,
+   `admins`, and `allowed_emails` tables, all Row-Level-Security policies, the
+   `create_campaign` / `join_campaign` / `regen_invite_code` functions, the
+   signup trigger, and the public `portraits` storage bucket. You should see
+   "Success. No rows returned." Re-running the whole file is safe (it's
+   idempotent), so this is also how you apply schema updates later.
 
 To sanity-check RLS later: **Authentication → Policies** should list policies on
 all four tables, and **Storage** should show a `portraits` bucket.
@@ -99,3 +101,41 @@ The anon key is meant to be public; RLS is what protects the data. Never put the
 > If the repo is not at the user/site root (i.e. it's a project page at
 > `/<repo>/`), no extra config is needed — the Vite build uses relative asset
 > paths (`base: './'`), so it works at any subpath.
+
+---
+
+## 7. Invite friends (email whitelist)
+
+The app is **invite-only**: only emails in the `allowed_emails` table — plus
+anyone in `admins`, who is implicitly allowed — can use it. Anyone else can
+still complete the OAuth sign-in (the login page is public), but they land on
+an "Invitation Required" screen and RLS blocks every data query server-side.
+
+Whitelist a friend in **SQL Editor → New query**:
+
+```sql
+insert into public.allowed_emails (email, note)
+values (lower('friend@example.com'), 'Bob from the Tuesday table')
+on conflict do nothing;
+```
+
+Revoke access again with:
+
+```sql
+delete from public.allowed_emails where email = lower('friend@example.com');
+```
+
+Notes:
+- Emails must be stored **lowercase** (a check constraint rejects otherwise);
+  matching against the account's sign-in email is case-insensitive.
+- You can whitelist an email **before** the friend has ever signed in.
+- Admins can never lock themselves out — `is_allowed()` returns true for any
+  `admins` member even with an empty whitelist. Adding your own email anyway is
+  cheap insurance.
+- If a signed-in friend gets whitelisted while staring at the "Invitation
+  Required" screen, they just sign out and back in.
+- The client treats a missing `is_allowed()` function as "not invited", so on
+  an existing deployment **run the updated `migration.sql` before deploying a
+  client build that includes the whitelist gate**.
+- Assumption: Discord/Google OAuth via Supabase always yields a verified email;
+  an account with no email is simply treated as not invited.

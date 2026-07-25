@@ -2,7 +2,7 @@ import React from 'react';
 import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES } from './data.jsx';
 import { ThemeStyles } from './theme.jsx';
 import { DS } from './backend.jsx';
-import { AccountStyles, AuthScreen, DisplayNamePrompt, AppBar } from './auth.jsx';
+import { AccountStyles, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar } from './auth.jsx';
 import { AdminScreen } from './admin.jsx';
 import { CampaignStyles, CampaignHub, CampaignDetail } from './campaigns.jsx';
 import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from './tweaks-panel.jsx';
@@ -330,7 +330,9 @@ function App() {
       hadUserRef.current = !!user;
       setCurrentUser(user);
       if (user) {
-        if (!bootedRef.current || !had) {
+        // Non-whitelisted users see the NotInvitedScreen; RLS would return empty
+        // sets anyway, so skip the dead queries.
+        if (user.isAllowed && (!bootedRef.current || !had)) {
           try { await refreshStore(); } catch (e) { console.error('Failed to load your data', e); }
         }
         if (bootedRef.current && !had) { setActiveId(null); setActiveCampaignId(null); setView('roster'); }
@@ -349,7 +351,7 @@ function App() {
   // hero the user is actively EDITING so an echo of their own save can't clobber in-progress
   // local state; everything else (incl. a hero we're only viewing read-only) is applied.
   useEffect(() => {
-    if (booting || !currentUser) return;
+    if (booting || !currentUser || !currentUser.isAllowed) return;
     const off = DS.subscribeCharacters(
       (row) => setCharacters(prev => {
         if (row.id === activeIdRef.current && canEditCharacter(row)) return prev;
@@ -641,6 +643,8 @@ function App() {
           </div></div>
         ) : !currentUser ? (
           <AuthScreen onProvider={doProvider} />
+        ) : !currentUser.isAllowed ? (
+          <NotInvitedScreen user={currentUser} onSignOut={signOut} />
         ) : !currentUser.displayNameSet ? (
           <DisplayNamePrompt defaultName={currentUser.displayName} onConfirm={setDisplayName} />
         ) : chromeView ? (
