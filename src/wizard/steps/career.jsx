@@ -283,7 +283,7 @@ function CareerStep({ character, update }) {
 
 function KV({ k, v }) {
   return (
-    <div style={{display:'grid', gridTemplateColumns:'120px 1fr', gap: 12, padding:'4px 0', borderBottom: '1px dashed var(--line)'}}>
+    <div className="wiz-kv" style={{padding:'4px 0', borderBottom: '1px dashed var(--line)'}}>
       <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase'}}>{k}</div>
       <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink)'}}>{v}</div>
     </div>

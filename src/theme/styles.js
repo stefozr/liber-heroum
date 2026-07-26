@@ -1,6 +1,7 @@
 // theme/styles.js — the Reliquary stylesheet (RELIQUARY_CSS) + the <style> injector.
 // Kept as a JS string injected by ThemeStyles so the runtime theme toggle is unchanged.
 import React from 'react';
+import { MQ } from './breakpoints.js';
 
 const RELIQUARY_CSS = `
 /* All font sizes are rem against a 16px baseline; the global text-size knob
@@ -430,6 +431,14 @@ body[data-theme="obsidian"] .app .bg-grain {
 .roster-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px;
 }
+/* Empty-state block, sat beside the "Forge a New Hero" card. Spans 2 tracks
+   rather than all of them so it shares row 1 with that card instead of being
+   pushed below it; the phone tier switches to 1 / -1 (see Responsive). */
+.roster-empty {
+  grid-column: span 2;
+  border: 1px dashed var(--line-2); padding: 40px 24px; text-align: center;
+  min-height: 230px; display: grid; place-items: center;
+}
 .hero-card {
   border: 1px solid var(--line-2); background: var(--bg-1);
   padding: 0; position: relative; overflow: hidden; cursor: pointer;
@@ -465,7 +474,10 @@ body[data-theme="obsidian"] .app .bg-grain {
 .hero-card .hc-bottom .hc-del {
   background: transparent; border: none; color: var(--ink-3); cursor: pointer;
   font-family: var(--mono); font-size: 0.6875rem; padding: 4px 6px;
+  position: relative;
 }
+/* Touch target without changing the visual size. */
+.hero-card .hc-bottom .hc-del::after { content: ''; position: absolute; inset: -9px; }
 .hero-card .hc-bottom .hc-del:hover { color: var(--rubric-2); }
 .hero-card.hc-new {
   display: grid; place-items: center; min-height: 230px;
@@ -484,7 +496,11 @@ body[data-theme="obsidian"] .app .bg-grain {
 .wiz {
   position: relative; z-index: 2; width: 100%; height: 100%;
   display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden;
+  /* Grid children default to min-width:auto, so the topbar's content would
+     otherwise widen .wiz past the viewport and get clipped. */
+  min-width: 0;
 }
+.wiz > *, .wiz-topbar > *, .wiz-footer > * { min-width: 0; }
 .wiz-topbar {
   display: grid; grid-template-columns: 1fr auto 1fr;
   align-items: center; padding: 16px 36px;
@@ -500,13 +516,38 @@ body[data-theme="obsidian"] .app .bg-grain {
   font-family: var(--display); font-size: 0.8125rem; letter-spacing: 0.34em; color: var(--gold);
   text-transform: uppercase;
 }
+/* Two-cell variant (no centre label) used by the wizard shell. */
+.wiz-topbar-2 { grid-template-columns: 1fr auto; }
+
+/* 5-up characteristics strip in the wizard preview card. Distinct from play's
+   .chars-row, which lives in PLAY_CSS and is not mounted during the wizard. */
+.chars-5 { display: grid; grid-template-columns: repeat(5, 1fr); }
+.chars-5 .stat-tile .lbl { font-size: 0.5rem; }
+
+/* Key/value rows in the career step. */
+.wiz-kv { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; align-items: baseline; }
+
+/* Class flavour banner (crest beside prose). The crest is only 60px, so the two
+   columns hold up on a phone — just the padding needs to come in. */
+.class-banner {
+  padding: 20px 24px; display: grid; grid-template-columns: auto 1fr;
+  gap: 18px; align-items: center;
+}
 
 /* Step rail */
 .wiz-rail {
   display: flex; padding: 0 36px; background: rgba(7,9,28,0.7);
   border-bottom: 1px solid var(--line); backdrop-filter: blur(4px);
   position: relative; z-index: 10;
+  /* The 7 steps need ~1080px, and .wiz is overflow:hidden, so the rail clips
+     rather than scrolls on narrow desktops. Scrollable unconditionally — a
+     no-op at widths where the steps already fit. Scrollbar hidden because the
+     rail is chrome, not content. */
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; scroll-snap-type: x proximity;
 }
+.wiz-rail::-webkit-scrollbar { display: none; }
 .wiz-rail .rstep {
   flex: 1; padding: 14px 8px 12px; border-bottom: 2px solid transparent;
   display: flex; align-items: center; gap: 10px; cursor: pointer;
@@ -745,8 +786,8 @@ body[data-theme="obsidian"] .app .bg-grain {
 .modal {
   background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
   border: 1px solid var(--gold);
-  width: 100%; max-width: 720px;
-  max-height: 90vh; overflow-y: auto;
+  width: 100%; max-width: var(--modal-w, 720px);
+  max-height: 90vh; max-height: 90dvh; overflow-y: auto;
   position: relative;
   box-shadow: 0 0 60px rgba(212,169,69,0.25), 0 0 0 1px rgba(212,169,69,0.2);
 }
@@ -891,6 +932,150 @@ body[data-theme="obsidian"] .app .bg-grain {
   margin-top: 9px; font-family: var(--serif); font-size: 0.78125rem; color: var(--ink-2); line-height: 1.5;
 }
 .kit-card .kit-sig-effect b { color: var(--gold-2); }
+
+/* ══════════════════════ Responsive ══════════════════════
+   Co-located deliberately: media queries add no specificity, so these must sit
+   in the same stylesheet as the rules they override. See theme/breakpoints.js.
+   RELIQUARY_CSS is the only sheet mounted on every screen, so anything shared
+   across screens belongs here rather than in a per-screen sheet. */
+
+${MQ.rail} {
+  /* The 7-step rail needs ~1080px, so it runs out of room well before the
+     tablet tier. Steps stop stretching and the rail scrolls instead. */
+  .wiz-rail { padding: 0 16px; }
+  .wiz-rail .rstep { flex: 0 0 auto; scroll-snap-align: center; }
+}
+
+${MQ.tab} {
+  /* Column collapse. .grid-2/3/4 back ~34 call sites across 10 files, so this
+     block alone reflows most of the wizard and review screens. */
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+
+  /* Normalise the type floor: 0.5rem would land under 10.5px from here down.
+     Promoting to 0.5625rem keeps every label at ~11px without hardcoding px,
+     which would break the all-rem invariant this stylesheet documents. */
+  .pb-lock { font-size: 0.5625rem; }
+
+  /* Wide tracking is the third size lever after font-size and padding, and the
+     cheapest: ~13% of the width of every label, at no legibility cost. */
+  .eyebrow, .h4-meta, .roster-hero .meta, .wiz-topbar .center { letter-spacing: 0.16em; }
+  .tag, .pill { letter-spacing: 0.14em; }
+  .glyph-row { letter-spacing: 0.2em; }
+
+  .h1-display { font-size: 2.25rem; }
+  .roster-hero h1 { font-size: 2.5rem; }
+  .drop-cap { font-size: 3.25rem; margin-right: 8px; vertical-align: -8px; }
+
+  .roster-inner { padding: 40px 24px 60px; }
+  .wiz-step .col-main { padding: 26px 24px 0; }
+  .wiz-topbar, .wiz-footer { padding-left: 22px; padding-right: 22px; }
+  .wiz-rail { padding: 0 12px; }
+
+  /* Badge-only rail: 7 numbers plus one active label fit in ~500px, so the rail
+     never needs scrolling on a phone. Doing this at the tablet tier rather than
+     the phone tier is what makes the CSS-only solution complete. */
+  .wiz-rail .rstep .rname { display: none; }
+  .wiz-rail .rstep.active .rname { display: block; }
+  .wiz-rail .rnum { width: 34px; height: 34px; }
+  .wiz-rail .rstep + .rstep { padding-left: 12px; }
+
+  .portrait-uploader { grid-template-columns: 1fr; }
+  .modal-backdrop { padding: 24px 20px; }
+  .modal-head { padding: 20px 22px 14px; }
+  .modal-body { padding: 18px 22px; }
+  .modal-foot { padding: 16px 22px; }
+  .skill-chip-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
+
+${MQ.phone} {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+
+  .h1-display { font-size: 1.875rem; }
+  /* 2rem would measure ~361px against a 358px content box and overflow. */
+  .roster-hero h1 { font-size: 1.75rem; }
+  .roster-hero { padding: 24px 0 20px; }
+  .roster-hero .sub { font-size: 1.0625rem; }
+  .h2-display { font-size: 1.375rem; }
+  .drop-cap { font-size: 2.75rem; }
+  .deck { font-size: 1rem; }
+
+  .roster-inner { padding: 28px max(16px, env(safe-area-inset-left)) 48px max(16px, env(safe-area-inset-right)); }
+  .roster-section-title { margin: 28px 0 14px; }
+  .wiz-step .col-main { padding: 20px 16px 0; }
+  .wiz-topbar { grid-template-columns: 1fr auto; padding: 12px 14px; }
+  .wiz-topbar .center { display: none; }
+  .wiz-topbar .right { flex-wrap: wrap; justify-content: flex-end; }
+  /* The SAVED pill restates what the app already shows; drop it before the
+     ROSTER button, which is the only way out of the wizard. */
+  .wiz-topbar .right .pill { display: none; }
+  .wiz-topbar .brand-text, .wiz-topbar .left > div > div:last-child { font-size: 0.625rem; }
+  .wiz-footer { padding: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .wiz-footer .meta { display: none; }
+
+  /* The empty-state block spans 2 tracks on desktop. Once only one track fits,
+     spanning 2 would create an implicit second column and overflow sideways. */
+  .roster-empty { grid-column: 1 / -1; }
+
+  /* Stays >=12px of padding so the modal's ::before/::after diamonds, which sit
+     at -9px, are not clipped by the backdrop edge. */
+  .modal-backdrop { padding: 16px 12px; }
+  .modal { max-width: none; }
+  .modal-head { padding: 18px 18px 12px; }
+  .modal-body { padding: 16px 18px; }
+  .modal-foot { padding: 14px 18px; flex-wrap: wrap; gap: 10px; }
+
+  /* Card-internal key/value grids: two auto columns squeeze the value to nothing. */
+  .ability-card .ac-meta { grid-template-columns: 1fr; gap: 2px; }
+  .ac-roll { grid-template-columns: 1fr; gap: 2px; }
+  .ac-roll .t { margin-top: 4px; }
+  .kit-card .kit-roll { grid-template-columns: 1fr; gap: 2px; }
+  .ability-card .ac-row { flex-wrap: wrap; gap: 6px; }
+
+  /* 5 point-buy stats over 2 rows; the odd one out spans the full width. */
+  .pb-grid { grid-template-columns: repeat(2, 1fr); }
+  .pb-grid .pb-stat:nth-child(5) { grid-column: 1 / -1; }
+
+  .review-portrait { width: 116px; }
+  .preview-portrait { height: 150px; }
+  .chars-5 { grid-template-columns: repeat(3, 1fr); }
+  .wiz-kv { grid-template-columns: 1fr; gap: 2px 0; }
+  .class-banner { padding: 14px 16px; gap: 12px; }
+
+  /* Touch targets. 44px is the platform minimum; these all sit well under it. */
+  .btn, .btn.small { min-height: 44px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .skill-chip { min-height: 44px; }
+  .quick-pick-btn, .pb-reset { min-height: 40px; padding-left: 12px; padding-right: 12px; }
+  .pb-btn { width: 40px; height: 40px; }
+  .input-text, .input-area, .input-select { padding: 13px 14px; }
+}
+
+/* Scroll containment: without this, reaching the end of an inner scroller hands
+   the gesture to the page behind it. */
+.roster, .wiz-step, .modal { overscroll-behavior: contain; }
+
+${MQ.touch} {
+  /* Hover-only reveals that are the ONLY cue for a real action. A capability
+     query rather than a width one, so touch laptops get them too. */
+  .portrait-drop .portrait-overlay { opacity: 1; }
+  /* A disabled skill chip explains itself only through title=, which touch users
+     never see. :has() targets exactly the grids that actually contain one, so no
+     hint appears where nothing is blocked. Desktop keeps the per-chip tooltips,
+     which are more specific than this general line. */
+  .skill-chip-grid:has(.skill-chip.blocked, .skill-chip.auto)::after {
+    content: 'Dimmed skills are already granted by another choice, or the pick is full.';
+    grid-column: 1 / -1;
+    font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
+    letter-spacing: 0.1em; line-height: 1.5; margin-top: 2px; text-transform: none;
+  }
+
+  /* iOS keeps :hover applied after a tap until you tap elsewhere, so a lift
+     transform sticks. Colour changes latch too but read as a selection hint;
+     movement reads as a bug. Reset rather than relocate, so rule order is
+     untouched — this block is last, and the selectors match exactly. */
+  .hero-card:hover { transform: none; box-shadow: none; }
+}
 `;
 
 // Render <style> tag once

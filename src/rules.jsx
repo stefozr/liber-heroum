@@ -1,4 +1,5 @@
 import React from 'react';
+import { MQ } from './theme/breakpoints.js';
 // rules.jsx — Default maneuvers + full rules glossary sourced from rules.pdf.
 // Exports to window: DS_MANEUVERS, DS_RULES, ManeuversPanel, RulesGlossary.
 
@@ -328,7 +329,10 @@ const RULES_CSS = `
 /* Rules glossary modal */
 .rg-modal {
   display: grid; grid-template-columns: 260px 1fr;
-  width: min(960px, 96vw); height: min(720px, 88vh);
+  /* 100% not 96vw: the backdrop is already padded, so a vw-relative width
+     overhangs it (and gets clipped by body{overflow:hidden}) at any viewport
+     where 96vw exceeds the padded box — roughly 830px to 1000px. */
+  width: min(960px, 100%); height: min(720px, 88dvh);
   border: 1px solid var(--gold);
   background: linear-gradient(180deg,
     rgba(20,20,26, calc(0.97 * var(--surface-alpha, 1))),
@@ -384,13 +388,25 @@ const RULES_CSS = `
   overflow-y: auto; padding: 26px 32px 32px;
   position: relative;
 }
+/* A direct child of .rg-modal, not .rg-body — .rg-body's top-right corner is the
+   modal's, so the desktop position is unchanged, but it no longer scrolls away. */
 .rg-close {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute; top: 14px; right: 14px; z-index: 8;
   width: 32px; height: 32px;
-  background: transparent; border: 1px solid var(--line-2);
+  background: rgba(8,8,10,0.72); border: 1px solid var(--line-2);
   color: var(--ink-2); cursor: pointer;
   font-family: var(--display); font-size: 1rem;
 }
+/* Phone-only drawer trigger for the section nav. */
+.rg-nav-toggle {
+  display: none; align-items: center; gap: 10px;
+  min-height: 52px; padding: 0 56px 0 16px; width: 100%;
+  background: rgba(8,8,10,0.5); border: 0; border-bottom: 1px solid var(--line);
+  color: var(--gold-2); cursor: pointer; text-align: left;
+  font-family: var(--display-2); font-size: 0.75rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.rg-nav-toggle .rg-burger { font-size: 0.9375rem; color: var(--ink-2); }
 .rg-close:hover { border-color: var(--rubric-2); color: var(--rubric-2); }
 .rg-section-title {
   font-family: var(--display); font-size: 1.75rem; letter-spacing: 0.1em;
@@ -454,6 +470,39 @@ const RULES_CSS = `
 }
 .rules-launcher.large:hover::before { color: #2a1c08; }
 .rules-launcher.large:active { transform: translateY(1px); }
+
+/* ══════════════════════ Responsive ══════════════════════ */
+
+${MQ.tab} {
+  .rg-modal { grid-template-columns: 200px 1fr; height: min(720px, 86dvh); }
+  .rg-nav-item { padding: 9px 14px; letter-spacing: 0.14em; }
+  .rg-body { padding: 22px 22px 26px; }
+}
+
+${MQ.phone} {
+  /* One column, nav lifted out into an overlay drawer. Width 100% rather than a
+     vw value so the (now smaller) backdrop padding governs and the modal cannot
+     overhang the viewport the way min(960px, 96vw) did. */
+  .rg-modal {
+    grid-template-columns: 1fr; grid-template-rows: auto 1fr;
+    width: 100%; height: 92dvh;
+  }
+  .rg-nav-toggle { display: flex; }
+  .rg-nav {
+    display: none;
+    position: absolute; inset: 52px 0 0 0; z-index: 6;
+    border-right: 0; padding: 10px 0;
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-0));
+  }
+  .rg-modal.nav-open .rg-nav { display: block; }
+  .rg-nav-head { display: none; }
+  .rg-nav-item { padding: 13px 18px; min-height: 44px; letter-spacing: 0.16em; }
+  .rg-body { padding: 20px 16px 28px; }
+  .rg-section-title { font-size: 1.5rem; letter-spacing: 0.06em; }
+  .rg-close { width: 44px; height: 44px; top: 4px; right: 6px; }
+  .mnv-roll { grid-template-columns: auto 1fr; }
+  .rules-launcher.large { padding: 13px 18px; letter-spacing: 0.16em; }
+}
 `;
 
 function RulesStyles() {
@@ -514,6 +563,10 @@ function ManeuverRow({ m }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function RulesGlossary({ open, onClose }) {
   const [activeId, setActiveId] = React.useState(DS_RULES[0].id);
+  // Phone-only nav drawer. The 260px sidebar leaves ~115px of content on a phone,
+  // and 13 sections is too many for a tab strip, so it becomes an overlay instead.
+  // Inert on desktop, where .rg-nav-toggle is display:none.
+  const [navOpen, setNavOpen] = React.useState(false);
   const bodyRef = React.useRef(null);
 
   // Reset scroll position when switching sections
@@ -529,13 +582,33 @@ function RulesGlossary({ open, onClose }) {
     return () => window.removeEventListener('keydown', fn);
   }, [open, onClose]);
 
+  // This component stays mounted with an `open` prop, so the drawer would
+  // otherwise still be open the next time the glossary is launched.
+  React.useEffect(() => {
+    if (!open) setNavOpen(false);
+  }, [open]);
+
   if (!open) return null;
   const active = DS_RULES.find(s => s.id === activeId) || DS_RULES[0];
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <RulesStyles />
-      <div className="rg-modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`rg-modal${navOpen ? ' nav-open' : ''}`} onClick={(e) => e.stopPropagation()}>
+        {/* Moved out of .rg-body so it no longer scrolls away with the prose, and
+            so it cannot collide with the nav toggle in the stacked phone layout.
+            Desktop resting position is unchanged. */}
+        <button type="button" className="rg-close" onClick={onClose} aria-label="Close">{'\u00d7'}</button>
+
+        <button
+          type="button"
+          className="rg-nav-toggle"
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen(o => !o)}
+        >
+          <span className="rg-burger">{'\u2630'}</span>{active.title}
+        </button>
+
         <div className="rg-nav">
           <div className="rg-nav-head">
             <div className="glyph">{'\u2720'}</div>
@@ -547,7 +620,7 @@ function RulesGlossary({ open, onClose }) {
               key={s.id}
               type="button"
               className={`rg-nav-item${s.id === activeId ? ' active' : ''}`}
-              onClick={() => setActiveId(s.id)}
+              onClick={() => { setActiveId(s.id); setNavOpen(false); }}
             >
               {s.title}
             </button>
@@ -555,7 +628,6 @@ function RulesGlossary({ open, onClose }) {
         </div>
 
         <div className="rg-body" ref={bodyRef}>
-          <button type="button" className="rg-close" onClick={onClose} aria-label="Close">{'\u00d7'}</button>
           <div className="rg-section-eyebrow">Chapter</div>
           <h2 className="rg-section-title">{active.title}</h2>
           {active.intro && (

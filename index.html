@@ -3,20 +3,34 @@
 <head>
 <meta charset="utf-8">
 <title>Draw Steel — Character Manager</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=Cinzel:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;500;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <style>
-  /* Global text-size knob — all app font sizes are rem, computed against a 16px baseline. */
+  /* Global text-size knob — all app font sizes are rem, computed against a 16px baseline.
+     The ladder scales every size at once. It stops at 122% rather than 100% because the
+     app's smallest label (0.5625rem) would drop to 9px; at 122% it holds at ~11px.
+     These breakpoints mirror src/theme/breakpoints.js — HTML can't import JS, so keep
+     the two in sync. */
   html { font-size: 135%; }
+  @media (max-width: 900px) { html { font-size: 128%; } }
+  @media (max-width: 560px) { html { font-size: 122%; } }
+  /* Without this iOS inflates text in landscape, defeating the ladder above. */
+  html { -webkit-text-size-adjust: 100%; }
   html, body { margin: 0; padding: 0; background: #08080a; color: #ece4d2;
     font-family: 'EB Garamond', Georgia, serif;
     min-height: 100vh; overflow: hidden;
+    /* The shell never scrolls; stop the browser rubber-banding the page behind it. */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: rgba(212,169,69,0.15);
   }
   *, *::before, *::after { box-sizing: border-box; }
-  #root { width: 100vw; height: 100vh; }
-  button { font-family: inherit; }
+  /* 100% not 100vw: vw includes the scrollbar gutter and overflows horizontally.
+     dvh tracks mobile browser chrome collapsing, which 100vh does not. */
+  #root { width: 100%; height: 100vh; height: 100dvh; }
+  /* Removes the 300ms double-tap-zoom delay on every button in the app. */
+  button { font-family: inherit; touch-action: manipulation; }
   ::selection { background: rgba(212,169,69,0.4); color: #fff; }
 </style>
 </head>

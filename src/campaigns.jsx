@@ -2,6 +2,7 @@ import React from 'react';
 import { OrnDivider, Pill, Button, H3, Modal } from './theme.jsx';
 import { Avatar, AuthField } from './auth.jsx';
 import { classDef, ancestryDef } from './app.jsx';
+import { MQ } from './theme/breakpoints.js';
 // campaigns.jsx — the campaign hub + a campaign's detail page (party, members, sigil).
 // "Director" is Draw Steel's name for the GM.
 
@@ -148,6 +149,39 @@ const CAMPAIGN_CSS = `
   padding: 4px 6px; transition: color .12s;
 }
 .hc-camp:hover { color: var(--gold-2); }
+
+/* ══════════════════════ Responsive ══════════════════════ */
+
+${MQ.tab} {
+  .cmp-inner { padding: 32px 24px 60px; }
+  .cmp-page-head .titles h1 { font-size: 2rem; }
+  .cmp-detail-head h1 { font-size: 1.875rem; }
+  .cmp-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .party-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}
+
+${MQ.phone} {
+  .cmp-inner { padding: 24px max(16px, env(safe-area-inset-left)) 48px max(16px, env(safe-area-inset-right)); }
+  .cmp-page-head .titles h1 { font-size: 1.75rem; }
+  .cmp-page-head .sub { font-size: 1rem; }
+  .cmp-detail-head { padding: 18px 16px; }
+  .cmp-detail-head h1 { font-size: 1.625rem; }
+  /* Absolutely positioned, so on a narrow head it lands on top of the h1. */
+  .cmp-detail-head .head-tools { position: static; margin-top: 14px; flex-wrap: wrap; }
+  .cmp-sigil { display: flex; margin-top: 14px; }
+  .cmp-sigil .sg-code { letter-spacing: 0.18em; padding: 9px 10px; }
+  .cmp-back { min-height: 44px; margin-bottom: 14px; }
+  .assign-row { min-height: 44px; }
+}
+
+/* Micro-controls sat over card art: keep the visual size, grow the hit area. */
+.mc-kick, .sg-copy { position: relative; }
+.mc-kick::after, .sg-copy::after { content: ''; position: absolute; inset: -9px; }
+
+${MQ.touch} {
+  /* iOS holds :hover after a tap, so these lifts stick until you tap elsewhere. */
+  .cmp-card:hover, .ph-card:hover { transform: none; box-shadow: none; }
+}
 `;
 
 const CampaignStyles = () => React.createElement('style', { id: 'ds-campaign-css' }, CAMPAIGN_CSS);
@@ -400,7 +434,7 @@ function CampaignDetail({
                   <div className={`mc-tag ${mGM ? 'director' : ''}`}>{mGM ? 'Director' : 'Player'}</div>
                 </div>
                 {isGM && !mGM && (
-                  <button className="mc-kick" title="Remove from campaign" onClick={() => setConfirm({ kind: 'kick', userId: m.id })}>✕</button>
+                  <button className="mc-kick" type="button" title="Remove from campaign" aria-label={`Remove ${m.displayName} from campaign`} onClick={() => setConfirm({ kind: 'kick', userId: m.id })}>✕</button>
                 )}
               </div>
             );

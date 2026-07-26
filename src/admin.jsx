@@ -2,6 +2,7 @@ import React from 'react';
 import { H2, Pill, Button, Modal, OrnDivider, GlyphRow } from './theme.jsx';
 import { Avatar } from './auth.jsx';
 import { PartyHeroCard, heroName } from './campaigns.jsx';
+import { MQ } from './theme/breakpoints.js';
 // admin.jsx — the superuser "All Heroes" oversight screen: every character in the
 // system, grouped by its owner. Reuses the campaign party-group chrome + PartyHeroCard.
 // Gated by currentUser.isAdmin in app.jsx; RLS (is_admin()) is the real enforcement.
@@ -21,6 +22,14 @@ const ADMIN_CSS = `
   font-family: var(--mono); font-size: 0.75rem; transition: border-color .14s, background .14s;
 }
 .adm-del:hover { border-color: var(--rubric); background: rgba(138,58,48,0.18); }
+/* Keeps its 26px look — growing it to 44 would cover the card art — but gains a
+   44px-equivalent touch target. */
+.adm-del::after { content: ''; position: absolute; inset: -9px; }
+
+/* ══════════════════════ Responsive ══════════════════════ */
+
+${MQ.tab} { .adm-wrap { padding: 24px 20px 60px; } }
+${MQ.phone} { .adm-wrap { padding: 18px 14px 48px; } }
 `;
 
 function AdminScreen({ characters, users, onOpen, onDelete }) {
@@ -68,7 +77,7 @@ function AdminScreen({ characters, users, onOpen, onDelete }) {
             <div className="party-grid">
               {g.heroes.map(c => (
                 <div key={c.id} className="adm-card-wrap">
-                  <button className="adm-del" title="Delete hero" onClick={(e) => { e.stopPropagation(); setPendingDelete(c); }}>✕</button>
+                  <button className="adm-del" type="button" title="Delete hero" aria-label="Delete hero" onClick={(e) => { e.stopPropagation(); setPendingDelete(c); }}>✕</button>
                   <PartyHeroCard character={c} canEdit onOpen={() => onOpen(c.id)} />
                 </div>
               ))}

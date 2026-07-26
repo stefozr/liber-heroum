@@ -55,10 +55,20 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
     if (bodyRef.current) bodyRef.current.scrollTop = 0;
   }, [stepIndex]);
 
+  // Between ~900px and ~1080px the rail scrolls, and the step is advanced from the
+  // footer rather than by touching the rail — so without this the newly-active step
+  // can sit off-screen. No-op at desktop widths, where nothing overflows.
+  // The optional call is required, not defensive: jsdom has no scrollIntoView and
+  // this effect runs on mount, which wizard.test.tsx does many times over.
+  const activeStepRef = React.useRef(null);
+  useEffect(() => {
+    activeStepRef.current?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+  }, [stepIndex]);
+
   return (
     <div className="wiz">
       {/* Top bar */}
-      <div className="wiz-topbar" style={{gridTemplateColumns: '1fr auto'}}>
+      <div className="wiz-topbar wiz-topbar-2">
         <div className="left">
           <Crest glyph="✠" portrait={character.portrait || undefined} />
           <div>
@@ -96,6 +106,7 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
             <div
               key={s.id}
               className={cls.join(' ')}
+              ref={isActive ? activeStepRef : null}
               onClick={() => setStep(i)}
             >
               <div className="rnum">{valid && !isActive ? '✓' : String(i+1).padStart(2,'0')}</div>
@@ -308,10 +319,10 @@ function CharacterPreview({ character }) {
 
       <div>
         <H4Meta>Characteristics</H4Meta>
-        <div className="grid-3" style={{gap: 6, gridTemplateColumns: 'repeat(5, 1fr)'}}>
+        <div className="chars-5" style={{gap: 6}}>
           {['Might','Agility','Reason','Intuition','Presence'].map(k => (
             <div key={k} className="stat-tile" style={{textAlign:'center', padding:'10px 4px'}}>
-              <div className="lbl" style={{fontSize: '0.5rem'}}>{k.slice(0,3).toUpperCase()}</div>
+              <div className="lbl">{k.slice(0,3).toUpperCase()}</div>
               <div className="val" style={{fontSize: '1.125rem'}}>
                 {derived.chars[k] != null ? (derived.chars[k] > 0 ? '+' + derived.chars[k] : derived.chars[k]) : '—'}
               </div>

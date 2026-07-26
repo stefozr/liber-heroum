@@ -94,15 +94,16 @@ function Tag({ children, kind = '' }) {
   return <span className={`tag ${kind}`}>{children}</span>;
 }
 
-function Button({ children, onClick, kind = '', disabled, small, style }) {
+function Button({ children, onClick, kind = '', disabled, small, style, className, title }) {
   return (
     <button
       type="button"
-      className={`btn ${kind} ${small ? 'small' : ''}`}
+      className={`btn ${kind} ${small ? 'small' : ''}${className ? ' ' + className : ''}`}
       onClick={onClick}
       disabled={disabled}
-      style={style}>
-      
+      style={style}
+      title={title}>
+
       {children}
     </button>);
 
@@ -152,7 +153,10 @@ function Modal({ open, onClose, title, children, footer, width }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={(e) => {if (e.target === e.currentTarget) onClose && onClose();}}>
-      <div className="modal" style={width ? { maxWidth: width } : {}}>
+      {/* width feeds a custom property rather than an inline max-width, so the
+          phone breakpoint can override it with a plain rule. An inline style
+          would need !important to beat. */}
+      <div className="modal" style={width ? { '--modal-w': typeof width === 'number' ? `${width}px` : width } : undefined}>
         {title &&
         <div className="modal-head">
             <div className="glyph-row" style={{ marginBottom: 8 }}>✠ · ❦ · ✠</div>

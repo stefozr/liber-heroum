@@ -45,15 +45,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           </div>
 
           {characters.length === 0 && (
-            <div style={{
-              gridColumn: 'span 2',
-              border: '1px dashed var(--line-2)',
-              padding: '40px 24px',
-              textAlign: 'center',
-              minHeight: 230,
-              display: 'grid',
-              placeItems: 'center',
-            }}>
+            <div className="roster-empty">
               <div>
                 <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.16em', color:'var(--gold-2)', marginBottom: 10}}>
                   The book is empty.

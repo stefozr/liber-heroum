@@ -73,7 +73,7 @@ function ClassStep({ character, update }) {
           <OrnDivider glyph={`❦  ${cls.name.toUpperCase()}  ❦`} />
 
           {/* Class flavor banner */}
-          <div className="orn-frame" style={{padding: '20px 24px', display:'grid', gridTemplateColumns:'auto 1fr', gap: 18, alignItems:'center'}}>
+          <div className="orn-frame class-banner">
             <Crest glyph={cls.glyph} size="large" />
             <div>
               <H2>{cls.name}</H2>

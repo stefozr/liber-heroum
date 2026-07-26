@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Modal } from './theme.jsx';
 import { DS } from './backend.jsx';
+import { MQ } from './theme/breakpoints.js';
 // auth.jsx — identity surfaces: avatars, the login gate, the app bar, the account menu.
 
 const { useState: useAuthState, useEffect: useAuthEffect, useRef: useAuthRef } = React;
@@ -130,6 +131,53 @@ const ACCOUNT_CSS = `
 }
 .auth-toggle button:hover { color: var(--ink); }
 .auth-foot { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-4); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 26px; text-align: center; line-height: 1.7; }
+
+/* ══════════════════════ Responsive ══════════════════════ */
+
+/* Without these the appbar's flex children refuse to shrink below their content
+   and push the whole shell past the viewport, where .app clips it. */
+.ds-shell, .ds-shell-body, .ds-appbar, .ds-nav, .ds-account { min-width: 0; }
+
+/* Measured, not a device tier: brand + three counted tabs + the account button
+   need ~1030px, so the bar overflows from well above the tablet breakpoint. */
+${MQ.rail} {
+  .ds-appbar { padding: 11px 16px; gap: 10px; }
+  .ds-appbar .ab-brand { display: none; }
+  /* Tabs scroll rather than pushing the account button off-screen. */
+  .ds-nav {
+    margin-left: 0; flex: 1 1 auto;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .ds-nav::-webkit-scrollbar { display: none; }
+  .ds-nav .ds-tab { flex: 0 0 auto; padding: 9px 12px; letter-spacing: 0.14em; }
+  .ds-account { flex: 0 0 auto; }
+  .ds-account-btn .nm { max-width: 110px; }
+}
+
+${MQ.tab} {
+  .auth-title { font-size: 2.25rem; }
+}
+
+${MQ.phone} {
+  .ds-appbar {
+    padding: 10px 12px; gap: 8px;
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+  .ds-nav .ds-tab { min-height: 44px; padding: 9px 10px; }
+  /* The count chip is redundant once space is tight. */
+  .ds-nav .ds-tab .ds-count { display: none; }
+  .ds-account-btn { padding: 5px 8px 5px 5px; }
+  .ds-account-btn .nm { display: none; }
+  .ds-menu { width: min(290px, calc(100vw - 24px)); }
+  .ds-menu .m-item { min-height: 44px; }
+
+  .auth-wrap { padding: 24px 14px; }
+  .auth-title { font-size: 1.875rem; letter-spacing: 0.06em; }
+  .auth-crown { letter-spacing: 0.24em; }
+  .auth-sub { font-size: 1.0625rem; }
+  .auth-panel { padding: 20px 16px 18px; margin-top: 22px; }
+  .auth-provider { min-height: 44px; }
+}
 `;
 
 const AccountStyles = () => React.createElement('style', { id: 'ds-account-css' }, ACCOUNT_CSS);

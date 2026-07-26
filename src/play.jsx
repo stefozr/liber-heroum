@@ -6,10 +6,52 @@ import { LevelUpFlow, LevelUpStyles } from './levelup.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from './app.jsx';
 import { parseKitSig, PERKS } from './wizard/helpers.js';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
+import { MQ } from './theme/breakpoints.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
 
 // Hooks used bare in this file (see note in wizard.jsx) — provide them under ES modules.
 const { useState, useEffect } = React;
+
+// Phone-only overflow menu for the top bar, which cannot fit six buttons on a
+// narrow screen. CSS shows this and hides the .collapsible buttons below the
+// breakpoint, and the reverse above it. Modelled on AccountMenu in auth.jsx.
+function TopBarMenu({ items }) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    // pointerdown covers mouse, touch and pen in one listener.
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="pt-menu-wrap" ref={ref}>
+      <button type="button" className="pt-menu-btn" aria-label="More actions"
+              aria-haspopup="menu" aria-expanded={open}
+              onClick={() => setOpen(o => !o)}>⋯</button>
+      {open && (
+        <div className="pt-menu" role="menu">
+          {items.map(a => (
+            <button key={a.id} type="button" role="menuitem" className="pt-menu-item"
+                    /* close first, so an action that opens a modal does not leave
+                       the dropdown live underneath it */
+                    onClick={() => { setOpen(false); a.onClick(); }}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
   const cls = classDef(character);
@@ -47,6 +89,20 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
   const heroName = character.identity.name || character.name || 'Unnamed Hero';
   const subclassName = (cls && cls.subclasses && cls.subclasses.find(s => s.id === character.cclass.subclass || s.name === character.cclass.subclass)?.name) || character.cclass.subclass;
   const aspectAction = (cls && cls.aspectActions && character.cclass.subclass) ? cls.aspectActions[character.cclass.subclass] : null;
+
+  // Named so the top-bar action list can reference it from one place. Closes over
+  // the local heroName above, which shadows the campaigns.jsx import of the same name.
+  const exportFoundry = async () => {
+    try {
+      // Official compendium index (null → generated-item fallback).
+      const idx = await loadOfficialIndex();
+      const file = heroName.trim().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'hero';
+      downloadJson(characterToFoundryHero(character, idx), `${file}-foundryvtt.json`);
+    } catch (err) {
+      console.error('[foundry-export]', err);
+      alert('Export failed: ' + (err?.message || err));
+    }
+  };
 
   // Ability collections
   const signatures = (cls && cls.signatures || []).filter(a => (character.cclass.signatures || []).includes(a.name));
@@ -165,6 +221,20 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
     }
   }
 
+  // Single source of truth for the top-bar actions. `pinned` entries stay visible
+  // on phones; the rest collapse into the ⋯ menu. Both renderers below map this
+  // same array, so the handlers are shared by reference rather than duplicated.
+  const topActions = [
+    { id: 'rules', label: 'RULES', onClick: () => setRulesOpen(true) },
+    { id: 'bio', label: 'BIOGRAPHY', onClick: () => setBioOpen(true) },
+    { id: 'export', label: 'EXPORT', onClick: exportFoundry,
+      title: 'Download as a FoundryVTT (Draw Steel system) actor file' },
+    canEdit && onEdit && { id: 'edit', label: 'EDIT', onClick: onEdit },
+    canEdit && { id: 'levelup', label: 'LEVEL UP ▲', kind: 'primary', pinned: true,
+      onClick: () => setLevelUpOpen(true) },
+    { id: 'exit', label: '◂ LIBER', onClick: onExit },
+  ].filter(Boolean);
+
   return (
     <div className={`play${canEdit ? '' : ' play-readonly'}`}>
       <PlayStyles />
@@ -181,7 +251,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                 <path d="M9,28 L27,40 M91,28 L73,40 M50,60 L50,96 M27,40 L9,72 M73,40 L91,72 M27,40 L50,96 M73,40 L50,96" />
               </svg>
             </span>
-            <div>
+            <div className="brand-text">
               <div className="brand-name">DRAW · STEEL</div>
               <div className="brand-sub">Character Sheet</div>
             </div>
@@ -190,22 +260,18 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
         <div className="center"></div>
         <div className="right">
           {!canEdit && <span className="play-readonly-tag" title="Only the owner or Director can edit this hero">👁 Viewing</span>}
-          <Button kind="ghost" small onClick={() => setRulesOpen(true)}>RULES</Button>
-          <Button kind="ghost" small onClick={() => setBioOpen(true)}>BIOGRAPHY</Button>
-          <Button kind="ghost" small title="Download as a FoundryVTT (Draw Steel system) actor file" onClick={async () => {
-            try {
-              // Official compendium index (null → generated-item fallback).
-              const idx = await loadOfficialIndex();
-              const file = heroName.trim().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'hero';
-              downloadJson(characterToFoundryHero(character, idx), `${file}-foundryvtt.json`);
-            } catch (err) {
-              console.error('[foundry-export]', err);
-              alert('Export failed: ' + (err?.message || err));
-            }
-          }}>EXPORT</Button>
-          {canEdit && onEdit && <Button kind="ghost" small onClick={onEdit}>EDIT</Button>}
-          {canEdit && <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>}
-          <Button kind="ghost" small onClick={onExit}>◂ LIBER</Button>
+          {/* Rendered twice on purpose: as buttons for wide viewports and as menu
+              items for narrow ones, with CSS choosing between them. That keeps the
+              breakpoint in the stylesheet only, so it cannot drift from a JS copy.
+              Note the non-pinned labels therefore appear twice in the DOM — a
+              getByText() query against PlayView would match both. */}
+          {topActions.map(a => (
+            <Button key={a.id} kind={a.kind || 'ghost'} small title={a.title}
+                    className={a.pinned ? undefined : 'collapsible'} onClick={a.onClick}>
+              {a.label}
+            </Button>
+          ))}
+          <TopBarMenu items={topActions.filter(a => !a.pinned)} />
         </div>
       </div>
 
@@ -357,7 +423,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                     <div className="trait-block">
                       <div className="trait-name">Skills</div>
                       {benefits.skills.map((s, i) => (
-                        <div className="kv-row" key={i} style={{gridTemplateColumns:'110px 1fr', marginTop: i === 0 ? 4 : 6}}>
+                        <div className="kv-row kv-src" key={i} style={{marginTop: i === 0 ? 4 : 6}}>
                           <span className="k">{s.source}</span><span className="v" style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5}}>{s.text}</span>
                         </div>
                       ))}
@@ -366,7 +432,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                   <div className="trait-block">
                     <div className="trait-name">Languages</div>
                     {benefits.languages.map((l, i) => (
-                      <div className="kv-row" key={i} style={{gridTemplateColumns:'110px 1fr', marginTop: i === 0 ? 4 : 6}}>
+                      <div className="kv-row kv-src" key={i} style={{marginTop: i === 0 ? 4 : 6}}>
                         <span className="k">{l.source}</span><span className="v" style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)'}}>{l.text}</span>
                       </div>
                     ))}
@@ -760,6 +826,9 @@ const PLAY_CSS = `
 .play {
   position: relative; z-index: 2; width: 100%; height: 100%;
   display: grid; grid-template-rows: auto 1fr; overflow: hidden;
+  /* Grid and flex children default to min-width:auto, so a wide row would push
+     this past the viewport and get clipped rather than fitting. */
+  min-width: 0;
 }
 .play-top {
   display: grid; grid-template-columns: 1fr auto 1fr;
@@ -1001,8 +1070,94 @@ const PLAY_CSS = `
 }
 .prog-edit:hover { color: var(--gold-2); border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow); }
 .kv-row { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 4px 12px; align-items: baseline; font-family: var(--mono); font-size: 0.6875rem; }
+/* Two-column variant used for kit source rows. */
+.kv-row.kv-src { grid-template-columns: 110px 1fr; }
 .kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: 0.625rem; text-transform: uppercase; }
 .kv-row .v { color: var(--ink); }
+
+/* Top-bar overflow menu (phone only — see Responsive below) */
+.pt-menu-wrap { position: relative; display: none; }
+.pt-menu-btn {
+  width: 40px; height: 40px; flex: none; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-2); color: var(--ink-2);
+  font-family: var(--display); font-size: 1.125rem; line-height: 1;
+  display: grid; place-items: center;
+}
+.pt-menu-btn[aria-expanded="true"] { border-color: var(--gold); color: var(--gold-2); }
+.pt-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+  min-width: 200px; display: flex; flex-direction: column;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-0));
+  border: 1px solid var(--gold);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(176,138,72,0.2);
+}
+.pt-menu-item {
+  background: transparent; border: none; cursor: pointer;
+  text-align: left; padding: 13px 16px; min-height: 44px;
+  font-family: var(--display-2); font-size: 0.6875rem;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2);
+}
+.pt-menu-item + .pt-menu-item { border-top: 1px solid var(--line); }
+
+/* ══════════════════════ Responsive ══════════════════════ */
+
+${MQ.rail} {
+  /* At 1024 the right column is only ~390px, and 240px of that is fixed track. */
+  .kv-row { grid-template-columns: 90px 1fr; }
+
+  /* Swap the button row for the ⋯ menu. Measured, not a device tier: branding
+     plus six buttons needs ~930px, so the bar overflows well above the tablet
+     breakpoint. This is the only place the threshold is expressed — play.jsx
+     renders both branches and lets CSS pick. */
+  .play-top .right > .btn.collapsible { display: none; }
+  .pt-menu-wrap { display: block; }
+}
+
+${MQ.tab} {
+  .play-grid { grid-template-columns: 1fr; }
+  .vitals { grid-template-columns: repeat(3, 1fr); }
+  .hero-masthead { grid-template-columns: auto 1fr; gap: 16px; padding: 16px 18px; }
+  .hb-level { grid-column: 2; padding-left: 0; border-left: none; text-align: left; margin-top: 4px; }
+  .hb-name { font-size: 2rem; }
+  .hb-level-num { font-size: 2rem; }
+  .play-content { padding: 22px 20px; }
+  .play-top { padding: 12px 18px; }
+}
+
+${MQ.phone} {
+  .play-top { grid-template-columns: 1fr auto; padding: 10px 12px; }
+  .play-top .center { display: none; }
+  .play-top .left, .play-top .right { gap: 8px; }
+  .brand-mark .brand-text { display: none; }
+
+  .vitals { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  /* The two gauges carry a bar and a control row; keep them full width. */
+  .vitals .vital { grid-column: 1 / -1; }
+  .chars-row { grid-template-columns: repeat(3, 1fr); }
+  .cond-grid { grid-template-columns: repeat(2, 1fr); }
+  .kv-row, .kv-row.kv-src { grid-template-columns: 1fr; gap: 2px 0; }
+  .kv-row .k { margin-top: 6px; }
+  .prog-row { grid-template-columns: auto 1fr; }
+  .prog-row .prog-edit { grid-column: 1 / -1; justify-self: start; margin-top: 8px; }
+
+  .hero-masthead { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .hb-portrait { width: 64px; height: 64px; }
+  .hb-portrait .hb-glyph { font-size: 1.875rem; }
+  .hb-name { font-size: 1.75rem; }
+  .hb-level { grid-column: auto; text-align: center; }
+  .hb-meta { letter-spacing: 0.1em; font-size: 0.875rem; }
+
+  .play-content { padding: 16px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
+  .panel-body { padding: 14px; }
+
+  /* The most-tapped controls on the sheet; 5px of padding is far under 44px. */
+  .vital-ctl button, .cnt-ctl button { padding: 11px 0; }
+}
+
+${MQ.touch} {
+  /* The dashed underline is the only cue that stamina is tap-to-edit. */
+  .vital-cur.editable { border-bottom-color: var(--gold-deep); }
+}
 `;
 
 const PlayStyles = () => React.createElement('style', {}, PLAY_CSS);
