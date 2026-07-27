@@ -318,7 +318,7 @@ function App() {
   const refreshStore = useCallback(async () => {
     const { profiles, characters: chs, campaigns: cps } = await DS.loadAll();
     setUsers(profiles);
-    setCharacters(chs.map(migrateCharacterChars));
+    setCharacters(chs.map(c => normalizeLanguages(migrateCharacterChars(c))));
     setCampaigns(cps);
   }, []);
 
@@ -355,7 +355,7 @@ function App() {
     const off = DS.subscribeCharacters(
       (row) => setCharacters(prev => {
         if (row.id === activeIdRef.current && canEditCharacter(row)) return prev;
-        const merged = migrateCharacterChars(row);
+        const merged = normalizeLanguages(migrateCharacterChars(row));
         const i = prev.findIndex(c => c.id === row.id);
         return i === -1 ? [...prev, merged] : prev.map(c => (c.id === row.id ? merged : c));
       }),
@@ -950,12 +950,47 @@ function perksTakenExcept(c, ownKey) {
   return m;
 }
 
+// Returns [{ name, source, key }] — one entry per language the character currently knows.
+// Sources: the standard tongue (Caelian), the culture pick, and career bonus languages.
+function collectLanguagePicks(c) {
+  const out = [];
+  const push = (name, source, key) => { if (name) out.push({ name, source, key }); };
+  push('Caelian', 'Standard', 'standard');
+  push(c.culture && c.culture.language, 'Culture', 'culture');
+  for (const l of (c.career && c.career.languages) || []) push(l, 'Career', 'career');
+  return out;
+}
+
+// Map of name → source for every language known EXCEPT the given slot key(s).
+// ownKey accepts a string or an array of keys (culture also owns 'standard' —
+// Caelian is its model default, so the culture picker must keep it selectable).
+function languagesTakenExcept(c, ownKey) {
+  const own = Array.isArray(ownKey) ? ownKey : [ownKey];
+  const m = new Map();
+  for (const p of collectLanguagePicks(c)) if (!own.includes(p.key)) m.set(p.name, p.source);
+  return m;
+}
+
+// Repair drafts saved before languages had cross-slot blocking: a language held by
+// culture (or Caelian itself) could also sit in career.languages, where its chip was
+// filtered out of the picker — impossible to remove, and silently deduped on export.
+// Pruning it here lets the career step honestly show the freed slot. Idempotent.
+function normalizeLanguages(c) {
+  const carLangs = c && c.career && c.career.languages;
+  if (!carLangs || !carLangs.length) return c;
+  const cleaned = carLangs.filter(l => l !== 'Caelian' && l !== (c.culture && c.culture.language));
+  if (cleaned.length === carLangs.length) return c;
+  return { ...c, career: { ...c.career, languages: cleaned } };
+}
+
 // Expose helpers globally for other files
 Object.assign(window, {
   newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived,
   summarizeBenefits, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept,
+  collectLanguagePicks, languagesTakenExcept, normalizeLanguages,
 });
 export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
+export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
 export { canEditCharacterFor };
 export { App };

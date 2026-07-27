@@ -320,6 +320,8 @@ body[data-theme="obsidian"] .app .bg-grain {
   font-family: var(--display); color: var(--gold); font-size: 0.6875rem; opacity: 0.4;
 }
 .card.selected .c-stamp { display: none; }
+.card.blocked { opacity: 0.4; cursor: not-allowed; }
+.card.blocked:hover { border-color: var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1)); }
 
 /* ───────── Header / titles ───────── */
 .eyebrow {
@@ -509,6 +511,10 @@ body[data-theme="obsidian"] .app .bg-grain {
   position: relative; z-index: 10;
 }
 .wiz-topbar .left { display: flex; align-items: center; gap: 14px; }
+/* The text wrapper is a flex item (min-width defaults to auto), so without this the
+   nowrap brand/hero lines widen the 1fr column and ride under the ROSTER button. */
+.wiz-topbar .left > div { min-width: 0; }
+.wiz-topbar .brand-text, .wiz-topbar .hero-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wiz-topbar .right { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
 .wiz-topbar .brand-text { font-family: var(--display); font-weight: 700; font-size: 1rem; letter-spacing: 0.28em; color: var(--gold-2); white-space: nowrap; }
 .wiz-topbar .brand-sub { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; margin-top: 2px; white-space: nowrap; }
@@ -571,6 +577,32 @@ body[data-theme="obsidian"] .app .bg-grain {
 .wiz-rail .rstep.active { border-bottom-color: var(--gold); background: linear-gradient(180deg, transparent, rgba(212,169,69,0.10)); }
 .wiz-rail .rstep.active .rnum { border-color: var(--gold); color: var(--gold); }
 .wiz-rail .rstep.active .rname { color: var(--ink); }
+
+/* Compact step navigator: swapped in for .wiz-rail at the tablet tier (see the
+   media query below) — current step name plus prev/next arrows, instead of a
+   row of badges whose names can't fit. */
+.wiz-railbar {
+  display: none; align-items: stretch;
+  background: rgba(7,9,28,0.7); border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(4px); position: relative; z-index: 10;
+}
+.wiz-railbar .rb-arrow {
+  width: 56px; min-height: 48px; background: transparent; border: none;
+  color: var(--gold-2); font-family: var(--display); font-size: 1.125rem; cursor: pointer;
+}
+.wiz-railbar .rb-arrow:first-child { border-right: 1px solid var(--line); }
+.wiz-railbar .rb-arrow:last-child { border-left: 1px solid var(--line); }
+.wiz-railbar .rb-arrow:disabled { opacity: 0.3; cursor: default; }
+.wiz-railbar .rb-label { flex: 1; min-width: 0; text-align: center; padding: 8px 10px 10px; }
+.wiz-railbar .rb-count {
+  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
+  letter-spacing: 0.22em; text-transform: uppercase;
+}
+.wiz-railbar .rb-name {
+  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 600; color: var(--ink);
+  letter-spacing: 0.22em; text-transform: uppercase; margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* Step body */
 .wiz-step {
@@ -872,7 +904,8 @@ body[data-theme="obsidian"] .app .bg-grain {
 .ability-card .ac-effect b { color: var(--gold-2); }
 
 /* Kit cards — borrow the ability-card vocabulary so the info reads clearly */
-.kit-card .ac-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+/* padding-right keeps the armor/order tag clear of the ✠ selection stamp. */
+.kit-card .ac-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-right: 16px; }
 .kit-card .ac-name {
   font-family: var(--display-2); font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.10em;
   color: var(--ink); text-transform: uppercase; min-width: 0;
@@ -969,15 +1002,12 @@ ${MQ.tab} {
   .roster-inner { padding: 40px 24px 60px; }
   .wiz-step .col-main { padding: 26px 24px 0; }
   .wiz-topbar, .wiz-footer { padding-left: 22px; padding-right: 22px; }
-  .wiz-rail { padding: 0 12px; }
 
-  /* Badge-only rail: 7 numbers plus one active label fit in ~500px, so the rail
-     never needs scrolling on a phone. Doing this at the tablet tier rather than
-     the phone tier is what makes the CSS-only solution complete. */
-  .wiz-rail .rstep .rname { display: none; }
-  .wiz-rail .rstep.active .rname { display: block; }
-  .wiz-rail .rnum { width: 34px; height: 34px; }
-  .wiz-rail .rstep + .rstep { padding-left: 12px; }
+  /* Swap the rail for the compact navigator: seven step names can't fit, and a
+     badge-only rail read as a row of anonymous checkmarks. Both live in the DOM
+     (Wizard.jsx renders each unconditionally); CSS picks per breakpoint. */
+  .wiz-rail { display: none; }
+  .wiz-railbar { display: flex; }
 
   .portrait-uploader { grid-template-columns: 1fr; }
   .modal-backdrop { padding: 24px 20px; }
@@ -1009,8 +1039,10 @@ ${MQ.phone} {
   /* The SAVED pill restates what the app already shows; drop it before the
      ROSTER button, which is the only way out of the wizard. */
   .wiz-topbar .right .pill { display: none; }
-  .wiz-topbar .brand-text, .wiz-topbar .left > div > div:last-child { font-size: 0.625rem; }
-  .wiz-footer { padding: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .wiz-topbar .brand-text, .wiz-topbar .hero-name { font-size: 0.625rem; }
+  /* Long step names ("◂ COMPLICATION" / "COMMIT TO THE LIBER ▸") don't fit a
+     360px row side by side — wrap onto two rows like .modal-foot does. */
+  .wiz-footer { padding: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); flex-wrap: wrap; gap: 10px; }
   .wiz-footer .meta { display: none; }
 
   /* The empty-state block spans 2 tracks on desktop. Once only one track fits,

@@ -73,7 +73,7 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
           <Crest glyph="✠" portrait={character.portrait || undefined} />
           <div>
             <div className="brand-text">DRAW · STEEL</div>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
+            <div className="hero-name" style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
               {character.identity.name || character.name || 'NEW HERO'}
             </div>
           </div>
@@ -114,6 +114,20 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Compact rail (≤900px): CSS swaps this in for .wiz-rail. Both stay in the
+          DOM — wizard.test.tsx asserts every step name renders. Arrows are free
+          navigation like rail clicks; the footer CONTINUE remains the validated path. */}
+      <div className="wiz-railbar">
+        <button type="button" className="rb-arrow" aria-label="Previous chapter"
+                disabled={stepIndex === 0} onClick={() => setStep(stepIndex - 1)}>◂</button>
+        <div className="rb-label">
+          <div className="rb-count">Chapter {stepIndex + 1} of {DS_STEPS.length}</div>
+          <div className="rb-name">{step.name}</div>
+        </div>
+        <button type="button" className="rb-arrow" aria-label="Next chapter"
+                disabled={isLast} onClick={() => setStep(stepIndex + 1)}>▸</button>
       </div>
 
       {/* Step body */}

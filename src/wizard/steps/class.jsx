@@ -52,7 +52,7 @@ function ClassStep({ character, update }) {
             <div style={{display:'flex', gap:14, alignItems:'flex-start'}}>
               <Crest glyph={c.glyph} />
               <div style={{flex:1, minWidth:0}}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:8}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:8, paddingRight:16}}>
                   <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
                   <Tag kind="gold">{c.resource.toUpperCase()}</Tag>
                 </div>
@@ -327,7 +327,7 @@ function ClassSubclassPicker({ character, update }) {
       <div className="grid-3" style={{marginTop:10}}>
         {cls.subclasses.map(s => (
           <SelCard key={s.id || s.name} selected={character.cclass.subclass === (s.id || s.name)} onClick={() => setSub(s.id || s.name)}>
-            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8, paddingRight:16}}>
               <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em'}}>{s.name}</div>
               {s.tag && <Tag>{s.tag}</Tag>}
             </div>

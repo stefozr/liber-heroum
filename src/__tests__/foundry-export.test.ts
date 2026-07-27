@@ -483,7 +483,6 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     'feature :: Domain',                   // chosen-domain summary (censor)
     'feature :: Domains',                  // chosen-domain summary (conduit)
     'feature :: Discipline Mastery',       // null: summary of the mastery table inside official Discipline
-    'feature :: College Features',         // shadow: summary of what the official college doc grants
   ]);
   it('every class × subclass build exports with zero unexpected unmatched items', () => {
     for (const cls of DS_CLASSES as any[]) {

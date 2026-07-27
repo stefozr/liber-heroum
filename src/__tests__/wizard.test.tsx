@@ -7,7 +7,7 @@ import { afterEach } from 'vitest';
 import React from 'react';
 import { Wizard } from '../wizard.jsx';
 import { newCharacter } from '../app.jsx';
-import { DS_STEPS, DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS, DS_CULTURES, DS_SKILL_GROUPS, kitPoolFor } from '../data.jsx';
+import { DS_STEPS, DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS, DS_CULTURES, DS_SKILL_GROUPS, DS_LANGUAGES, kitPoolFor } from '../data.jsx';
 import { PERKS, pickPool } from '../wizard/helpers.js';
 import { buildValidCharacter } from './helpers/factories';
 import { vi } from 'vitest';
@@ -338,5 +338,63 @@ describe('culture and career storage semantics', () => {
       expect(rolled).toBeDefined();
       expect(rolled.d100).toBe(51);
     } finally { spy.mockRestore(); }
+  });
+});
+
+// Compact step navigator (railbar) — the ≤900px replacement for the step rail.
+// Rendered unconditionally (CSS decides which shows), so it's testable in jsdom.
+describe('compact step navigator (railbar)', () => {
+  it('arrows navigate and disable at both ends', () => {
+    const mid = renderWizard(atStep(2));
+    fireEvent.click(mid.getByLabelText('Next chapter'));
+    expect(mid.latest().wizardStep).toBe(3);
+    fireEvent.click(mid.getByLabelText('Previous chapter'));
+    expect(mid.latest().wizardStep).toBe(1);
+    cleanup();
+    const first = renderWizard(atStep(0));
+    expect((first.getByLabelText('Previous chapter') as HTMLButtonElement).disabled).toBe(true);
+    cleanup();
+    const last = renderWizard(atStep(DS_STEPS.length - 1));
+    expect((last.getByLabelText('Next chapter') as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+// Cross-step language conflicts: culture and career pick from the same list, so each
+// step must block the other's picks — and a career chip that conflicts retroactively
+// (culture re-picked it later) must stay removable, never filtered out of the DOM.
+describe('language conflict between culture and career', () => {
+  const cultureStep = DS_STEPS.findIndex((s: any) => /culture/i.test(s.id));
+  const careerStep = DS_STEPS.findIndex((s: any) => /career/i.test(s.id));
+  const chip = (container: HTMLElement, name: string) =>
+    Array.from(container.querySelectorAll('.skill-chip')).find(el => el.textContent === name) as HTMLElement;
+
+  it('culture step renders career-claimed languages blocked and inert', () => {
+    const c = atStep(cultureStep, { career: 'agent' }); // agent grants 2 languages
+    expect(c.career.languages.length).toBe(2);
+    const claimed = c.career.languages[0];
+    const { container, latest } = renderWizard(c);
+    const card = Array.from(container.querySelectorAll('.card'))
+      .find(el => el.textContent === claimed) as HTMLElement;
+    expect(card.className).toContain('blocked');
+    fireEvent.click(card);
+    expect(latest()).toBeNull(); // click swallowed — no update issued
+  });
+
+  it('career step blocks the culture language but keeps a conflicting own pick removable', () => {
+    const c = atStep(careerStep, { career: 'agent' });
+    // Simulate the reported ordering: culture later re-picked a career language.
+    c.culture.language = c.career.languages[0];
+    const conflicted = c.career.languages[0];
+    const other = (DS_LANGUAGES as string[]).find(
+      L => L !== 'Caelian' && L !== conflicted && !c.career.languages.includes(L))!;
+    const { container, latest } = renderWizard(c);
+    // The conflicted chip is still rendered, still "on", and still toggles off.
+    const conflictedChip = chip(container, conflicted);
+    expect(conflictedChip.className).toContain('on');
+    fireEvent.click(conflictedChip);
+    expect(latest().career.languages).not.toContain(conflicted);
+    // An unpicked language known elsewhere renders blocked (not filtered away).
+    expect(chip(container, 'Caelian').className).toContain('blocked');
+    expect(chip(container, other)).toBeDefined();
   });
 });

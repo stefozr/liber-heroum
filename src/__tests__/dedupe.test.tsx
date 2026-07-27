@@ -3,7 +3,7 @@
 // level-up). These tests pin the shared collectors in app.jsx that every picker consults to
 // grey out an already-held skill/perk. See src/wizard/steps/* and src/levelup.jsx pickers.
 import { describe, it, expect } from 'vitest';
-import { newCharacter, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept } from '../app.jsx';
+import { newCharacter, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept, collectLanguagePicks, languagesTakenExcept, normalizeLanguages } from '../app.jsx';
 
 function charWithPicks() {
   const c: any = newCharacter('u-test', null);
@@ -59,5 +59,49 @@ describe('skill/perk dedupe collectors', () => {
   it('career perk reads as taken for other (non-career) perk slots', () => {
     expect(perksTakenExcept(charWithPicks(), 'lvl:5:perk').has('Quick Hands')).toBe(true);
     expect(perksTakenExcept(charWithPicks(), 'career').has('Quick Hands')).toBe(false);
+  });
+});
+
+// Languages are chosen in two slots (culture single pick, career multi pick) plus the
+// standard Caelian everyone knows. These collectors mirror the skill ones so each picker
+// can block the other's picks instead of silently duplicating (the duplicate used to be
+// deduped away at Foundry export, losing a language).
+describe('language dedupe collectors', () => {
+  function charWithLangs() {
+    const c: any = newCharacter('u-test', null);
+    c.culture.language = 'Hyrallic';
+    c.career.languages = ['Zaliac', 'Khelt'];
+    return c;
+  }
+
+  it('collects standard, culture, and career languages tagged by source', () => {
+    const picks = collectLanguagePicks(charWithLangs());
+    expect(picks.map(p => p.name).sort()).toEqual(['Caelian', 'Hyrallic', 'Khelt', 'Zaliac']);
+    expect(picks.find(p => p.name === 'Zaliac')!.source).toBe('Career');
+    expect(picks.find(p => p.name === 'Hyrallic')!.source).toBe('Culture');
+  });
+
+  it('career view blocks culture + standard picks but not its own', () => {
+    const view = languagesTakenExcept(charWithLangs(), 'career');
+    expect(view.has('Zaliac')).toBe(false);
+    expect(view.has('Khelt')).toBe(false);
+    expect(view.get('Hyrallic')).toBe('Culture');
+    expect(view.get('Caelian')).toBe('Standard');
+  });
+
+  it('culture view blocks career picks but keeps Caelian selectable (its own default)', () => {
+    const view = languagesTakenExcept(charWithLangs(), ['culture', 'standard']);
+    expect(view.get('Zaliac')).toBe('Career');
+    expect(view.has('Hyrallic')).toBe(false);
+    expect(view.has('Caelian')).toBe(false);
+  });
+
+  it('normalizeLanguages prunes career entries duplicated by culture/Caelian', () => {
+    const c = charWithLangs();
+    c.career.languages = ['Hyrallic', 'Zaliac', 'Caelian'];
+    expect(normalizeLanguages(c).career.languages).toEqual(['Zaliac']);
+    // No duplicates → the object passes through untouched (identity preserved).
+    const clean = charWithLangs();
+    expect(normalizeLanguages(clean)).toBe(clean);
   });
 });

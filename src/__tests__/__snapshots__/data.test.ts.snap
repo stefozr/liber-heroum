@@ -18,9 +18,9 @@ exports[`game data tables > DS_CAREERS is present and unchanged 1`] = `
 
 exports[`game data tables > DS_CLASSES is present and unchanged 1`] = `
 {
-  "bytes": 92769,
+  "bytes": 95906,
   "count": 9,
-  "hash": "a1aa0e03",
+  "hash": "8ead7f46",
 }
 `;
 

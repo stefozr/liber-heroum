@@ -46,7 +46,7 @@ function ComplicationStep({ character, update }) {
       <div className="grid-2">
         {DS_COMPLICATIONS.map(c => (
           <SelCard key={c.id} id={'comp-' + c.id} selected={sel === c.id} onClick={() => pick(c.id)}>
-            <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
+            <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em', color:'var(--ink)', paddingRight:16}}>{c.name}</div>
             <div style={{marginTop: 10, display:'grid', gridTemplateColumns:'auto 1fr', gap: '4px 12px', alignItems:'start'}}>
               <Tag kind="gold">Benefit</Tag>
               <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.5}}>{c.benefit}</div>

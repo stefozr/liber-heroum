@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
@@ -34,7 +34,9 @@ function CareerStep({ character, update }) {
   );
   const carLangs = character.career.languages || [];
   const cu = character.culture || {};
-  const knownLangs = new Set(['Caelian', cu.language].filter(Boolean));
+  // Languages known from any other slot (standard Caelian, culture pick) — rendered
+  // blocked rather than filtered out, so a chip that's on always stays removable.
+  const langsElsewhere = languagesTakenExcept(character, 'career');
   // Career autos duplicated by ancestry/culture — official rules allow a same-group swap.
   const collisions = careerAutoCollisions(character);
   const swaps = character.career.skillSwaps || {};
@@ -74,7 +76,8 @@ function CareerStep({ character, update }) {
       <div className="grid-3">
         {DS_CAREERS.map(ca => (
           <SelCard key={ca.id} selected={sel === ca.id} onClick={() => setCareer(ca.id)}>
-            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+            {/* paddingRight keeps the tag clear of the ✠ selection stamp (absolute top-right). */}
+            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8, paddingRight:16}}>
               <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em'}}>{ca.name}</div>
               <Tag>{ca.perk}</Tag>
             </div>
@@ -140,7 +143,7 @@ function CareerStep({ character, update }) {
 
           {/* Skills picker */}
           <div className="orn-frame" style={{padding:'18px 22px'}}>
-            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, flexWrap:'wrap'}}>
               <H3>Career Skills</H3>
               <button type="button" className="quick-pick-btn" onClick={() => {
                 // Quick build: apply autos + the career's `quick` field as a comma/dot-separated guess
@@ -203,7 +206,7 @@ function CareerStep({ character, update }) {
           {/* Languages picker */}
           {car.languages > 0 && (
             <div className="orn-frame" style={{padding:'18px 22px'}}>
-              <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+              <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, flexWrap:'wrap'}}>
                 <H3>Additional Languages</H3>
                 <span style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color: carLangs.length === car.languages ? 'var(--gold-2)' : 'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
                   {carLangs.length} / {car.languages}
@@ -211,9 +214,11 @@ function CareerStep({ character, update }) {
               </div>
               <Deck>You already know Caelian{cu.language ? ` and ${cu.language}` : ''}. Choose {car.languages} more.</Deck>
               <div className="skill-chip-grid" style={{marginTop: 12}}>
-                {DS_LANGUAGES.filter(L => !knownLangs.has(L)).map(L => {
+                {DS_LANGUAGES.map(L => {
                   const on = carLangs.includes(L);
-                  const blocked = !on && carLangs.length >= car.languages;
+                  // A selected chip is ALWAYS removable — even if it now conflicts with a
+                  // later culture pick — otherwise it would be stuck in career.languages.
+                  const blocked = !on && (langsElsewhere.has(L) || carLangs.length >= car.languages);
                   return (
                     <button
                       type="button"
@@ -221,6 +226,7 @@ function CareerStep({ character, update }) {
                       className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
                       onClick={() => !blocked && toggleLang(L)}
                       disabled={blocked}
+                      title={!on && langsElsewhere.has(L) ? `Already known — ${langsElsewhere.get(L)}` : ''}
                     >
                       {L}
                     </button>

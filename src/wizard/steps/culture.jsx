@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
@@ -45,7 +45,7 @@ function CultureStep({ character, update }) {
         <div className="grid-3" style={{marginTop:12, gap:8}}>
           {DS_CULTURES.archetypes.map(a => (
             <div key={a.name} className={`card ${cu.archetype === a.name ? 'selected' : ''}`} onClick={() => apply(a)} style={{padding:'10px 14px'}}>
-              <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.12em', color:'var(--ink)', fontWeight:600}}>{a.name}</div>
+              <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.12em', color:'var(--ink)', fontWeight:600, paddingRight:16}}>{a.name}</div>
               <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', marginTop:3}}>
                 {a.env} · {a.org} · {a.upb}
               </div>
@@ -83,7 +83,7 @@ function CultureStep({ character, update }) {
 
             {sel && (
               <div className="orn-frame" style={{marginTop: 14, padding:'14px 18px'}}>
-                <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom: 10}}>
+                <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, flexWrap:'wrap', marginBottom: 10}}>
                   <H4Meta>Choose a {sel.name} Skill</H4Meta>
                   <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--ink-3)'}}>
                     From: {skillLabel}{!picked && !quickBlocked && ' \u2014 quick pick: '}
@@ -118,11 +118,26 @@ function CultureStep({ character, update }) {
         <H3>Native Language</H3>
         <Deck>All player characters know Caelian in addition to their culture's language.</Deck>
         <div className="grid-4" style={{marginTop:12}}>
-          {DS_LANGUAGES.map(L => (
-            <div key={L} className={`card ${cu.language === L ? 'selected' : ''}`} onClick={() => setField('language', L)} style={{padding:'10px 12px'}}>
-              <div style={{fontFamily:'var(--display-2)', fontSize: '0.75rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{L}</div>
-            </div>
-          ))}
+          {(() => {
+            // Languages claimed by another slot (career picks) render blocked here —
+            // same treatment skills get — so the two steps can't hold duplicates.
+            const takenElsewhere = languagesTakenExcept(character, ['culture', 'standard']);
+            return DS_LANGUAGES.map(L => {
+              const on = cu.language === L;
+              const blocked = !on && takenElsewhere.has(L);
+              return (
+                <div
+                  key={L}
+                  className={`card ${on ? 'selected' : ''}${blocked ? ' blocked' : ''}`}
+                  onClick={() => !blocked && setField('language', L)}
+                  title={blocked ? `Already chosen — ${takenElsewhere.get(L)}` : ''}
+                  style={{padding:'10px 12px'}}
+                >
+                  <div style={{fontFamily:'var(--display-2)', fontSize: '0.75rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, paddingRight:16}}>{L}</div>
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
     </div>
