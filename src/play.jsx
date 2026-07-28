@@ -4,7 +4,7 @@ import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles } from './levelup.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from './app.jsx';
-import { parseKitSig, PERKS } from './wizard/helpers.js';
+import { parseKitSig, PERKS, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
 import { MQ } from './theme/breakpoints.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
@@ -88,7 +88,6 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
 
   const heroName = character.identity.name || character.name || 'Unnamed Hero';
   const subclassName = (cls && cls.subclasses && cls.subclasses.find(s => s.id === character.cclass.subclass || s.name === character.cclass.subclass)?.name) || character.cclass.subclass;
-  const aspectAction = (cls && cls.aspectActions && character.cclass.subclass) ? cls.aspectActions[character.cclass.subclass] : null;
 
   // Named so the top-bar action list can reference it from one place. Closes over
   // the local heroName above, which shadows the campaigns.jsx import of the same name.
@@ -353,7 +352,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                   <StatTile label="Speed" value={derived.speed} />
                   <StatTile label="Stability" value={derived.stability} />
                   <StatTile label="Disengage" value={derived.disengage} />
-                  <StatTile label="Size" value={anc?.size || '1M'} />
+                  <StatTile label="Size" value={derived.size} />
                   <StatTile label="Echelon" value={derived.echelon} />
                 </div>
               </Panel>
@@ -365,6 +364,9 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                     <AbilityCard key={a.name} ability={a} kind="sig" />
                   ))}
                   {(benefits.classAbilities || []).map(a => (
+                    <AbilityCard key={a.name} ability={a} kind="sig" />
+                  ))}
+                  {(benefits.ancestryAbilities || []).map(a => (
                     <AbilityCard key={a.name} ability={a} kind="sig" />
                   ))}
                   {kitSig && (
@@ -382,10 +384,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                   {domainAbilities.map(a => (
                     <AbilityCard key={a.name} ability={a} kind="heroic" />
                   ))}
-                  {aspectAction && (
-                    <AbilityCard key={aspectAction.name} ability={aspectAction} kind="heroic" />
-                  )}
-                  {(signatures.length + heroic.length + levelAbilities.length + domainAbilities.length + (benefits.classAbilities || []).length) === 0 && (
+                  {(signatures.length + heroic.length + levelAbilities.length + domainAbilities.length + (benefits.classAbilities || []).length + (benefits.ancestryAbilities || []).length) === 0 && (
                     <div className="empty-note">No abilities yet — this class is in basics-only mode. Use Edit to add more.</div>
                   )}
                 </div>
@@ -498,10 +497,15 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
               {/* Traits */}
               {anc && (
                 <Panel title="Ancestry Traits" collapsible>
-                  {(anc.signatures || [anc.signature]).map(sig => (
+                  {ancestrySignatures(anc).map(sig => (
                     <div className="trait-block" key={sig.name}>
                       <div className="trait-name">{sig.name} <span className="sig-tag">SIG</span></div>
                       <div className="trait-text">{sig.text}</div>
+                      {sig.name === 'Former Life' && formerLifeDef(character) && (
+                        <div className="trait-text" style={{ marginTop: 6 }}>
+                          Former Life: <b>{formerLifeDef(character).name}</b> — Size {formerLifeDef(character).size}
+                        </div>
+                      )}
                       {sig.optionChoice && (() => {
                         const norm = sig.optionChoice.options.map(o => typeof o === 'string' ? { name: o, text: null } : o);
                         const picked = (character.ancestry.sigOptions || {})[sig.name] || [];
@@ -522,16 +526,20 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                       })()}
                     </div>
                   ))}
-                  {(character.ancestry.traits || []).map(tn => {
-                    const t = anc.traits.find(x => x.name === tn);
-                    if (!t) return null;
-                    return (
-                      <div className="trait-block" key={tn}>
-                        <div className="trait-name">{t.name} <span className="cost-tag">{t.cost} PT</span></div>
-                        <div className="trait-text">{t.text}</div>
+                  {resolvedAncestryTraits(character).map((t, i) => (
+                    <div className="trait-block" key={`${t.name}-${i}`}>
+                      <div className="trait-name">
+                        {t.name} <span className="cost-tag">{t.cost} PT</span>
+                        {t.borrowedFrom && <span className="sig-tag">PREVIOUS LIFE — {t.borrowedFrom.toUpperCase()}</span>}
                       </div>
-                    );
-                  })}
+                      <div className="trait-text">{t.text}</div>
+                      {t.chosen?.length > 0 && (
+                        <div className="trait-text" style={{ marginTop: 6 }}>
+                          {t.choiceLabel}: <b>{t.chosen.join(', ')}</b>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </Panel>
               )}
 

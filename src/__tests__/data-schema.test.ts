@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS,
-  DS_SKILL_GROUPS, DS_LANGUAGES, DS_LEVEL_BONUSES, kitPoolFor,
+  DS_SKILL_GROUPS, DS_LANGUAGES, DS_DEAD_LANGUAGES, DS_LEVEL_BONUSES, kitPoolFor,
 } from '../data.jsx';
 import {
   LEVELUP_DATA, makeContext, levelChoicesFor, deriveGroupName,
@@ -264,6 +264,35 @@ describe('cross-references', () => {
     expect((DS_COMPLICATIONS as any[]).length).toBe(100);
     const rolls = (DS_COMPLICATIONS as any[]).map(c => c.d100).sort((a, b) => a - b);
     expect(rolls).toEqual(Array.from({ length: 100 }, (_, i) => i + 1));
+  });
+
+  it('complications: grant fields reference real skills, groups and languages', () => {
+    const ALL_LANGS = new Set([...(DS_LANGUAGES as string[]), ...(DS_DEAD_LANGUAGES as string[])]);
+    for (const comp of DS_COMPLICATIONS as any[]) {
+      for (const s of comp.skills || []) {
+        expect(ALL_SKILLS.has(s), `${comp.id} grants unknown skill "${s}"`).toBe(true);
+      }
+      for (const ch of comp.skillChoices || []) {
+        expect(ch.count, `${comp.id} skillChoices count`).toBeGreaterThanOrEqual(1);
+        expect(!!ch.options !== !!ch.groups, `${comp.id} skillChoices needs exactly one of options/groups`).toBe(true);
+        const pool = ch.options
+          || Array.from(new Set((ch.groups || []).flatMap((g: string) => (DS_SKILL_GROUPS as any)[g] || [])));
+        for (const g of ch.groups || []) expect(GROUP_NAMES.has(g), `${comp.id} unknown skill group "${g}"`).toBe(true);
+        for (const s of ch.options || []) expect(ALL_SKILLS.has(s), `${comp.id} unknown option skill "${s}"`).toBe(true);
+        expect(pool.length, `${comp.id} skillChoices pool smaller than count`).toBeGreaterThanOrEqual(ch.count);
+      }
+      if (comp.languageChoice) {
+        expect(comp.languageChoice.count).toBeGreaterThanOrEqual(1);
+        for (const l of comp.languageChoice.options || []) {
+          expect(ALL_LANGS.has(l), `${comp.id} grants unknown language "${l}"`).toBe(true);
+        }
+      }
+      for (const a of comp.abilities || []) {
+        expect(typeof a.name, `${comp.id} ability without a name`).toBe('string');
+        expect(typeof a.type, `${comp.id}/${a.name} ability without a type`).toBe('string');
+        if (a.tiers) expect(a.tiers.length, `${comp.id}/${a.name} tier count`).toBe(3);
+      }
+    }
   });
 
   it('ancestries: signature skill/option choices reference real groups', () => {

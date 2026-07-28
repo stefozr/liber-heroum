@@ -1,7 +1,7 @@
 // wizard/Wizard.jsx — the orchestrator: main Wizard + CharacterPreview + isStepValid + the step map.
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
-import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions } from './helpers.js';
+import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, resolvedAncestryTraits, ancestrySignatures } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
 import { CultureStep } from './steps/culture.jsx';
@@ -211,8 +211,38 @@ function swapsResolved(c, collisions, swaps, ownKey, ownNames) {
 function isStepValid(c, idx) {
   const id = DS_STEPS[idx].id;
   switch (id) {
-    case 'ancestry':
-      return !!c.ancestry.id;
+    case 'ancestry': {
+      if (!c.ancestry.id) return false;
+      const anc = DS_ANCESTRIES.find(a => a.id === c.ancestry.id);
+      // Every signature-level choice must be fully picked (Silver Tongue skill,
+      // Wyrmplate immunity, Runic Carving rune).
+      for (const sig of ancestrySignatures(anc)) {
+        if (sig.skillChoice && ((c.ancestry.sigSkills || {})[sig.name] || []).filter(Boolean).length < sig.skillChoice.count) return false;
+        if (sig.optionChoice && ((c.ancestry.sigOptions || {})[sig.name] || []).filter(Boolean).length < sig.optionChoice.count) return false;
+      }
+      if (c.ancestry.id === 'revenant') {
+        // A revenant needs a former life, and each purchased 'Previous Life' trait
+        // needs its borrowed trait chosen (when the former ancestry offers one).
+        const former = DS_ANCESTRIES.find(a => a.id === c.ancestry.formerLife);
+        if (!former) return false;
+        const pl = c.ancestry.prevLifeTraits || {};
+        for (const [name, cost] of [['Previous Life: 1pt', 1], ['Previous Life: 2pt', 2]]) {
+          if ((c.ancestry.traits || []).includes(name)
+              && (former.traits || []).some(t => t.cost === cost)
+              && !pl[`${cost}pt`]) return false;
+        }
+      }
+      // Every purchased (or borrowed) choice-bearing trait must be fully picked.
+      for (const t of resolvedAncestryTraits(c)) {
+        if (t.placeholder) continue; // unpicked Previous Life — the revenant gate owns it
+        if (t.skillChoice && (t.chosen || []).length < t.skillChoice.count) return false;
+        if (t.optionChoice) {
+          const pool = t.optionChoice.options || (t.abilities || []).map(a => a.name);
+          if (pool.length >= t.optionChoice.count && (t.chosen || []).length < t.optionChoice.count) return false;
+        }
+      }
+      return true;
+    }
     case 'culture':
       return !!c.culture.environment && !!c.culture.organization && !!c.culture.upbringing && !!c.culture.language
         && !!(c.culture.skills?.environment) && !!(c.culture.skills?.organization) && !!(c.culture.skills?.upbringing);
@@ -278,8 +308,17 @@ function isStepValid(c, idx) {
       }
       return true;
     }
-    case 'complication':
-      return true; // optional
+    case 'complication': {
+      // Skipping is always valid, but a chosen complication must have its picks filled.
+      if (!c.complication.id) return true;
+      const comp = complicationDef(c);
+      if (!comp) return true;
+      for (let i = 0; i < (comp.skillChoices || []).length; i++) {
+        if ((((c.complication.skills) || {})[i] || []).length < comp.skillChoices[i].count) return false;
+      }
+      if (comp.languageChoice && ((c.complication.languages || []).length < comp.languageChoice.count)) return false;
+      return true;
+    }
     case 'identity':
       return (c.identity.name || '').trim().length > 0;
     case 'review':

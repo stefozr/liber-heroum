@@ -5,4 +5,9 @@ const DS_LANGUAGES = [
   'The First Language',
 ];
 
-export { DS_LANGUAGES };
+// Dead languages — only grantable via the Ivory Tower complication.
+const DS_DEAD_LANGUAGES = [
+  'High Rhyvian','Khamish','Kheltivari','Low Rhivian','Old Variac','Phorialtic','Rallarian','Ullorvic',
+];
+
+export { DS_LANGUAGES, DS_DEAD_LANGUAGES };

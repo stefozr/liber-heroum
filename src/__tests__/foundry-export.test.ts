@@ -276,6 +276,41 @@ describe('characterToFoundryHero', () => {
     expect(fresh.name).toBe('Unnamed Hero');
     expect(fresh.items.filter((i: any) => i.type === 'class')).toHaveLength(0);
   });
+
+  it('exports ancestry choice picks and granted abilities', () => {
+    const c: any = newCharacter('u-dk', null);
+    c.ancestry.id = 'dragon-knight';
+    c.ancestry.traits = ['Prismatic Scales', 'Dragon Breath'];
+    c.ancestry.sigOptions = { 'Wyrmplate': ['Cold'] };
+    c.ancestry.traitOptions = { 'Prismatic Scales': ['Fire'] };
+    const doc: any = characterToFoundryHero(c);
+    const item = (name: string) => doc.items.find((i: any) => i.name === name);
+    expect(item('Wyrmplate').system.description.value).toContain('Damage Immunity: Cold');
+    expect(item('Prismatic Scales').system.description.value).toContain('Additional Immunity: Fire');
+    expect(doc.items.some((i: any) => i.name === 'Dragon Breath' && i.type === 'ability')).toBe(true);
+  });
+
+  it('orc trait skill picks reach the exported skills list', () => {
+    const c: any = newCharacter('u-orc', null);
+    c.ancestry.id = 'orc';
+    c.ancestry.traits = ['Passionate Artisan'];
+    c.ancestry.traitSkills = { 'Passionate Artisan': ['Alchemy', 'Blacksmithing'] };
+    const doc: any = characterToFoundryHero(c);
+    expect(doc.system.skills.value).toEqual(expect.arrayContaining(['alchemy', 'blacksmithing']));
+  });
+
+  it('revenant exports the borrowed trait, both signatures, and the former-life size', () => {
+    const c: any = newCharacter('u-rev', null);
+    c.ancestry.id = 'revenant';
+    c.ancestry.formerLife = 'hakaan';
+    c.ancestry.traits = ['Previous Life: 2pt'];
+    c.ancestry.prevLifeTraits = { '2pt': 'Great Fortitude' };
+    const doc: any = characterToFoundryHero(c);
+    const traitNames = doc.items.filter((i: any) => i.type === 'ancestryTrait').map((i: any) => i.name);
+    expect(traitNames).toEqual(expect.arrayContaining(['Former Life', 'Tough But Withered', 'Great Fortitude']));
+    expect(traitNames).not.toContain('Previous Life: 2pt');
+    expect(doc.system.combat.size).toEqual({ value: 1, letter: 'L' });
+  });
 });
 
 // ───────── official compendium substitution ─────────

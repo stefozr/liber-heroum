@@ -7,7 +7,7 @@ import {
   classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef,
   computeDerived, summarizeBenefits, collectSkillPicks, collectPerkPicks,
 } from './app.jsx';
-import { parseKitSig, PERKS } from './wizard/helpers.js';
+import { parseKitSig, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { DS_CULTURES } from './data/cultures.js';
 import { DS_SKILL_GROUPS } from './data/skills.js';
 
@@ -448,13 +448,19 @@ function characterToFoundryHero(c, officialIndex = null) {
 
   if (anc) {
     add(official('ancestry', anc.name, descriptionItem(anc.name, 'ancestry', 0, para(anc.desc))));
-    if (anc.signature?.name) {
-      add(official('ancestryTrait', anc.signature.name,
-        descriptionItem(anc.signature.name, 'ancestryTrait', 0, para(anc.signature.text))));
+    for (const sig of ancestrySignatures(anc)) {
+      const sigChosen = ((c.ancestry?.sigOptions || {})[sig.name] || []).filter(Boolean);
+      const sigExtra = (sig.optionChoice && sigChosen.length) ? para(`${sig.optionChoice.label}: ${sigChosen.join(', ')}`) : '';
+      const sigSkillsChosen = ((c.ancestry?.sigSkills || {})[sig.name] || []).filter(Boolean);
+      const skillExtra = (sig.skillChoice && sigSkillsChosen.length) ? para(`Skills: ${sigSkillsChosen.join(', ')}`) : '';
+      add(official('ancestryTrait', sig.name,
+        descriptionItem(sig.name, 'ancestryTrait', 0, para(sig.text) + sigExtra + skillExtra)));
     }
-    for (const tName of (c.ancestry?.traits || [])) {
-      const t = (anc.traits || []).find(x => x.name === tName);
-      add(official('ancestryTrait', tName, descriptionItem(tName, 'ancestryTrait', 0, para(t?.text || ''))));
+    // Resolved: a revenant's 'Previous Life' picks export as the actual borrowed trait,
+    // and choice-bearing traits carry their picks in the description.
+    for (const t of resolvedAncestryTraits(c)) {
+      const extra = t.chosen?.length ? para(`${t.choiceLabel}: ${t.chosen.join(', ')}`) : '';
+      add(official('ancestryTrait', t.name, descriptionItem(t.name, 'ancestryTrait', 0, para(t.text || '') + extra)));
     }
   }
 
@@ -576,6 +582,7 @@ function characterToFoundryHero(c, officialIndex = null) {
     if (h5) addAbility(h5, 'heroic');
   }
   for (const a of (benefits.classAbilities || [])) addAbility(a, a.cost ? 'heroic' : '');
+  for (const a of (benefits.ancestryAbilities || [])) addAbility(a, '');
   if (c.cclass?.domainAbility && typeof window !== 'undefined' && window.DOMAIN_2_ABILITIES) {
     const da = c.cclass.domainAbility;
     const found = (window.DOMAIN_2_ABILITIES[da.domain] || []).find(a => a.name === da.name);
@@ -599,6 +606,7 @@ function characterToFoundryHero(c, officialIndex = null) {
   const langNames = new Set(['Caelian']);
   if (c.culture?.language) langNames.add(c.culture.language);
   for (const l of (c.career?.languages || [])) langNames.add(l);
+  for (const l of (c.complication?.languages || [])) langNames.add(l);
   const languages = [...new Set([...langNames].map(langId).filter(Boolean))];
 
   // ── actor system ──
@@ -631,7 +639,7 @@ function characterToFoundryHero(c, officialIndex = null) {
     movement: { value: anc?.speed ?? 5, types: ['walk'], hover: false, disengage: 1 },
     combat: {
       size: (() => {
-        const m = String(anc?.size || '1M').match(/^(\d+)\s*([TSMLH]?)$/i);
+        const m = String(derived.size || '1M').match(/^(\d+)\s*([TSMLH]?)$/i);
         return { value: m ? +m[1] : 1, letter: m ? (m[2] || '').toUpperCase() || 'M' : 'M' };
       })(),
       stability: anc?.stability ?? 0,

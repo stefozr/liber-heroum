@@ -1,6 +1,12 @@
 // data/classes.js — Draw Steel game data: DS_CLASSES. Split out of the former monolithic data.jsx.
 const ab = (name, opts) => ({ name, ...opts });
 
+// Motivate Earth is defined at module scope (rather than inline in the earth elementalist
+// subclass) because the Grounded complication also grants it.
+const MOTIVATE_EARTH = ab('Motivate Earth', { noBadge: true, flavor: 'The earth rises, falls, or opens up at your command.',
+  keywords: ['Magic','Earth','Melee'], type: 'Main action', distance: 'Melee 1', target: 'Special',
+  effect: 'You touch a square containing mundane dirt, stone, or metal and create a 5 wall of the same material, which rises up out of the ground and must include the square you touched.\n\nAlternatively, you touch a structure made of mundane dirt, stone, or metal that occupies 2 or more squares. You can open a 1-square opening in the structure where you touched it. You can instead touch an existing doorway or other opening that is 1 square or smaller in a mundane dirt, stone, or metal surface. The opening is sealed by the same material that makes up the surface.' });
+
 // ───────── Classes ─────────
 const DS_CLASSES = [
   // ───── Censor ─────
@@ -331,9 +337,52 @@ const DS_CLASSES = [
     quickSkills: ['Alertness','Jump','Nature'],
     subclassName: 'Primordial Aspect',
     subclasses: [
-      { id: 'berserker',  name: 'Berserker',  tag: 'Might',   text: 'You channel ferocity into physical might, a living force shaping the world.', skill: 'Lift' },
-      { id: 'reaver',     name: 'Reaver',     tag: 'Cunning', text: 'You channel ferocity into instinct, challenging the order of civilization.', skill: 'Hide' },
-      { id: 'stormwight', name: 'Stormwight', tag: 'Beast',   text: 'You channel ferocity into primordial storms and take the form of an animal.', skill: 'Track', kitPool: 'stormwight' },
+      { id: 'berserker',  name: 'Berserker',  tag: 'Might',   text: 'You channel ferocity into physical might, a living force shaping the world.', skill: 'Lift',
+        features: [
+          { name: 'Primordial Strength', text: 'Whenever you damage an object with a weapon strike, the strike deals extra damage equal to your Might score. Additionally, whenever you push another creature into an object, the creature takes extra damage equal to your Might score.\n\nAs your ferocity grows, you gain benefits as noted on the Berserker Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.' },
+        ],
+        abilities: [
+          ab('Lines of Force', {
+            flavor: 'You redirect the energy of motion.',
+            keywords: ['Magic','Melee'], type: 'Triggered', badge: 'TRIGGER',
+            distance: 'Melee 1', target: 'Self or one creature',
+            trigger: 'The target would be force moved.',
+            effect: 'You can select a new target of the same size or smaller within distance to be force moved instead. You become the source of the forced movement, determine the new target’s destination, and can push the target instead of using the original forced movement type. Additionally, the forced movement distance gains a bonus equal to your Might score.',
+            resource: 'Ferocity', spend: 'The forced movement distance gains a bonus equal to twice your Might score instead.',
+          }),
+        ],
+      },
+      { id: 'reaver',     name: 'Reaver',     tag: 'Cunning', text: 'You channel ferocity into instinct, challenging the order of civilization.', skill: 'Hide',
+        features: [
+          { name: 'Primordial Cunning', text: 'You are never surprised. Additionally, whenever you would push a target with forced movement, you can slide them instead.\n\nAs your ferocity grows, you gain benefits as noted on the Reaver Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.' },
+        ],
+        abilities: [
+          ab('Unearthly Reflexes', {
+            flavor: 'You are as elusive as a hummingbird.',
+            type: 'Triggered', badge: 'TRIGGER',
+            distance: 'Self', target: 'Self',
+            trigger: 'You take damage.',
+            effect: 'You take half the damage from the triggering effect and can shift up to a number of squares equal to your Agility score.',
+            resource: 'Ferocity', spend: 'If the damage has any potency effects associated with it, the potency is reduced by 1 for you.',
+          }),
+        ],
+      },
+      { id: 'stormwight', name: 'Stormwight', tag: 'Beast',   text: 'You channel ferocity into primordial storms and take the form of an animal.', skill: 'Track', kitPool: 'stormwight',
+        features: [
+          { name: 'Beast Shape', text: 'You can use and gain the benefits of a stormwight kit (see Stormwight Kits). Your stormwight kit grants you a number of benefits, including benefits tied to your Growing Ferocity feature.' },
+          { name: 'Relentless Hunter', text: 'You gain an edge on tests made using the Track skill.' },
+        ],
+        abilities: [
+          ab('Furious Change', {
+            flavor: 'In your anger, you revert to a more bestial form.',
+            type: 'Triggered', badge: 'TRIGGER',
+            distance: 'Self', target: 'Self',
+            trigger: 'You lose Stamina and are not dying.',
+            effect: 'You gain temporary Stamina equal to your Might score and can enter your animal form or hybrid form.',
+            resource: 'Ferocity', spend: 'if you are not dying, you can spend a Recovery.',
+          }),
+        ],
+      },
     ],
     kitRequired: true,
     quickKit: 'Panther',
@@ -341,32 +390,6 @@ const DS_CLASSES = [
       { name: 'Growing Ferocity', text: 'Your aspect grants benefits at 2/4/6 ferocity — bigger Knockback distances, free surges, edges on Might tests, and more. Lost at end of turn.' },
       { name: 'Mighty Leap', text: 'You can\'t roll lower than a tier 2 outcome on Might tests made to jump.' },
     ],
-    aspectActions: {
-      berserker: ab('Lines of Force', {
-        flavor: 'You redirect the energy of motion.',
-        keywords: ['Magic','Melee'], type: 'Triggered', badge: 'TRIGGER',
-        distance: 'Melee 1', target: 'Self or one creature',
-        trigger: 'The target would be force moved.',
-        effect: 'You can select a new target of the same size or smaller within distance to be force moved instead. You become the source of the forced movement, determine the new target’s destination, and can push the target instead of using the original forced movement type. Additionally, the forced movement distance gains a bonus equal to your Might score.',
-        resource: 'Ferocity', spend: 'The forced movement distance gains a bonus equal to twice your Might score instead.',
-      }),
-      reaver: ab('Unearthly Reflexes', {
-        flavor: 'You are as elusive as a hummingbird.',
-        type: 'Triggered', badge: 'TRIGGER',
-        distance: 'Self', target: 'Self',
-        trigger: 'You take damage.',
-        effect: 'You take half the damage from the triggering effect and can shift up to a number of squares equal to your Agility score.',
-        resource: 'Ferocity', spend: 'If the damage has any potency effects associated with it, the potency is reduced by 1 for you.',
-      }),
-      stormwight: ab('Furious Change', {
-        flavor: 'In your anger, you revert to a more bestial form.',
-        type: 'Triggered', badge: 'TRIGGER',
-        distance: 'Self', target: 'Self',
-        trigger: 'You lose Stamina and are not dying.',
-        effect: 'You gain temporary Stamina equal to your Might score and can enter your animal form or hybrid form.',
-        resource: 'Ferocity', spend: 'if you are not dying, you can spend a Recovery.',
-      }),
-    },
     signatures: [
       ab('To the Death!', { flavor: 'Your reckless assault leaves you tactically vulnerable.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
@@ -479,9 +502,7 @@ const DS_CLASSES = [
         text: 'Acolyte of Earth — whenever you use an ability with the Earth and Magic keywords, your stability increases by 1 until the start of your next turn (cumulative).',
         acolyte: { name: 'Acolyte of Earth', text: 'Whenever you use an ability with the Earth and Magic keywords, your stability increases by 1 until the start of your next turn. This benefit is cumulative.' },
         abilities: [
-          ab('Motivate Earth', { noBadge: true, flavor: 'The earth rises, falls, or opens up at your command.',
-            keywords: ['Magic','Earth','Melee'], type: 'Main action', distance: 'Melee 1', target: 'Special',
-            effect: 'You touch a square containing mundane dirt, stone, or metal and create a 5 wall of the same material, which rises up out of the ground and must include the square you touched.\n\nAlternatively, you touch a structure made of mundane dirt, stone, or metal that occupies 2 or more squares. You can open a 1-square opening in the structure where you touched it. You can instead touch an existing doorway or other opening that is 1 square or smaller in a mundane dirt, stone, or metal surface. The opening is sealed by the same material that makes up the surface.' }),
+          MOTIVATE_EARTH,
           ab('Skin Like Castle Walls', { flavor: 'You cover yourself or an ally in protective stone.',
             keywords: ['Magic','Earth','Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target takes damage.', effect: 'The target takes half the damage.',
@@ -647,9 +668,21 @@ const DS_CLASSES = [
     quickSkills: ['Psionics','Read Person','Timescape'],
     subclassName: 'Null Tradition',
     subclasses: [
-      { id: 'chronokinetic', name: 'Chronokinetic', tag: 'Time', text: 'Your training unmoors you from temporal reality, using the flow of time as a dimension all things move through.', skillGroup: 'lore' },
-      { id: 'cryokinetic',   name: 'Cryokinetic',   tag: 'Cold', text: 'You tap into absolute cold, the most essential energy of myriad manifolds, and manifest its effects in your body.', skillGroup: 'crafting' },
-      { id: 'metakinetic',   name: 'Metakinetic',   tag: 'Self', text: 'You see through the illusions of the universe to more fully understand your body and its psionic potential.', skillGroup: 'exploration' },
+      { id: 'chronokinetic', name: 'Chronokinetic', tag: 'Time', text: 'Your training unmoors you from temporal reality, using the flow of time as a dimension all things move through.', skillGroup: 'lore',
+        features: [
+          { name: 'Chronokinetic Mastery', text: 'Whenever you use the Inertial Shield ability, you can use the Disengage move action as a free triggered action.\n\nAdditionally, as your discipline grows, your psionic mastery of your body intensifies, granting benefits from the Chronokinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.\n\n- 2 discipline: Whenever you use the Knockback maneuver, you can use the Disengage move action as a free triggered action either before or after the maneuver.\n- 4 discipline: The first time on a turn that you willingly move 1 or more squares as part of an ability, you gain 1 surge.\n- 6 discipline: You gain an edge on the Grab and Knockback maneuvers.\n- 8 discipline (4th level): The first time on a turn that you willingly move 1 or more squares as part of an ability, you gain 2 surges.\n- 10 discipline (7th level): You have a double edge on the Grab and Knockback maneuvers.\n- 12 discipline (10th level): Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.' },
+        ],
+      },
+      { id: 'cryokinetic',   name: 'Cryokinetic',   tag: 'Cold', text: 'You tap into absolute cold, the most essential energy of myriad manifolds, and manifest its effects in your body.', skillGroup: 'crafting',
+        features: [
+          { name: 'Cryokinetic Mastery', text: 'Whenever you use your Inertial Shield ability, you can then use the Grab maneuver as a free triggered action.\n\nAdditionally, as your discipline grows, you strengthen the psionic power suffusing you, granting benefits from the Cryokinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.\n\n- 2 discipline: Whenever you use the Knockback maneuver, you can target one additional creature. Additionally, whenever you deal untyped damage with a psionic ability, you can change it to cold damage instead.\n- 4 discipline: The first time on a turn that you grab a creature or an enemy moves 1 or more squares in the area of your Null Field ability, you gain 1 surge.\n- 6 discipline: You gain an edge on the Grab and Knockback maneuvers.\n- 8 discipline (4th level): The first time on a turn that you grab a creature or an enemy moves 1 or more squares in the area of your Null Field ability, you gain 2 surges.\n- 10 discipline (7th level): You have a double edge on the Grab and Knockback maneuvers.\n- 12 discipline (10th level): Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.' },
+        ],
+      },
+      { id: 'metakinetic',   name: 'Metakinetic',   tag: 'Self', text: 'You see through the illusions of the universe to more fully understand your body and its psionic potential.', skillGroup: 'exploration',
+        features: [
+          { name: 'Metakinetic Mastery', text: 'Whenever you use your Inertial Shield ability, you can then use the Knockback maneuver as a free triggered action.\n\nAdditionally, as your discipline grows, your psionic potential is amplified, granting benefits from the Metakinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.\n\n- 2 discipline: Whenever you use the Knockback maneuver, the forced movement distance gains a bonus equal to your Intuition score.\n- 4 discipline: The first time in a combat round that you take damage or are force moved, you gain 1 surge, even if you resist the effect.\n- 6 discipline: You gain an edge on the Grab and Knockback maneuvers.\n- 8 discipline (4th level): The first time in a combat round that you take damage or are force moved, you gain 1 surge, even if you resist the effect.\n- 10 discipline (7th level): You have a double edge on the Grab and Knockback maneuvers.\n- 12 discipline (10th level): Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.' },
+        ],
+      },
     ],
     quickKit: null,
     features: [
@@ -671,7 +704,6 @@ const DS_CLASSES = [
         spend: 'The potency of one effect associated with the damage is reduced by 1 for you.'
       }) },
       { name: 'Discipline', text: 'At the start of combat you gain discipline equal to your Victories, then 2 at the start of each turn. You gain 1 more the first time each round an enemy in your Null Field takes a main action, and 1 the first time the Director spends Malice.' },
-      { name: 'Discipline Mastery', text: 'Your tradition grants benefits as your discipline grows (2/4/6, with more at 4th/7th/10th level): free surges, edges and then double edges on the Grab and Knockback maneuvers, and more. Benefits last until the end of your turn. Using Inertial Shield also lets you Disengage (Chronokinetic), Grab (Cryokinetic), or Knockback (Metakinetic) as a free triggered action.' },
       { name: 'Null Speed', text: 'You gain a bonus to speed and to the number of squares you can shift when you take the Disengage move action equal to your Agility score.', bonuses: { spdChar: 'Agility', disChar: 'Agility' } },
       { name: 'Psionic Augmentation', text: 'Your training has turned your body into the perfect psionic weapon, shaping pathways in your mind that enhance your physical form. Choose one of the following augmentations. You can change your augmentation by undergoing a psionic meditation as a respite activity.', choose: 'augment' },
       { name: 'Psionic Martial Arts', text: 'A Null forgoes a kit — your body is your weapon. Whenever you use the Knockback or Grab maneuver you use Intuition instead of Might (for the roll and for targeting larger creatures), and Knockback can slide the target instead of pushing.' },
@@ -986,9 +1018,42 @@ const DS_CLASSES = [
     quickSkills: ['Lead','Monsters','Strategy'],
     subclassName: 'Tactical Doctrine',
     subclasses: [
-      { id: 'insurgent',  name: 'Insurgent',  tag: 'Hit-and-run', text: 'You do whatever it takes to keep your allies alive — playing fair and dying honorably is your opponent\u2019s job. Covert Operations & Advanced Tactics.', skillGroup: 'intrigue' },
-      { id: 'mastermind', name: 'Mastermind', tag: 'Strategist', text: 'You hold an encyclopedic knowledge of warfare, viewing the battlefield as a game board and thinking steps ahead. Studied Commander & Overwatch.', skillGroup: 'lore' },
-      { id: 'vanguard',   name: 'Vanguard',   tag: 'Frontline',  text: 'You learned the stratagems of ancient heroes, leading from the front through force of will and personality. Commanding Presence & Parry.', skillGroup: 'interpersonal' },
+      { id: 'insurgent',  name: 'Insurgent',  tag: 'Hit-and-run', text: 'You do whatever it takes to keep your allies alive — playing fair and dying honorably is your opponent\u2019s job.', skillGroup: 'intrigue',
+        features: [
+          { name: 'Covert Operations', text: 'While in your presence or working according to your plans, each of your allies gains an edge on tests using any skill from the intrigue skill group. Additionally, you can use the Lead skill to assist another creature with any test made using a skill from the intrigue group.\n\nAt the Director\u2019s discretion, you and your allies can use skills from the intrigue skill group to attempt research or reconnaissance during a negotiation instead of outside of a negotiation.' },
+        ],
+        abilities: [
+          ab('Advanced Tactics', { flavor: 'Your leadership aids an ally.',
+            keywords: ['Ranged'], type: 'Triggered', distance: 'Ranged 10', target: 'One creature',
+            trigger: 'The target deals damage to another creature.',
+            effect: 'The target gains 2 surges, which they can use on the triggering damage.',
+            resource: 'Focus', spendCost: 1, spend: 'If the damage has any potency effect associated with it, the potency is increased by 1.' }),
+        ],
+      },
+      { id: 'mastermind', name: 'Mastermind', tag: 'Strategist', text: 'You hold an encyclopedic knowledge of warfare, viewing the battlefield as a game board and thinking steps ahead.', skillGroup: 'lore',
+        features: [
+          { name: 'Studied Commander', text: 'Your encyclopedic knowledge of the history of battle lets you apply that knowledge to current challenges. While you are present, each hero with you treats the Discover Lore project related to a war or battle as one category cheaper. This makes projects seeking common lore free, but such projects still require a respite activity to complete.\n\nAdditionally, if you have 24 hours or more before a combat encounter or negotiation, and you have one or more clues or rumors regarding the encounter or negotiation, you can make a Reason test as a respite activity. The following test outcomes apply to a combat encounter:\n\n- ≤11: The Director tells you the number of creatures in the encounter.\n- 12–16: The Director tells you the number and level of the creatures in the encounter.\n- 17+: The Director tells you the tier 2 outcome information, and when the encounter begins, all enemies are surprised.\n\nThe following test results apply to a negotiation:\n\n- ≤11: The Director gives you three motivations, one of which belongs to an NPC in the negotiation.\n- 12–16: The Director gives you one motivation for an NPC in the negotiation.\n- 17+: The Director tells you the tier 2 outcome information, and you and each of your allies gains an edge on tests made to influence NPCs during the negotiation.\n\nYou can make this test only once for any encounter or negotiation.' },
+        ],
+        abilities: [
+          ab('Overwatch', { flavor: 'Under your direction, an ally waits for just the right moment to strike.',
+            keywords: ['Ranged'], type: 'Triggered', distance: 'Ranged 10', target: 'One creature',
+            trigger: 'The target moves.',
+            effect: 'At any point during the target’s movement, one ally can make a free strike against them.',
+            resource: 'Focus', spendCost: 1, spend: 'If the target has R < Average, they are slowed (EoT).' }),
+        ],
+      },
+      { id: 'vanguard',   name: 'Vanguard',   tag: 'Frontline',  text: 'You learned the stratagems of ancient heroes, leading from the front through force of will and personality.', skillGroup: 'interpersonal',
+        features: [
+          { name: 'Commanding Presence', text: 'You command any room you walk into. While you are present during a negotiation, each hero with you treats their Renown as 2 higher than usual. Additionally, each hero with you during a combat encounter has a double edge on tests made to stop combat and start a negotiation.' },
+        ],
+        abilities: [
+          ab('Parry', { flavor: 'Your quick reflexes cost an enemy the precision they seek.',
+            keywords: ['Melee','Weapon'], type: 'Triggered', distance: 'Melee 2', target: 'Self or one ally',
+            trigger: 'A creature deals damage to the target.',
+            effect: 'You can shift 1 square. If the target is you, or if you end this shift adjacent to the target, the target takes half the damage. If the damage has any potency effect associated with it, the potency is decreased by 1.',
+            resource: 'Focus', spendCost: 1, spend: 'This ability’s distance becomes Melee 1 + your Reason score, and you can shift up to a number of squares equal to your Reason score instead of 1 square.' }),
+        ],
+      },
     ],
     kitRequired: true,
     kit2Required: true,
@@ -1094,9 +1159,42 @@ const DS_CLASSES = [
     quickSkills: ['Empathize','Psionics','Read Person','Timescape'],
     subclassName: 'Talent Tradition',
     subclasses: [
-      { id: 'chronopathy', name: 'Chronopathy', tag: 'Time',  text: 'View future and past events and manipulate time to aid allies and hinder foes. Grants Accelerate & Again.' },
-      { id: 'telekinesis', name: 'Telekinesis', tag: 'Force', text: 'Physically manipulate creatures and objects with your mind. Grants Minor Telekinesis & Repel.' },
-      { id: 'telepathy',   name: 'Telepathy',   tag: 'Mind',  text: 'Communicate with, read, and influence the minds of other creatures. Grants Feedback Loop & Remote Assistance.' },
+      { id: 'chronopathy', name: 'Chronopathy', tag: 'Time',  text: 'View future and past events and manipulate time to aid allies and hinder foes.',
+        abilities: [
+          ab('Accelerate', { flavor: 'To your ally, it seems as though the world has slowed down.',
+            keywords: ['Psionic','Ranged'], type: 'Maneuver', noBadge: true, distance: 'Ranged 10', target: 'Self or one creature',
+            effect: 'The target shifts up to a number of squares equal to your Reason score.',
+            resource: 'Clarity', spendCost: 2, spend: 'The target can use a maneuver.' }),
+          ab('Again', { flavor: 'You step back a split second to see if things play out a little differently.',
+            keywords: ['Psionic','Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one creature',
+            trigger: 'The target makes an ability roll.',
+            effect: 'You can use this ability after seeing the result of the triggering roll. The target must reroll the power roll and use the new roll.' }),
+        ],
+      },
+      { id: 'telekinesis', name: 'Telekinesis', tag: 'Force', text: 'Physically manipulate creatures and objects with your mind.',
+        abilities: [
+          ab('Minor Telekinesis', { flavor: 'Wisps of psychic energy ripple visibly from your brain as you force the target to move using only your mind.',
+            keywords: ['Psionic','Ranged'], type: 'Maneuver', noBadge: true, distance: 'Ranged 10', target: 'Self or one size 1 creature or object',
+            effect: 'You slide the target up to a number of squares equal to your Reason score.',
+            resource: 'Clarity', spendCost: '1+', spend: 'The size of the creature or object you can target increases by 1 for every 2 clarity spent.\n\nSpend 3 clarity: You can vertical slide the target.' }),
+          ab('Repel', { flavor: 'They aren’t going anywhere, but you might!',
+            keywords: ['Psionic','Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
+            trigger: 'The target takes damage or is force moved.',
+            effect: 'The target takes half the triggering damage, or the distance of the triggering forced movement is reduced by a number of squares equal to your Reason score. If the target took damage and was force moved, you choose the effect. If the forced movement is reduced to 0 squares, the target can push the source of the forced movement a number of squares equal to your Reason score.' }),
+        ],
+      },
+      { id: 'telepathy',   name: 'Telepathy',   tag: 'Mind',  text: 'Communicate with, read, and influence the minds of other creatures.',
+        abilities: [
+          ab('Feedback Loop', { flavor: 'Creating a brief psychic link between an enemy and their target gives that foe a taste of their own medicine.',
+            keywords: ['Psionic','Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'One creature',
+            trigger: 'The target deals damage to an ally.',
+            effect: 'The target takes psychic damage equal to half the triggering damage.' }),
+          ab('Remote Assistance', { flavor: 'An ally gains the benefit of your intellect.',
+            keywords: ['Psionic','Ranged'], type: 'Maneuver', noBadge: true, distance: 'Ranged 10', target: 'One creature or object',
+            effect: 'The next ability roll an ally makes against the target before the start of your next turn gains an edge.',
+            resource: 'Clarity', spendCost: 1, spend: 'You target one additional creature or object.' }),
+        ],
+      },
     ],
     enchantments: [
       { name: 'Battle Augmentation', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities. Can\u2019t be taken if you have a kit.', bonuses: { sta_per: 3 } },
@@ -1262,9 +1360,56 @@ const DS_CLASSES = [
     quickSkills: ['Brag','Read Person','Rumors','Society'],
     subclassName: 'Class Act',
     subclasses: [
-      { id: 'auteur',   name: 'Auteur',   tag: 'Story', text: 'You seek drama from story and recount, using magic to manipulate the sequence of events. Grants Blocking & Dramatic Monologue.', skill: 'Brag' },
-      { id: 'duelist',  name: 'Duelist',  tag: 'Blade', text: 'Drama infuses your every movement in tandem with another — dances of death, trusting your opponent to match your passion. Grants Acrobatics & Star Power.', skill: 'Gymnastics' },
-      { id: 'virtuoso', name: 'Virtuoso', tag: 'Music', text: 'You find drama in music and song, weaving magic between vibrations and filling the audience with your pathos. Grants Power Chord & Virtuoso Performances.', skill: 'Music' },
+      { id: 'auteur',   name: 'Auteur',   tag: 'Story', text: 'You seek drama from story and recount, using magic to manipulate the sequence of events.', skill: 'Brag',
+        abilities: [
+          ab('Blocking', { flavor: 'No, no, no, you lose the audience that way. Try it like this …',
+            keywords: ['Area','Magic','Performance'], badge: 'PERFORMANCE', distance: '2 aura', target: 'Each creature in the area',
+            effect: 'At the end of each of your turns while this performance is active, you can choose up to a number of targets equal to your Presence score and teleport those targets to unoccupied spaces in the area. A target can’t be teleported in a way that would harm them (such as over a cliff), leave them dying, or result in them suffering a condition or other negative effect.' }),
+          ab('Dramatic Monologue', { flavor: 'It doesn’t need to make sense. Just say it with emotion.',
+            keywords: ['Magic','Ranged'], type: 'Maneuver', noBadge: true, distance: 'Ranged 10', target: 'Special',
+            effect: 'Choose one of the following effects:\n\n- You orate a rousing tale of victory. One ally within distance gains an edge on the next power roll they make before the start of your next turn.\n- You weave a tale of high-stakes heroics. One ally within distance gains 1 surge.\n- You insult a foe where they’re most vulnerable. One enemy within distance takes a bane on the next power roll they make before the end of their next turn.',
+            resource: 'Drama', spendCost: 1, spend: 'You can choose two targets for the chosen effect.' }),
+          ab('Turnabout Is Fair Play', { flavor: 'All’s fair in love and whatever.',
+            keywords: ['Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'One creature',
+            trigger: 'The target makes an ability roll that has an edge, a double edge, a bane, or a double bane.',
+            effect: 'An edge on the triggering roll becomes a bane, or a double edge becomes an edge. A bane becomes an edge, or a double bane becomes a bane.',
+            resource: 'Drama', spendCost: 3, spend: 'An edge on the triggering roll becomes a double bane, or a double edge is negated. A bane becomes a double edge, or a double bane is negated.' }),
+        ],
+      },
+      { id: 'duelist',  name: 'Duelist',  tag: 'Blade', text: 'Drama infuses your every movement in tandem with another — dances of death, trusting your opponent to match your passion.', skill: 'Gymnastics',
+        abilities: [
+          ab('Acrobatics', { flavor: 'Folks love a good tumble.',
+            keywords: ['Area','Magic','Performance'], badge: 'PERFORMANCE', distance: '5 aura', target: 'Self and each ally in the area',
+            effect: 'While this performance is active, each target who starts their turn in the area can automatically obtain a tier 3 outcome on one test made to jump, tumble, or climb as part of their movement before the end of their turn.' }),
+          ab('Star Power', { flavor: 'Your years of practicing fencing and dancing pay off on the battlefield.',
+            keywords: ['—'], type: 'Maneuver', cost: 1, resource: 'Drama', distance: 'Self', target: 'Self',
+            effect: 'You gain a +2 bonus to speed until the end of your turn. Additionally, the next power roll you make this turn can’t have an outcome lower than tier 2.',
+            spendCost: 1, spend: 'You gain a +4 bonus to speed instead.' }),
+          ab('Riposte', { flavor: '“I’d have brought treats had I known I’d be fighting a dog.”',
+            keywords: ['Melee'], type: 'Triggered', badge: 'TRIGGER', distance: 'Melee 1', target: 'Self or one ally',
+            trigger: 'The target takes damage from a melee strike.',
+            effect: 'The target makes a free strike against the creature who made the triggering strike.' }),
+        ],
+      },
+      { id: 'virtuoso', name: 'Virtuoso', tag: 'Music', text: 'You find drama in music and song, weaving magic between vibrations and filling the audience with your pathos.', skill: 'Music',
+        abilities: [
+          ab('Power Chord', { flavor: 'Your instrument rings true and your music blows everyone away.',
+            keywords: ['Area','Magic'], type: 'Maneuver', noBadge: true, distance: '2 burst', target: 'Each enemy in the area',
+            powerRoll: 'Presence', tiers: [['≤11','Push 1'],['12–16','Push 2'],['17+','Push 3']] }),
+          ab('“Ballad of the Beast”', { flavor: 'Teeth are bare! Eyes black! No escaping the beast!',
+            keywords: ['Area','Magic','Performance'], badge: 'PERFORMANCE', distance: '5 aura', target: 'Self and each ally in the area',
+            effect: 'While this performance is active, each target who starts their turn in the area gains 1 surge.' }),
+          ab('“Thunder Mother”', { flavor: 'All for thunder motherrr! Run and hide for coverrr!',
+            keywords: ['Magic','Ranged','Strike','Performance'], badge: 'PERFORMANCE', distance: 'Ranged 10', target: 'One creature',
+            powerRoll: 'Presence', tiers: [['≤11','Lightning damage equal to your level'],['12–16','5 + your level lightning damage'],['17+','10 + your level lightning damage']],
+            effect: 'At the end of each combat round while this performance is active, you can make a power roll against the target that ignores cover. You can’t target the same creature twice with this effect.' }),
+          ab('Harmonize', { flavor: 'Give the chorus a little punch.',
+            keywords: ['Ranged'], type: 'Triggered', cost: 3, resource: 'Drama', distance: 'Ranged 5', target: 'One ally',
+            trigger: 'The target uses an ability that targets only one enemy and costs 3 or fewer of their Heroic Resource.',
+            effect: 'The target can choose one additional target for the triggering ability. Any damage dealt to the additional target is sonic damage.',
+            spendCost: '1+', spend: 'You can trigger this ability when a target uses an ability that has a Heroic Resource cost of 3 plus each additional drama spent.' }),
+        ],
+      },
     ],
     kitRequired: true,
     quickKit: 'Swashbuckler',
@@ -1367,4 +1512,4 @@ const DS_CLASSES = [
 
 // ───────── Kits ─────────
 
-export { DS_CLASSES };
+export { DS_CLASSES, MOTIVATE_EARTH };

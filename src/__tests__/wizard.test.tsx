@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import React from 'react';
-import { Wizard } from '../wizard.jsx';
-import { newCharacter } from '../app.jsx';
+import { Wizard, isStepValid } from '../wizard.jsx';
+import { newCharacter, collectSkillPicks } from '../app.jsx';
 import { DS_STEPS, DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS, DS_CULTURES, DS_SKILL_GROUPS, DS_LANGUAGES, kitPoolFor } from '../data.jsx';
 import { PERKS, pickPool } from '../wizard/helpers.js';
 import { buildValidCharacter } from './helpers/factories';
@@ -267,6 +267,59 @@ describe('revenant former life', () => {
     const { container: hc } = renderWizard(human);
     expect(hc.textContent!.toLowerCase()).not.toContain('former life');
   });
+
+  it('trait choice pickers store picks and flip the gate (orc, dragon-knight, time-raider)', () => {
+    const ancestryStep = DS_STEPS.findIndex((s: any) => /ancestry/i.test(s.id));
+    // Orc Passionate Artisan: two crafting-skill chips.
+    const orc = atStep(ancestryStep, { ancestry: 'orc', traits: ['Passionate Artisan'] });
+    orc.ancestry.traitSkills = {};
+    expect(isStepValid(orc, ancestryStep)).toBe(false);
+    const { getAllByText, latest } = renderWizard(orc);
+    fireEvent.click(getAllByText('Alchemy').pop()!);
+    expect(latest().ancestry.traitSkills['Passionate Artisan']).toEqual(['Alchemy']);
+    cleanup();
+    // Dragon Knight Prismatic Scales: immunity chip.
+    const dk = atStep(ancestryStep, { ancestry: 'dragon-knight', traits: ['Prismatic Scales'] });
+    dk.ancestry.traitOptions = {};
+    expect(isStepValid(dk, ancestryStep)).toBe(false);
+    const dkr = renderWizard(dk);
+    fireEvent.click(dkr.getAllByText('Fire').pop()!);
+    const dkAfter = dkr.latest();
+    expect(dkAfter.ancestry.traitOptions['Prismatic Scales']).toEqual(['Fire']);
+    expect(isStepValid(dkAfter, ancestryStep)).toBe(true);
+    cleanup();
+    // Time Raider Psionic Gift: options derived from the abilities array.
+    const tr = atStep(ancestryStep, { ancestry: 'time-raider', traits: ['Psionic Gift'] });
+    tr.ancestry.traitOptions = {};
+    expect(isStepValid(tr, ancestryStep)).toBe(false);
+    const trr = renderWizard(tr);
+    fireEvent.click(trr.getAllByText('Psionic Bolt').pop()!);
+    const trAfter = trr.latest();
+    expect(trAfter.ancestry.traitOptions['Psionic Gift']).toEqual(['Psionic Bolt']);
+    expect(isStepValid(trAfter, ancestryStep)).toBe(true);
+    cleanup();
+    // Deselecting the trait clears its picks.
+    const orc2 = atStep(ancestryStep, { ancestry: 'orc', traits: ['Passionate Artisan'] });
+    const orc2r = renderWizard(orc2);
+    fireEvent.click(orc2r.getAllByText('Passionate Artisan')[0]);
+    const orc2After = orc2r.latest();
+    expect(orc2After.ancestry.traits).not.toContain('Passionate Artisan');
+    expect(orc2After.ancestry.traitSkills['Passionate Artisan']).toBeUndefined();
+  });
+
+  it('a purchased Previous Life trait gates the step until the borrowed trait is picked', () => {
+    const ancestryStep = DS_STEPS.findIndex((s: any) => /ancestry/i.test(s.id));
+    const c = atStep(ancestryStep, { ancestry: 'revenant', formerLife: 'dwarf', traits: ['Previous Life: 1pt'] });
+    c.ancestry.prevLifeTraits = {};                       // undo the factory's auto-pick
+    expect(isStepValid(c, ancestryStep)).toBe(false);
+    const { getAllByText, latest } = renderWizard(c);
+    // 'Grounded' is dwarf's only 1pt trait; the borrow picker card is the last match.
+    const grounded = getAllByText('Grounded');
+    fireEvent.click(grounded[grounded.length - 1]);
+    const after = latest();
+    expect(after.ancestry.prevLifeTraits['1pt']).toBe('Grounded');
+    expect(isStepValid(after, ancestryStep)).toBe(true);
+  });
 });
 
 describe('duplicate-grant swap UI', () => {
@@ -396,5 +449,65 @@ describe('language conflict between culture and career', () => {
     // An unpicked language known elsewhere renders blocked (not filtered away).
     expect(chip(container, 'Caelian').className).toContain('blocked');
     expect(chip(container, other)).toBeDefined();
+  });
+});
+
+// Complication grant pickers — skills/languages chosen on the complication step.
+describe('complication grant pickers', () => {
+  const COMP_STEP = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
+
+  it('a chosen complication with unfilled picks invalidates the step; skipping stays valid', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'grifter', custom: '', skills: {}, languages: [] };
+    expect(isStepValid(c, COMP_STEP)).toBe(false);
+    c.complication = { id: null, custom: '', skills: {}, languages: [] };
+    expect(isStepValid(c, COMP_STEP)).toBe(true);
+  });
+
+  it('grifter: clicking a free skill chip stores the pick and completes the step', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'grifter', custom: '', skills: {}, languages: [] };
+    const held = new Set(collectSkillPicks(c).map((p: any) => p.name));
+    const free = (DS_SKILL_GROUPS as any).intrigue.find((s: string) => !held.has(s));
+    const { getAllByText, latest } = renderWizard(c);
+    fireEvent.click(getAllByText(free)[0]);
+    expect(latest().complication.skills[0]).toEqual([free]);
+    expect(isStepValid(latest(), COMP_STEP)).toBe(true);
+  });
+
+  it('a skill already held elsewhere renders as a blocked chip', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'grifter', custom: '', skills: {}, languages: [] };
+    const held = collectSkillPicks(c).find((p: any) => (DS_SKILL_GROUPS as any).intrigue.includes(p.name));
+    if (!held) return; // default build holds no intrigue skill — nothing to assert
+    const { getAllByText } = renderWizard(c);
+    const chip = getAllByText(held.name).find((el: any) => el.className?.includes?.('skill-chip'));
+    expect(chip!.className).toContain('blocked');
+  });
+
+  it('exile: clicking a language chip stores the pick', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'exile', custom: '', skills: {}, languages: [] };
+    const { getAllByText, latest } = renderWizard(c);
+    fireEvent.click(getAllByText('Zaliac')[0]);
+    expect(latest().complication.languages).toEqual(['Zaliac']);
+    expect(isStepValid(latest(), COMP_STEP)).toBe(true);
+  });
+
+  it('stripped-of-rank previews the Issue Order ability card on the step', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'stripped-of-rank', custom: '', skills: {}, languages: [] };
+    const { container } = renderWizard(c);
+    expect(container.textContent).toContain('Issue Order');
+    expect(isStepValid(c, COMP_STEP)).toBe(true); // ability grants need no picks
+  });
+
+  it('re-picking a complication clears stored grant picks', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'grifter', custom: '', skills: { 0: ['Alertness'] }, languages: [] };
+    const { getAllByText, latest } = renderWizard(c);
+    fireEvent.click(getAllByText('Exile')[0]);
+    expect(latest().complication.id).toBe('exile');
+    expect(latest().complication.skills).toEqual({});
   });
 });

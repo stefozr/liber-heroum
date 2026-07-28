@@ -3,11 +3,12 @@
 import { newCharacter, classDef, collectSkillPicks, collectPerkPicks } from '../../app.jsx';
 
 import {
-  DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_SKILL_GROUPS, DS_LANGUAGES, kitPoolFor,
+  DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_SKILL_GROUPS, DS_LANGUAGES, DS_COMPLICATIONS, kitPoolFor,
 } from '../../data.jsx';
 import {
   parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, defaultFlexValues, PERKS,
   groupsOfSkill, careerAutoCollisions, classGrantCollisions,
+  resolvedAncestryTraits, ancestrySignatures,
 } from '../../wizard/helpers.js';
 import {
   LEVELUP_DATA, makeContext, levelChoicesFor, applyLevelUp, deriveGroupName,
@@ -100,6 +101,47 @@ export function buildValidCharacter(spec: any = {}) {
   c.ancestry.id = anc.id;
   if (anc.id === 'revenant') c.ancestry.formerLife = spec.formerLife || DS_ANCESTRIES.find((a: any) => a.id !== 'revenant')!.id;
   if (spec.traits) c.ancestry.traits = [...spec.traits];
+  // Each purchased 'Previous Life: Npt' trait needs its borrowed former-life trait
+  // chosen (mirrors setPrevLifeTrait in the ancestry step).
+  if (anc.id === 'revenant') {
+    const former: any = DS_ANCESTRIES.find((a: any) => a.id === c.ancestry.formerLife);
+    c.ancestry.prevLifeTraits = spec.prevLifeTraits ? { ...spec.prevLifeTraits } : {};
+    for (const cost of [1, 2]) {
+      if (!c.ancestry.prevLifeTraits[`${cost}pt`] && (c.ancestry.traits || []).includes(`Previous Life: ${cost}pt`)) {
+        const pick = (former?.traits || []).find((t: any) => t.cost === cost);
+        if (pick) c.ancestry.prevLifeTraits[`${cost}pt`] = pick.name;
+      }
+    }
+  }
+  // Signature choices (devil skill, dragon-knight Wyrmplate, dwarf rune) and trait
+  // choices (Prismatic Scales, Psionic Gift, Passionate Artisan) — the ancestry gate
+  // requires them, so fill first-valid picks (mirrors the ancestry step togglers).
+  c.ancestry.sigSkills = spec.sigSkills ? { ...spec.sigSkills } : {};
+  c.ancestry.traitSkills = spec.traitSkills ? { ...spec.traitSkills } : {};
+  c.ancestry.traitOptions = spec.traitOptions ? { ...spec.traitOptions } : {};
+  if (spec.sigOptions) c.ancestry.sigOptions = { ...spec.sigOptions };
+  const optionNames = (choice: any, def: any) =>
+    (choice.options || (def.abilities || []).map((a: any) => a.name)).map((o: any) => (typeof o === 'string' ? o : o.name));
+  for (const sig of ancestrySignatures(anc)) {
+    if (sig.skillChoice && !c.ancestry.sigSkills[sig.name]) {
+      const pool = sig.skillChoice.groups.flatMap((g: string) => (DS_SKILL_GROUPS as any)[g] || []);
+      c.ancestry.sigSkills[sig.name] = pool.filter((s: string) => !taken.has(s)).slice(0, sig.skillChoice.count);
+      c.ancestry.sigSkills[sig.name].forEach(take);
+    }
+    if (sig.optionChoice && !c.ancestry.sigOptions[sig.name]) {
+      c.ancestry.sigOptions[sig.name] = optionNames(sig.optionChoice, sig).slice(0, sig.optionChoice.count);
+    }
+  }
+  for (const t of resolvedAncestryTraits(c)) {
+    if (t.skillChoice && !c.ancestry.traitSkills[t.name]) {
+      const pool = t.skillChoice.groups.flatMap((g: string) => (DS_SKILL_GROUPS as any)[g] || []);
+      c.ancestry.traitSkills[t.name] = pool.filter((s: string) => !taken.has(s)).slice(0, t.skillChoice.count);
+      c.ancestry.traitSkills[t.name].forEach(take);
+    }
+    if (t.optionChoice && !c.ancestry.traitOptions[t.name]) {
+      c.ancestry.traitOptions[t.name] = optionNames(t.optionChoice, t).slice(0, t.optionChoice.count);
+    }
+  }
 
   // 2 · Culture (aspects are stored by id; each aspect grants one skill from its pool)
   const cul: any = DS_CULTURES;
@@ -196,8 +238,27 @@ export function buildValidCharacter(spec: any = {}) {
     if (cls.kit2Required) c.kit2 = { id: spec.kit2 || pool[1].id };
   }
 
-  // 5 · Complication (optional — only when asked for)
-  if (spec.complication) c.complication.id = spec.complication;
+  // 5 · Complication (optional — only when asked for), filling any required
+  // skill/language picks the same way the wizard's complication step would.
+  if (spec.complication) {
+    c.complication.id = spec.complication;
+    const comp: any = DS_COMPLICATIONS.find((x: any) => x.id === spec.complication);
+    if (comp) {
+      (comp.skills || []).forEach((s: string) => taken.add(s));
+      c.complication.skills = {};
+      (comp.skillChoices || []).forEach((ch: any, i: number) => {
+        const pool: string[] = ch.options || Array.from(new Set((ch.groups || []).flatMap((g: string) => (DS_SKILL_GROUPS as any)[g] || [])));
+        const picks = pool.filter(s => !taken.has(s)).slice(0, ch.count);
+        picks.forEach(s => taken.add(s));
+        c.complication.skills[i] = picks;
+      });
+      if (comp.languageChoice) {
+        const known = new Set(['Caelian', c.culture.language, ...c.career.languages]);
+        const pool: string[] = comp.languageChoice.options || (DS_LANGUAGES as string[]);
+        c.complication.languages = pool.filter(L => !known.has(L)).slice(0, comp.languageChoice.count);
+      }
+    }
+  }
 
   // 6 · Identity
   c.identity.name = spec.name || 'Test Hero';

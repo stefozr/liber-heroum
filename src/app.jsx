@@ -9,7 +9,7 @@ import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from '.
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
-import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants } from './wizard/helpers.js';
+import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
 
 const { useState, useEffect, useMemo, useReducer, useCallback } = React;
@@ -51,13 +51,13 @@ function newCharacter(ownerId = null, campaignId = null) {
     name: '',
     portrait: '',
 
-    ancestry: { id: null, traits: [], traitChoice: null, formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {} },
+    ancestry: { id: null, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} },
     culture: { language: 'Caelian', environment: null, organization: null, upbringing: null, archetype: null, skills: {} },
     career: { id: null, incident: '', taken: '', languages: [], skills: [], perk: '' },
     cclass: { id: null, subclass: null, domains: [], characteristics: {}, charArrayIndex: 0, signatures: [], heroic3: null, heroic5: null, skills: [], deity: '', charModel: 'v2' },
     kit: { id: null },
     kit2: { id: null },
-    complication: { id: null, custom: '' },
+    complication: { id: null, custom: '', skills: {}, languages: [] },
     identity: { name: '', pronouns: '', age: '', height: '', weight: '', appearance: '', backstory: '', deity: '' },
     levelChoices: {},
 
@@ -187,10 +187,9 @@ function collectStatBonuses(c) {
   const out = [];
 
   if (anc) {
-    for (const tName of c.ancestry.traits || []) {
-      const t = (anc.traits || []).find(x => x.name === tName);
-      if (t?.bonuses) out.push(t.bonuses);
-    }
+    // Resolves the revenant's 'Previous Life' entries to the borrowed trait, so its
+    // bonuses count too.
+    for (const t of resolvedAncestryTraits(c)) if (t.bonuses) out.push(t.bonuses);
   }
   if (cls) {
     for (const f of cls.features || []) if (f.bonuses) out.push(f.bonuses);
@@ -267,9 +266,12 @@ function computeDerived(c) {
     + bonuses.reduce((s, b) => s + (b.recBonusChar ? charVal(b.recBonusChar) : 0), 0);
   const winded = Math.floor(staminaMax / 2);
 
+  // A revenant's size is the former life's size (Former Life signature trait).
+  const size = (formerLifeDef(c) || anc)?.size || '1M';
+
   return {
     staminaMax, recoveries, recoveryValue, winded,
-    speed, stability, disengage,
+    speed, stability, disengage, size,
     chars, highest, echelon,
     potency: cls ? {
       weak: highest - 2, average: highest - 1, strong: highest,
@@ -798,9 +800,32 @@ function summarizeBenefits(c) {
   if (c.cclass?.domainSkill && c.cclass?.domainFeature) {
     skills.push({ source: `${c.cclass.domainFeature.domain} Domain`, text: c.cclass.domainSkill });
   }
-  if (anc && anc.signature?.text && /skill/i.test(anc.signature.text)) {
-    // Ancestry signatures like Silver Tongue grant a skill choice.
-    skills.push({ source: anc.name + ' \u2014 ' + anc.signature.name, text: anc.signature.text });
+  if (anc) {
+    // Ancestry signature/trait skill choices (Silver Tongue, Passionate Artisan) \u2014
+    // show the picked skills, not the rules prompt.
+    for (const sig of ancestrySignatures(anc)) {
+      if (!sig.skillChoice) continue;
+      const picked = ((c.ancestry?.sigSkills || {})[sig.name] || []).filter(Boolean);
+      skills.push({ source: `${anc.name} \u2014 ${sig.name}`,
+        text: picked.length ? picked.join(' \u00b7 ')
+          : `+${sig.skillChoice.count} ${sig.skillChoice.groups.join('/')} of your choice` });
+    }
+    for (const t of resolvedAncestryTraits(c)) {
+      if (!t.skillChoice) continue;
+      skills.push({ source: `${anc.name} \u2014 ${t.name}`,
+        text: t.chosen?.length ? t.chosen.join(' \u00b7 ')
+          : `+${t.skillChoice.count} ${t.skillChoice.groups.join('/')} of your choice` });
+    }
+  }
+  const comp = complicationDef(c);
+  if (comp) {
+    const parts = [...(comp.skills || [])];
+    (comp.skillChoices || []).forEach((ch, i) => {
+      const picked = (c.complication?.skills || {})[i] || [];
+      parts.push(...picked);
+      if (picked.length < ch.count) parts.push(`+${ch.count - picked.length} of your choice`);
+    });
+    if (parts.length) skills.push({ source: comp.name, text: parts.join(' \u00b7 ') });
   }
 
   // Languages — show actual picks if any, otherwise the +N text.
@@ -811,6 +836,11 @@ function summarizeBenefits(c) {
     const picks = c.career?.languages || [];
     if (picks.length) languages.push({ source: car.name, text: picks.join(' \u00b7 ') });
     else languages.push({ source: car.name, text: `+${car.languages} of your choice` });
+  }
+  if (comp?.languageChoice) {
+    const picks = c.complication?.languages || [];
+    if (picks.length) languages.push({ source: comp.name, text: picks.join(' \u00b7 ') });
+    else languages.push({ source: comp.name, text: `+${comp.languageChoice.count} of your choice` });
   }
 
   // Perk
@@ -884,7 +914,35 @@ function summarizeBenefits(c) {
     }
   }
 
-  return { skills, languages, perk, features, classAbilities };
+  // Complication-granted abilities, deduped by name against class/subclass abilities.
+  // Grounded's Motivate Earth carries an official rider: if the hero also gains the
+  // feature from their class, it becomes usable at range instead of a second copy.
+  for (const a of comp?.abilities || []) {
+    const existing = classAbilities.findIndex(x => x.name === a.name);
+    if (existing >= 0) {
+      if (a.name === 'Motivate Earth') {
+        classAbilities[existing] = { ...classAbilities[existing],
+          distance: 'Ranged 5',
+          keywords: (classAbilities[existing].keywords || []).map(k => (k === 'Melee' ? 'Ranged' : k)) };
+      }
+    } else {
+      classAbilities.push(a);
+    }
+  }
+
+  // Ancestry-granted abilities (Dragon Breath, Shadowmeld, …). Choice-bearing traits
+  // (Psionic Gift) contribute only the chosen ability.
+  const ancestryAbilities = [];
+  if (anc) {
+    for (const sig of ancestrySignatures(anc)) ancestryAbilities.push(...(sig.abilities || []));
+    for (const t of resolvedAncestryTraits(c)) {
+      if (!t.abilities) continue;
+      if (t.optionChoice) ancestryAbilities.push(...t.abilities.filter(a => (t.chosen || []).includes(a.name)));
+      else ancestryAbilities.push(...t.abilities);
+    }
+  }
+
+  return { skills, languages, perk, features, classAbilities, ancestryAbilities };
 }
 
 // ───────── Duplicate-prevention: a single source of truth for committed skills/perks ─────────
@@ -903,6 +961,8 @@ function collectSkillPicks(c) {
   if (c.cclass && c.cclass.domainSkill) push(c.cclass.domainSkill, 'Domain', 'domain');
   Object.entries((c.ancestry && c.ancestry.sigSkills) || {}).forEach(([sig, arr]) =>
     (arr || []).forEach(s => push(s, sig, 'sig:' + sig)));
+  Object.entries((c.ancestry && c.ancestry.traitSkills) || {}).forEach(([trait, arr]) =>
+    (arr || []).forEach(s => push(s, trait, 'trait:' + trait)));
   const cls = classDef(c);
   if (cls) {
     // Class skills: grants (with swaps applied) and the picker's choices.
@@ -917,6 +977,12 @@ function collectSkillPicks(c) {
       if (p && p.chosen) push(p.chosen, 'Level ' + L, 'lvl:' + L + ':' + ch.id);
     }
   });
+  const comp = complicationDef(c);
+  if (comp) {
+    for (const s of comp.skills || []) push(s, comp.name, 'comp:fixed');
+    (comp.skillChoices || []).forEach((ch, i) =>
+      (((c.complication && c.complication.skills) || {})[i] || []).forEach(s => push(s, comp.name, 'comp:' + i)));
+  }
   return out;
 }
 
@@ -958,6 +1024,7 @@ function collectLanguagePicks(c) {
   push('Caelian', 'Standard', 'standard');
   push(c.culture && c.culture.language, 'Culture', 'culture');
   for (const l of (c.career && c.career.languages) || []) push(l, 'Career', 'career');
+  for (const l of (c.complication && c.complication.languages) || []) push(l, 'Complication', 'complication');
   return out;
 }
 
@@ -976,11 +1043,19 @@ function languagesTakenExcept(c, ownKey) {
 // filtered out of the picker — impossible to remove, and silently deduped on export.
 // Pruning it here lets the career step honestly show the freed slot. Idempotent.
 function normalizeLanguages(c) {
+  let out = c;
   const carLangs = c && c.career && c.career.languages;
-  if (!carLangs || !carLangs.length) return c;
-  const cleaned = carLangs.filter(l => l !== 'Caelian' && l !== (c.culture && c.culture.language));
-  if (cleaned.length === carLangs.length) return c;
-  return { ...c, career: { ...c.career, languages: cleaned } };
+  if (carLangs && carLangs.length) {
+    const cleaned = carLangs.filter(l => l !== 'Caelian' && l !== (c.culture && c.culture.language));
+    if (cleaned.length !== carLangs.length) out = { ...out, career: { ...out.career, languages: cleaned } };
+  }
+  const compLangs = c && c.complication && c.complication.languages;
+  if (compLangs && compLangs.length) {
+    const known = new Set(['Caelian', c.culture && c.culture.language, ...((out.career && out.career.languages) || [])]);
+    const cleaned = compLangs.filter(l => !known.has(l));
+    if (cleaned.length !== compLangs.length) out = { ...out, complication: { ...out.complication, languages: cleaned } };
+  }
+  return out;
 }
 
 // Expose helpers globally for other files

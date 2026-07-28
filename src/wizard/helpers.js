@@ -1,5 +1,6 @@
 // wizard/helpers.js — pure helpers + shared constants for the creation wizard.
 import { DS_SKILL_GROUPS } from '../data.jsx';
+import { DS_ANCESTRIES } from '../data/ancestries.js';
 import { DS_CAREERS } from '../data/careers.js';
 import { DS_CLASSES } from '../data/classes.js';
 
@@ -280,6 +281,66 @@ function fmtKitDmg(v) {
   return v;
 }
 
+const PREV_LIFE_RE = /^Previous Life: (\d)pt$/;
+
+// The ancestry the revenant was before dying, or null.
+function formerLifeDef(c) {
+  return DS_ANCESTRIES.find(a => a.id === c?.ancestry?.formerLife) || null;
+}
+
+// An ancestry's signature trait list — some ancestries have one (`signature`),
+// some have two (`signatures[]`).
+function ancestrySignatures(anc) {
+  return anc?.signatures || (anc?.signature ? [anc.signature] : []);
+}
+
+// The ancestry point budget. Official data ships "Revenant (Small)" as a separate
+// ancestry whose budget is 3 (vs 2); the app models it as +1 point when the former
+// life is size 1S.
+function ancestryPoints(c) {
+  const anc = DS_ANCESTRIES.find(a => a.id === c?.ancestry?.id);
+  if (!anc) return 0;
+  if (anc.id === 'revenant' && formerLifeDef(c)?.size === '1S') return anc.points + 1;
+  return anc.points;
+}
+
+// Every purchased ancestry trait, resolved to its full definition. The revenant's
+// 'Previous Life: Npt' entries expand into the trait borrowed from the former-life
+// ancestry ({ ...trait, borrowedFrom: <ancestry name> }); when no former life or no
+// pick has been made yet, the placeholder entry passes through with placeholder: true.
+// Traits carrying a choice (optionChoice/skillChoice) are decorated with the stored
+// picks as { choiceLabel, chosen: [...] }.
+function resolvedAncestryTraits(c) {
+  const anc = DS_ANCESTRIES.find(a => a.id === c?.ancestry?.id);
+  if (!anc) return [];
+  const former = formerLifeDef(c);
+  const withChosen = (def) => {
+    if (def.optionChoice) {
+      return { ...def, choiceLabel: def.optionChoice.label,
+        chosen: ((c.ancestry.traitOptions || {})[def.name] || []).filter(Boolean) };
+    }
+    if (def.skillChoice) {
+      return { ...def, choiceLabel: 'Skills',
+        chosen: ((c.ancestry.traitSkills || {})[def.name] || []).filter(Boolean) };
+    }
+    return def;
+  };
+  const out = [];
+  for (const tName of c.ancestry.traits || []) {
+    const t = (anc.traits || []).find(x => x.name === tName);
+    if (!t) continue;
+    const m = PREV_LIFE_RE.exec(tName);
+    if (m) {
+      const pickName = (c.ancestry.prevLifeTraits || {})[`${m[1]}pt`];
+      const picked = pickName && (former?.traits || []).find(x => x.name === pickName);
+      out.push(picked ? withChosen({ ...picked, borrowedFrom: former.name }) : { ...t, placeholder: true });
+      continue;
+    }
+    out.push(withChosen(t));
+  }
+  return out;
+}
+
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
-export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg };
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints };

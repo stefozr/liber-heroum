@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
@@ -10,8 +10,23 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 function ComplicationStep({ character, update }) {
   const sel = character.complication.id;
-  const pick = (id) => update(c => ({ ...c, complication: { id, custom: '' } }));
-  const skip = () => update(c => ({ ...c, complication: { id: null, custom: '' } }));
+  const pick = (id) => update(c => ({ ...c, complication: { id, custom: '', skills: {}, languages: [] } }));
+  const skip = () => update(c => ({ ...c, complication: { id: null, custom: '', skills: {}, languages: [] } }));
+  const comp = complicationDef(character);
+  const compSkills = character.complication.skills || {};
+  const compLangs = character.complication.languages || [];
+  const toggleChoiceSkill = (i, count, s) => update(c => {
+    const cur = { ...(c.complication.skills || {}) };
+    const arr = cur[i] || [];
+    cur[i] = arr.includes(s) ? arr.filter(x => x !== s) : (arr.length >= count ? arr : [...arr, s]);
+    return { ...c, complication: { ...c.complication, skills: cur } };
+  });
+  const toggleLang = (count, L) => update(c => {
+    const cur = c.complication.languages || [];
+    const next = cur.includes(L) ? cur.filter(x => x !== L) : (cur.length >= count ? cur : [...cur, L]);
+    return { ...c, complication: { ...c.complication, languages: next } };
+  });
+  const hasGrants = comp && ((comp.skills || []).length || (comp.skillChoices || []).length || comp.languageChoice || (comp.abilities || []).length);
   // Scroll the wizard body so a freshly-rolled complication card is brought into view.
   const scrollToComp = (id) => {
     requestAnimationFrame(() => {
@@ -41,6 +56,91 @@ function ComplicationStep({ character, update }) {
           <Button kind="ghost" small onClick={roll}>⚄ ROLL d100</Button>
         </div>
       </div>
+
+      {hasGrants && (
+        <div className="orn-frame" style={{padding:'18px 22px'}}>
+          <H3>Granted by <span style={{color:'var(--gold-2)'}}>{comp.name}</span></H3>
+
+          {(comp.skills || []).length > 0 && (
+            <div style={{marginTop:12, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
+              <Tag kind="gold">Skills</Tag>
+              {(comp.skills || []).map(s => (
+                <span key={s} className="skill-chip on" style={{cursor:'default'}}>{s}</span>
+              ))}
+            </div>
+          )}
+
+          {(comp.skillChoices || []).map((ch, i) => {
+            const pool = ch.options || Array.from(new Set((ch.groups || []).flatMap(g => DS_SKILL_GROUPS[g] || [])));
+            const picked = compSkills[i] || [];
+            const label = ch.options ? 'listed' : (ch.groups || []).join(' / ');
+            const takenElsewhere = skillsTakenExcept(character, 'comp:' + i);
+            return (
+              <div key={i} style={{marginTop:16}}>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
+                  Choose {ch.count} {label} skill{ch.count > 1 ? 's' : ''} — picked <b style={{color: picked.length === ch.count ? 'var(--gold-2)' : 'var(--ink)'}}>{picked.length}</b> / {ch.count}
+                </div>
+                <div className="skill-chip-grid">
+                  {pool.map(s => {
+                    const on = picked.includes(s);
+                    const elsewhere = !on && takenElsewhere.has(s);
+                    const blocked = elsewhere || (!on && picked.length >= ch.count);
+                    return (
+                      <button
+                        type="button"
+                        key={s}
+                        className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
+                        onClick={() => !blocked && toggleChoiceSkill(i, ch.count, s)}
+                        disabled={blocked}
+                        title={elsewhere ? `Already chosen — ${takenElsewhere.get(s)}` : ''}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {comp.languageChoice && (() => {
+            const { count, options } = comp.languageChoice;
+            const pool = options || DS_LANGUAGES;
+            const langsElsewhere = languagesTakenExcept(character, 'complication');
+            return (
+              <div style={{marginTop:16}}>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
+                  Choose {count} {options ? 'dead ' : ''}language{count > 1 ? 's' : ''} — picked <b style={{color: compLangs.length === count ? 'var(--gold-2)' : 'var(--ink)'}}>{compLangs.length}</b> / {count}
+                </div>
+                <div className="skill-chip-grid">
+                  {pool.map(L => {
+                    const on = compLangs.includes(L);
+                    const blocked = !on && (langsElsewhere.has(L) || compLangs.length >= count);
+                    return (
+                      <button
+                        type="button"
+                        key={L}
+                        className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
+                        onClick={() => !blocked && toggleLang(count, L)}
+                        disabled={blocked}
+                        title={!on && langsElsewhere.has(L) ? `Already known — ${langsElsewhere.get(L)}` : ''}
+                      >
+                        {L}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {(comp.abilities || []).length > 0 && (
+            <div style={{marginTop:16, display:'grid', gap:14}}>
+              {(comp.abilities || []).map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
+            </div>
+          )}
+        </div>
+      )}
 
       <H3>Or choose one</H3>
       <div className="grid-2">

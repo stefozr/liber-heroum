@@ -240,6 +240,40 @@ describe('ancestries', () => {
       expectComplete(c, `revenant ← ${other.id}`);
     }
   });
+  it('every ancestry choice gates the step until picked', () => {
+    // Devil signature skill
+    const devil = buildValidCharacter({ ancestry: 'devil' });
+    devil.ancestry.sigSkills = {};
+    expect(invalidSteps(devil), 'devil without Silver Tongue skill').toContain('ancestry');
+    // Dragon Knight Wyrmplate immunity
+    const dk = buildValidCharacter({ ancestry: 'dragon-knight' });
+    dk.ancestry.sigOptions = {};
+    expect(invalidSteps(dk), 'dragon-knight without Wyrmplate immunity').toContain('ancestry');
+    // Dragon Knight Prismatic Scales (trait optionChoice)
+    const dk2 = buildValidCharacter({ ancestry: 'dragon-knight', traits: ['Prismatic Scales'] });
+    dk2.ancestry.traitOptions = {};
+    expect(invalidSteps(dk2), 'Prismatic Scales without immunity pick').toContain('ancestry');
+    // Orc Passionate Artisan (trait skillChoice, count 2)
+    const orc = buildValidCharacter({ ancestry: 'orc', traits: ['Passionate Artisan'] });
+    expectComplete(orc, 'orc + Passionate Artisan');
+    orc.ancestry.traitSkills = { 'Passionate Artisan': ['Alchemy'] };
+    expect(invalidSteps(orc), 'Passionate Artisan with 1 of 2 skills').toContain('ancestry');
+    // Time Raider Psionic Gift (trait optionChoice over abilities)
+    const tr = buildValidCharacter({ ancestry: 'time-raider', traits: ['Psionic Gift'] });
+    expectComplete(tr, 'time-raider + Psionic Gift');
+    tr.ancestry.traitOptions = {};
+    expect(invalidSteps(tr), 'Psionic Gift without ability pick').toContain('ancestry');
+    // Revenant borrowing a choice-bearing trait gates until its pick is made too.
+    const rev = buildValidCharacter({
+      ancestry: 'revenant', formerLife: 'dragon-knight',
+      traits: ['Previous Life: 1pt'], prevLifeTraits: { '1pt': 'Prismatic Scales' },
+    });
+    rev.ancestry.traitOptions = {};
+    expect(invalidSteps(rev), 'borrowed Prismatic Scales without pick').toContain('ancestry');
+    rev.ancestry.traitOptions = { 'Prismatic Scales': ['Fire'] };
+    expectComplete(rev, 'borrowed Prismatic Scales with pick');
+  });
+
   it('signature skill choices: every option is a real, selectable skill', () => {
     for (const anc of DS_ANCESTRIES as any[]) {
       const sigs = anc.signatures || (anc.signature ? [anc.signature] : []);

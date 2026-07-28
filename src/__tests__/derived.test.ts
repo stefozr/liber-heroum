@@ -3,6 +3,7 @@
 // picks, complications, and subclass level-gated features (DS_LEVEL_BONUSES).
 import { describe, it, expect } from 'vitest';
 import { newCharacter, computeDerived } from '../app.jsx';
+import { resolvedAncestryTraits } from '../wizard/helpers.js';
 
 function hero(over: any = {}) {
   const c: any = newCharacter('u-test', null);
@@ -112,6 +113,43 @@ describe('ancestry traits (data-driven)', () => {
     c.ancestry.id = 'human';
     c.ancestry.traits = ['Staying Power'];
     expect(computeDerived(c).recoveries).toBe(8 + 2);
+  });
+});
+
+describe('revenant previous life', () => {
+  function revenant(formerLife: string, traits: string[], prevLifeTraits: any) {
+    const c = withClass('censor');
+    c.ancestry.id = 'revenant';
+    c.ancestry.formerLife = formerLife;
+    c.ancestry.traits = traits;
+    c.ancestry.prevLifeTraits = prevLifeTraits;
+    return c;
+  }
+
+  it('resolvedAncestryTraits expands the borrowed trait, keeps the placeholder when unpicked', () => {
+    const picked = resolvedAncestryTraits(revenant('dwarf', ['Previous Life: 1pt', 'Undead Influence'], { '1pt': 'Grounded' }));
+    expect(picked.map((t: any) => t.name)).toEqual(['Grounded', 'Undead Influence']);
+    expect(picked[0].borrowedFrom).toBe('Dwarf');
+    const unpicked = resolvedAncestryTraits(revenant('dwarf', ['Previous Life: 1pt'], {}));
+    expect(unpicked[0].name).toBe('Previous Life: 1pt');
+    expect(unpicked[0].placeholder).toBe(true);
+  });
+
+  it('borrowed trait bonuses reach derived stats', () => {
+    const grounded = revenant('dwarf', ['Previous Life: 1pt'], { '1pt': 'Grounded' });
+    expect(computeDerived(grounded).stability).toBe(1);
+    const spark = revenant('dwarf', ['Previous Life: 2pt'], { '2pt': 'Spark Off Your Skin' });
+    expect(computeDerived(spark).staminaMax).toBe(21 + 6);
+    const swift = revenant('wode-elf', ['Previous Life: 2pt'], { '2pt': 'Swift' });
+    expect(computeDerived(swift).speed).toBe(6);
+  });
+
+  it('size comes from the former life', () => {
+    expect(computeDerived(revenant('hakaan', [], {})).size).toBe('1L');
+    expect(computeDerived(revenant('polder', [], {})).size).toBe('1S');
+    const human = withClass('censor');
+    human.ancestry.id = 'human';
+    expect(computeDerived(human).size).toBe('1M');
   });
 });
 

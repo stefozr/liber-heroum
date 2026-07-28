@@ -3,7 +3,7 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
-import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
+import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestrySignatures } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
@@ -70,7 +70,7 @@ function ReviewStep({ character, update }) {
         <ReviewBlock title="Ancestry" body={anc ? (
           <>
             <div style={{fontFamily:'var(--display)', fontSize: '1rem', color:'var(--ink)', letterSpacing:'0.10em'}}>{anc.name}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:6}}>SIG: {(anc.signatures || [anc.signature]).map(s => s.name).join(' · ').toUpperCase()}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:6}}>SIG: {ancestrySignatures(anc).map(s => s.name).join(' · ').toUpperCase()}</div>
             {Object.values(character.ancestry.sigSkills || {}).flat().filter(Boolean).length > 0 && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Signature skill: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigSkills || {}).flat().filter(Boolean).join(', ')}</b>
@@ -78,7 +78,7 @@ function ReviewStep({ character, update }) {
             )}
             {Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).length > 0 && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
-                {(anc.signatures || [anc.signature]).find(s => s.optionChoice)?.optionChoice.label || 'Choice'}: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).join(', ')}</b>
+                {ancestrySignatures(anc).find(s => s.optionChoice)?.optionChoice.label || 'Choice'}: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).join(', ')}</b>
               </div>
             )}
             {anc.id === 'revenant' && character.ancestry.formerLife && (
@@ -89,9 +89,13 @@ function ReviewStep({ character, update }) {
                 ))}
               </div>
             )}
-            {character.ancestry.traits?.length > 0 && (
+            {resolvedAncestryTraits(character).length > 0 && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
-                Traits: {character.ancestry.traits.join(', ')}
+                Traits: {resolvedAncestryTraits(character).map(t =>
+                  t.name
+                  + (t.chosen?.length ? ` (${t.chosen.join(', ')})` : '')
+                  + (t.borrowedFrom ? ` [${t.borrowedFrom}]` : '')
+                ).join(', ')}
               </div>
             )}
           </>
@@ -235,6 +239,17 @@ function ReviewStep({ character, update }) {
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
                 <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55}}>{f.text}</div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(benefits.ancestryAbilities || []).length > 0 && (
+        <div>
+          <H3>Ancestry Abilities</H3>
+          <div className="grid-2" style={{marginTop: 12, gap: 12}}>
+            {benefits.ancestryAbilities.map(a => (
+              <AbilityCard key={a.name} ability={a} kind="sig" />
             ))}
           </div>
         </div>
