@@ -427,8 +427,9 @@ function characterToFoundryHero(c, officialIndex = null) {
     const generated = descriptionItem(cls.name, 'class', 0, para(cls.longBlurb || cls.blurb), {
       level: c.level || 1,
       primary: cls.resource || '',
-      epic: '',
-      turnGain: '2',
+      epic: cls.epicResource || '',
+      // Half the classes roll 1d3 rather than gaining a flat 2 — don't assume.
+      turnGain: cls.turnGain || '2',
       minimum: '0',
       characteristics: { core: Object.keys(cls.fixedChars || {}).map(k => k.toLowerCase()) },
       stamina: { starting: cls.starting?.stamina1 ?? 20, level: cls.starting?.staminaPer ?? 0 },

@@ -1,5 +1,10 @@
 node_modules/
 dist/
+# Licensed source material and everything derived from it. The rulebook PDF and the
+# premium Foundry module in Extra/ are commercial content; reference/ holds the text
+# extracted from them for validation. Neither may be committed.
+Extra/
+reference/
 .env
 .env.local
 *.local

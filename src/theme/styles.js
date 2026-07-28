@@ -304,6 +304,9 @@ body[data-theme="obsidian"] .app .bg-grain {
   background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   padding: 16px 18px; position: relative;
   transition: all .15s; cursor: pointer;
+  /* Pairs with the minmax(0, …) tracks below: the grid no longer grows to fit a
+     stubborn card, so the card itself has to be allowed to shrink. */
+  min-width: 0;
 }
 .card:hover { border-color: var(--gold-deep); background: linear-gradient(180deg, var(--bg-3), var(--bg-2)); }
 .card.selected {
@@ -527,7 +530,7 @@ body[data-theme="obsidian"] .app .bg-grain {
 
 /* 5-up characteristics strip in the wizard preview card. Distinct from play's
    .chars-row, which lives in PLAY_CSS and is not mounted during the wizard. */
-.chars-5 { display: grid; grid-template-columns: repeat(5, 1fr); }
+.chars-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .chars-5 .stat-tile .lbl { font-size: 0.5rem; }
 
 /* Key/value rows in the career step. */
@@ -641,7 +644,7 @@ body[data-theme="obsidian"] .app .bg-grain {
 .wiz-footer .meta { font-family: var(--mono); font-size: 0.6875rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
 
 /* Point-buy characteristic picker */
-.pb-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.pb-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .pb-stat {
   border: 2px double var(--line); background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   padding: 14px 10px 12px; text-align: center; position: relative;
@@ -666,10 +669,10 @@ body[data-theme="obsidian"] .app .bg-grain {
   border-radius: 2px; padding: 5px 10px; cursor: pointer; transition: color .12s, border-color .12s;
 }
 .pb-reset:hover { color: var(--gold-2); border-color: var(--gold); }
-@media (max-width: 720px) { .pb-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 720px) { .pb-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* Prayer / Ward picker */
-.pw-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.pw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .pw-opt {
   border: 1px solid var(--line-2); background: rgba(255,255,255,0.015);
   padding: 9px 12px; cursor: pointer; transition: border-color .12s, box-shadow .12s, background .12s;
@@ -681,9 +684,13 @@ body[data-theme="obsidian"] .app .bg-grain {
 @media (max-width: 560px) { .pw-grid { grid-template-columns: 1fr; } }
 
 /* Grid (cards listing) */
-.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+/* minmax(0, 1fr), not 1fr — a bare 1fr is minmax(auto, 1fr), which floors every
+   track at its widest child's min-content. One card with an unbreakable header
+   then widens its whole column and the siblings shrink to pay for it, so the
+   columns come out uneven. minmax(0, …) keeps every track exactly equal. */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .stack { display: flex; flex-direction: column; }
 .stack-8 > * + * { margin-top: 8px; }
 .stack-12 > * + * { margin-top: 12px; }
@@ -900,8 +907,33 @@ body[data-theme="obsidian"] .app .bg-grain {
 .ability-card .ac-roll .t { font-weight: 700; }
 .ability-card .ac-effect {
   margin-top: 10px; font-family: var(--serif); font-size: 0.84375rem; color: var(--ink-2); line-height: 1.5;
+  /* Official effect text carries real paragraph and bullet breaks — honour them without
+     turning the string into markup. pre-line keeps wrapping intact. */
+  white-space: pre-line;
 }
 .ability-card .ac-effect b { color: var(--gold-2); }
+
+/* Class picker cards — the crest is fixed-width, so everything to its right has
+   to be able to shrink or the card sets a floor its grid track can't honour. */
+.class-card { padding-bottom: 14px; }
+.class-card .cc-row { display: flex; gap: 14px; align-items: flex-start; }
+.class-card .cc-body { flex: 1; min-width: 0; }
+.class-card .cc-name {
+  font-family: var(--display); font-size: 1.125rem; letter-spacing: 0.10em; color: var(--ink);
+}
+.class-card .cc-meta {
+  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
+  letter-spacing: 0.18em; text-transform: uppercase; margin-top: 5px;
+}
+/* The resource used to be a gold Tag in the header. Roles are two-part ("Controller ·
+   Striker"), so appending it inline wraps on 5 of the 9 cards and strands a separator
+   at the end of the line — give it its own line on every card instead, and keep it
+   gold so it stays distinct from the roles above it. */
+.class-card .cc-resource { display: block; color: var(--gold-2); margin-top: 2px; }
+.class-card .cc-blurb {
+  font-family: var(--serif); font-size: 0.8125rem; color: var(--ink-2);
+  margin-top: 10px; line-height: 1.45;
+}
 
 /* Kit cards — borrow the ability-card vocabulary so the info reads clearly */
 /* padding-right keeps the armor/order tag clear of the ✠ selection stamp. */
@@ -982,7 +1014,7 @@ ${MQ.rail} {
 ${MQ.tab} {
   /* Column collapse. .grid-2/3/4 back ~34 call sites across 10 files, so this
      block alone reflows most of the wizard and review screens. */
-  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   /* Normalise the type floor: 0.5rem would land under 10.5px from here down.
      Promoting to 0.5625rem keeps every label at ~11px without hardcoding px,
@@ -1018,8 +1050,8 @@ ${MQ.tab} {
 }
 
 ${MQ.phone} {
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .h1-display { font-size: 1.875rem; }
   /* 2rem would measure ~361px against a 358px content box and overflow. */
@@ -1065,12 +1097,12 @@ ${MQ.phone} {
   .ability-card .ac-row { flex-wrap: wrap; gap: 6px; }
 
   /* 5 point-buy stats over 2 rows; the odd one out spans the full width. */
-  .pb-grid { grid-template-columns: repeat(2, 1fr); }
+  .pb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pb-grid .pb-stat:nth-child(5) { grid-column: 1 / -1; }
 
   .review-portrait { width: 116px; }
   .preview-portrait { height: 150px; }
-  .chars-5 { grid-template-columns: repeat(3, 1fr); }
+  .chars-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wiz-kv { grid-template-columns: 1fr; gap: 2px 0; }
   .class-banner { padding: 14px 16px; gap: 12px; }
 

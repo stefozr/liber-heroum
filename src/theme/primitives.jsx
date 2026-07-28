@@ -141,9 +141,14 @@ function StatTile({ label, value, sub, gold }) {
 }
 
 // Selectable card (used in grids)
-function SelCard({ selected, onClick, children, style, id }) {
+function SelCard({ selected, onClick, children, style, id, className }) {
   return (
-    <div id={id} className={`card ${selected ? 'selected' : ''}`} onClick={onClick} style={style}>
+    <div
+      id={id}
+      className={`card ${selected ? 'selected' : ''}${className ? ' ' + className : ''}`}
+      onClick={onClick}
+      style={style}>
+
       {children}
     </div>);
 

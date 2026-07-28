@@ -48,22 +48,18 @@ function ClassStep({ character, update }) {
       <H3>Choose your Class</H3>
       <div className="grid-3">
         {DS_CLASSES.map(c => (
-          <SelCard key={c.id} selected={sel === c.id} onClick={() => setCls(c.id)} style={{paddingBottom: 14}}>
-            <div style={{display:'flex', gap:14, alignItems:'flex-start'}}>
+          <SelCard key={c.id} className="class-card" selected={sel === c.id} onClick={() => setCls(c.id)}>
+            <div className="cc-row">
               <Crest glyph={c.glyph} />
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:8, paddingRight:16}}>
-                  <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{c.name}</div>
-                  <Tag kind="gold">{c.resource.toUpperCase()}</Tag>
-                </div>
-                <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:5}}>
+              <div className="cc-body">
+                <div className="cc-name">{c.name}</div>
+                <div className="cc-meta">
                   {c.role}{!c.deep && ' · BASICS ONLY'}
+                  <span className="cc-resource">{c.resource.toUpperCase()}</span>
                 </div>
               </div>
             </div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:10, lineHeight:1.45}}>
-              {c.blurb}
-            </div>
+            <div className="cc-blurb">{c.blurb}</div>
           </SelCard>
         ))}
       </div>
@@ -117,6 +113,28 @@ function ClassStep({ character, update }) {
               </div>
             </div>
           )}
+
+          {/* Subclass-granted features & abilities (mirrors summarizeBenefits in app.jsx) */}
+          {(() => {
+            const sub = cls.subclasses?.find(s => s.id === character.cclass.subclass || s.name === character.cclass.subclass);
+            if (!sub) return null;
+            const textFeats = [...(sub.acolyte ? [sub.acolyte] : []), ...(sub.features || [])];
+            if (!textFeats.length && !(sub.abilities || []).length) return null;
+            return (
+              <div>
+                <H3>{(cls.subclassName || 'Subclass')} Features</H3>
+                <div className="stack-12" style={{marginTop: 10}}>
+                  {textFeats.map(f => (
+                    <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
+                      <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
+                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+                    </div>
+                  ))}
+                  {(sub.abilities || []).map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Ability picks (only for deep classes) */}
           {cls.deep && <AbilityPicker character={character} update={update} />}

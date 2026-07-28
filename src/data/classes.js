@@ -4,7 +4,7 @@ const ab = (name, opts) => ({ name, ...opts });
 // ───────── Classes ─────────
 const DS_CLASSES = [
   // ───── Censor ─────
-  { id: 'censor', name: 'Censor', resource: 'Wrath', glyph: 'icon:shield',
+  { id: 'censor', name: 'Censor', resource: 'Wrath', turnGain: '2', epicResource: 'Virtue', glyph: 'icon:shield',
     role: 'Striker · Defender',
     blurb: 'A trained warrior devoted to a saint or god who hunts down the wicked using melee weapons and divine magic.',
     longBlurb: 'You are the will of your god made manifest. Your judgment terrifies heretics, stops enemies in their tracks, and hurls them across the battlefield. You confront the wicked and lock down single enemies in combat.',
@@ -45,7 +45,7 @@ const DS_CLASSES = [
         flavor: 'You utter a prayer that outlines your foe in holy energy.',
         keywords: ['Magic','Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'One enemy',
-        effect: 'The target is judged by you until the end of the encounter. Whenever a creature judged by you uses a main action within your line of effect, you can use a free triggered action to deal holy damage equal to twice your Presence score. You can also spend 1 wrath for a free triggered action to stop a shift (with a free strike), impose a bane, reduce a single-target potency by 1, or taunt them on a melee hit.'
+        effect: 'The target is judged by you until the end of the encounter, you use this ability again, you willingly end this effect (no action required), or another censor judges the target.\n\nWhenever a creature judged by you uses a main action and is within your line of effect, you can use a free triggered action to deal holy damage equal to twice your Presence score to them.\n\nWhen a creature judged by you is reduced to 0 Stamina, you can use a free triggered action to use this ability against a new target.\n\nAdditionally, you can spend 1 wrath to take one of the following free triggered actions:\n\n- When an adjacent creature judged by you starts to shift, you make a melee free strike against them and their speed becomes 0 until the end of the current turn, preventing them from shifting.\n- When a creature judged by you within 10 squares makes a power roll, you cause them to take a bane on the roll.\n- When a creature judged by you within 10 squares uses an ability with a potency that targets only one creature, the potency is reduced by 1 for that creature.\n- If you damage a creature judged by you with a melee ability, the creature is taunted by you until the end of their next turn.\n\nYou can choose only one free triggered action option at a time, even if multiple options are triggered by the same effect.'
       }) },
       { name: 'My Life for Yours', ability: ab('My Life for Yours', {
         flavor: 'You channel some of your vitality into more resilience for you or an ally.',
@@ -54,35 +54,35 @@ const DS_CLASSES = [
         trigger: 'The target starts their turn or takes damage.',
         effect: 'You spend a Recovery and the target regains Stamina equal to your recovery value.',
         resource: 'Wrath', spendCost: 1,
-        spend: 'End one effect on the target that a save can end or that ends at the end of their turn, or a prone target can stand up.'
+        spend: 'You can end one effect on the target that is ended by a saving throw or that ends at the end of their turn, or a prone target can stand up.'
       }) },
     ],
     signatures: [
       ab('Your Allies Cannot Save You!', {
-        flavor: 'Your magic strike turns your foe\'s guilt into a burst of holy power.',
+        flavor: 'Your magic strike turns your foe’s guilt into a burst of holy power.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
         powerRoll: 'Might', tiers: [['≤11','3 + M holy damage'],['12–16','5 + M holy damage'],['17+','8 + M holy damage']],
         effect: 'Each enemy adjacent to the target is pushed away from the target up to a number of squares equal to your Presence score.'
       }),
       ab('Halt Miscreant!', {
-        flavor: 'Holy magic makes it difficult for your foe to get away.',
+        flavor: 'You infuse your weapon with holy magic that makes it difficult for your foe to get away.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','2 + M holy; P<WEAK, slowed (save)'],['12–16','5 + M holy; P<AVERAGE, slowed (save)'],['17+','7 + M holy; P<STRONG, slowed (save)']],
+        powerRoll: 'Might', tiers: [['≤11','2 + M holy damage; P < WEAK, slowed (save ends)'],['12–16','5 + M holy damage; P < AVERAGE, slowed (save ends)'],['17+','7 + M holy damage; P < STRONG, slowed (save ends)']],
       }),
       ab('Back Blasphemer!', {
         flavor: 'You channel power through your weapon to repel foes.',
         keywords: ['Area','Magic','Melee','Weapon'], type: 'Main action',
         distance: '2 cube within 1', target: 'Each enemy in the area',
-        powerRoll: 'Presence', tiers: [['≤11','2 holy; push 1'],['12–16','4 holy; push 2'],['17+','6 holy; push 3']],
+        powerRoll: 'Presence', tiers: [['≤11','2 holy damage; push 1'],['12–16','4 holy damage; push 2'],['17+','6 holy damage; push 3']],
       }),
       ab('Every Step ... Death!', {
         flavor: 'You show your foe a glimpse of their fate after death.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','5 + P psychic'],['12–16','7 + P psychic'],['17+','10 + P psychic']],
-        effect: 'Each time the target willingly moves before the end of your next turn, they take 1 psychic damage per square moved.'
+        powerRoll: 'Presence', tiers: [['≤11','5 + P psychic damage'],['12–16','7 + P psychic damage'],['17+','10 + P psychic damage']],
+        effect: 'Each time the target willingly moves before the end of your next turn, they take 1 psychic damage for each square they move.'
       }),
     ],
     heroic3: [
@@ -90,28 +90,28 @@ const DS_CLASSES = [
         flavor: 'You channel holy energy to smite a foe and heal an ally.',
         keywords: ['Magic','Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','5 + M holy'],['12–16','8 + M holy'],['17+','11 + M holy']],
+        powerRoll: 'Might', tiers: [['≤11','5 + M holy damage'],['12–16','8 + M holy damage'],['17+','11 + M holy damage']],
         effect: 'You can spend a Recovery to allow yourself or one ally within 10 squares to regain Stamina equal to your recovery value.'
       }),
       ab('Driving Assault', { cost: 3, resource: 'Wrath',
-        flavor: 'As you force your enemy back, you stay close.',
+        flavor: 'As you force your enemy back with your weapon, you use your faith to stay close.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3 + M; push 1'],['12–16','6 + M; push 3'],['17+','9 + M; push 5']],
+        powerRoll: 'Might', tiers: [['≤11','3 + M damage; push 1'],['12–16','6 + M damage; push 3'],['17+','9 + M damage; push 5']],
         effect: 'You can shift up to your speed in a straight line toward the target after pushing them.'
       }),
       ab('Behold a Shield of Faith!', { cost: 3, resource: 'Wrath',
-        flavor: 'A mighty blow turns guilt into holy light.',
+        flavor: 'A mighty blow turns your foe’s vitality into a holy light that envelops you and an ally, discouraging enemies who might attack you.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3 + M holy'],['12–16','6 + M holy'],['17+','9 + M holy']],
-        effect: 'Until your next turn, enemies take a bane on ability rolls against you or any ally adjacent to you.'
+        powerRoll: 'Might', tiers: [['≤11','3+ M holy damage'],['12–16','6+ M holy damage'],['17+','9 + M holy damage']],
+        effect: 'Until the start of your next turn, enemies take a bane on ability rolls made against you or any ally adjacent to you.'
       }),
       ab('Repent!', { cost: 3, resource: 'Wrath',
-        flavor: 'You conjure memories of their sins.',
+        flavor: 'You conjure memories of their sins to harry your foes.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','5 + P holy; I<WEAK, dazed (save)'],['12–16','8 + P holy; I<AVERAGE, dazed (save)'],['17+','11 + P holy; I<STRONG, dazed (save)']],
+        powerRoll: 'Presence', tiers: [['≤11','5 + P holy damage; I < WEAK, dazed (save ends)'],['12–16','8 + P holy; I<AVERAGE, dazed (save)'],['17+','11 + P holy; I<STRONG, dazed (save)']],
       }),
     ],
     heroic5: [
@@ -119,35 +119,35 @@ const DS_CLASSES = [
         flavor: 'The gods judge, fire cleanses.',
         keywords: ['Magic','Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature',
-        powerRoll: 'Might', tiers: [['≤11','5 + M holy; M<WEAK, fire weakness 3 (save)'],['12–16','9 + M holy; M<AVERAGE, fire weakness 5 (save)'],['17+','12 + M holy; M<STRONG, fire weakness 7 (save)']],
-        effect: 'While the target has fire weakness from this ability, your abilities can deal fire instead of holy damage to them.'
+        powerRoll: 'Might', tiers: [['≤11','5 + M holy damage; M < WEAK, the target has fire weakness 3 (save ends)'],['12–16','9 + M holy damage; M < AVERAGE, the target has fire weakness 5 (save ends)'],['17+','12 + M holy damage; M < STRONG, the target has fire weakness 7 (save ends)']],
+        effect: 'While the target has fire weakness from this ability, you can choose to have your abilities deal fire damage to the target instead of holy damage.'
       }),
       ab('Arrest', { cost: 5, resource: 'Wrath',
-        flavor: '"I got you, you son of a bitch."',
+        flavor: '"I got you, you son of a bitch.”',
         keywords: ['Magic','Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Might', tiers: [['≤11','6 + M holy; grabbed'],['12–16','9 + M holy; grabbed'],['17+','13 + M holy; grabbed']],
-        effect: 'If the grabbed target strikes another creature, you can spend 3 wrath to deal holy damage = your Presence and redirect the strike.'
+        powerRoll: 'Might', tiers: [['≤11','6 + M holy damage; grabbed'],['12–16','9 + M holy damage; grabbed'],['17+','13 + M holy damage; grabbed']],
+        effect: 'If the target makes a strike against a creature while grabbed this way, you can spend 3 wrath to deal holy damage to them equal to your Presence score, then change the target of the strike to another target within the strike’s distance.'
       }),
       ab('Behold the Face of Justice!', { cost: 5, resource: 'Wrath',
-        flavor: 'They behold the true nature of your resolve.',
+        flavor: 'You attack a foe and your enemies behold a vision of the true nature of your resolve.',
         keywords: ['Magic','Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature',
         powerRoll: 'Might', tiers: [['≤11','3 + M holy; if P<WEAK, enemies near target are frightened (save)'],['12–16','5 + M holy; P<AVERAGE'],['17+','8 + M holy; P<STRONG']],
-        effect: 'Each enemy frightened this way is pushed 2 squares and takes psychic damage equal to your Presence score.'
+        effect: 'Each enemy frightened this way is pushed up to 2 squares away from the target and takes psychic damage equal to your Presence score.'
       }),
       ab('Censored', { cost: 5, resource: 'Wrath',
         flavor: 'Judged and sentenced.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Might', tiers: [['≤11','2 + M holy'],['12–16','3 + M holy'],['17+','5 + M holy']],
-        effect: 'When a non-leader/non-solo target is made winded by this ability, they are reduced to 0 Stamina.'
+        effect: 'When a target who is not a leader or solo creature is made winded by this ability, they are reduced to 0 Stamina.'
       }),
     ],
   },
 
   // ───── Conduit ─────
-  { id: 'conduit', name: 'Conduit', resource: 'Piety', glyph: 'icon:sun',
+  { id: 'conduit', name: 'Conduit', resource: 'Piety', turnGain: '1d3', epicResource: 'Divine Power', glyph: 'icon:sun',
     role: 'Support · Healer',
     blurb: 'A devoted priest who channels divine magic to smite enemies, support allies, and heal wounds no mundane medicine can mend.',
     longBlurb: 'You are special among worshippers — a vessel for divine power. The spark of divinity within you shines, filling enemies with awe and making you more worldly and aware.',
@@ -173,12 +173,12 @@ const DS_CLASSES = [
     quickKit: null,
     quickDomains: ['Life','Protection'],
     features: [
-      { name: 'Healing Grace', ability: ab('Healing Grace', {
+      { name: 'Healing Grace', ability: ab('Healing Grace', { noBadge: true,
         flavor: 'Your divine energy restores the righteous.',
         keywords: ['Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target can spend a Recovery. Spend 1+ piety; for each piety spent, choose one: target one additional ally within distance; end one effect on a target that is ended by a save or that ends at the end of their turn; a prone target can stand up; or a target can spend 1 additional Recovery.'
+        effect: 'The target can spend a Recovery.\n\nSpend 1+ Piety: For each piety spent, choose one of the following enhancements:\n\n- You can target one additional ally within distance.\n- You can end one effect on a target that is ended by a saving throw or that ends at the end of their turn.\n- A prone target can stand up.\n- A target can spend 1 additional Recovery.'
       }) },
-      { name: 'Ray of Wrath', ability: ab('Ray of Wrath', {
+      { name: 'Ray of Wrath', ability: ab('Ray of Wrath', { noBadge: true,
         flavor: 'You unleash a blast of holy light upon your foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Intuition', tiers: [['≤11','2 + I damage'],['12–16','4 + I damage'],['17+','6 + I damage']],
@@ -206,78 +206,78 @@ const DS_CLASSES = [
     ],
     sigCount: 2,
     signatures: [
-      ab('Blessed Light', { flavor: 'Burning radiance falls upon your foe.',
+      ab('Blessed Light', { flavor: 'Burning radiance falls upon your foe, transferring some of their energy to a nearby ally.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy'],['12–16','5 + I holy'],['17+','8 + I holy']],
-        effect: 'One ally within distance gains surges equal to the tier outcome of your power roll.'
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage'],['12–16','5 + I holy damage'],['17+','8 + I holy damage']],
+        effect: 'One ally within distance gains a number of surges equal to the tier outcome of your power roll.\n\ngains 1 surge gains 2 surges gains 3 surges.'
       }),
       ab('Staggering Curse', { flavor: 'A blast of judgment disorients your foe.',
         keywords: ['Magic','Melee','Strike'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy; slide 1'],['12–16','5 + I holy; slide 2'],['17+','8 + I holy; slide 3']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage; slide 1'],['12–16','5 + I holy damage; slide 2'],['17+','8 + I holy damage; slide 3']],
       }),
-      ab('Holy Lash', { flavor: 'A tendril of divine energy draws in your foe.',
+      ab('Holy Lash', { flavor: 'A tendril of divine energy shoots forth to draw in your foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy; vertical pull 2'],['12–16','5 + I holy; vertical pull 3'],['17+','8 + I holy; vertical pull 4']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage; vertical pull 2'],['12–16','5 + I holy damage; vertical pull 3'],['17+','8 + I holy damage; vertical pull 4']],
       }),
-      ab('Warrior\'s Prayer', { flavor: 'Aggressive divine energy lends to a friend.',
+      ab('Warrior\'s Prayer', { flavor: 'Your quickly uttered prayer lends aggressive divine energy to a friend engaged in melee.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy'],['12–16','6 + I holy'],['17+','9 + I holy']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage'],['12–16','6 + I holy damage'],['17+','9 + I holy damage']],
         effect: 'You or one ally within distance gains temporary Stamina equal to your Intuition score.'
       }),
-      ab('Drain', { flavor: 'You drain the energy from your target.',
+      ab('Drain', { flavor: 'You drain the energy from your target to revitalize yourself or an ally.',
         keywords: ['Magic','Melee','Strike'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Intuition', tiers: [['≤11','2 + I corruption'],['12–16','5 + I corruption'],['17+','7 + I corruption']],
+        powerRoll: 'Intuition', tiers: [['≤11','2 + I corruption damage'],['12–16','5 + I corruption damage'],['17+','7 + I corruption damage']],
         effect: 'You or one ally within distance can spend a Recovery.'
       }),
       ab('Lightfall', { flavor: 'A rain of holy light scours your enemies and repositions your allies.',
         keywords: ['Area','Magic'], type: 'Main action',
         distance: '2 burst', target: 'Each enemy in the area',
-        powerRoll: 'Intuition', tiers: [['≤11','2 holy'],['12–16','3 holy'],['17+','5 holy']],
+        powerRoll: 'Intuition', tiers: [['≤11','2 holy damage'],['12–16','3 holy damage'],['17+','5 holy damage']],
         effect: 'You can teleport yourself and each ally in the area to unoccupied spaces in the area.'
       }),
       ab('Sacrificial Offer', { flavor: 'Divine magic tears at your foe and defends a nearby friend.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Intuition', tiers: [['≤11','2 + I corruption'],['12–16','4 + I corruption'],['17+','6 + I corruption']],
+        powerRoll: 'Intuition', tiers: [['≤11','2 + I corruption damage'],['12–16','4 + I corruption damage'],['17+','6 + I corruption damage']],
         effect: 'Choose yourself or one ally within distance. That character can impose a bane on one power roll made against them before the end of their next turn.'
       }),
       ab('Wither', { flavor: 'A bolt of holy energy saps the life from a foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption; P<WEAK, bane on next power roll'],['12–16','5 + I corruption; P<AVERAGE, bane on next power roll'],['17+','8 + I corruption; P<STRONG, bane on next power roll']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption damage; P < WEAK, the target takes a bane on their next power roll'],['12–16','5 + I corruption; P<AVERAGE, bane on next power roll'],['17+','8 + I corruption; P<STRONG, bane on next power roll']],
       }),
     ],
     heroic3: [
       ab('Violence Will Not Aid Thee', { cost: 3, resource: 'Piety',
-        flavor: 'After some holy lightning, your enemy will think twice.',
+        flavor: 'After some holy lightning, your enemy will think twice about their next attack.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I lightning'],['12–16','6 + I lightning'],['17+','9 + I lightning']],
-        effect: 'First time on a turn the target deals damage, they take 1d10 lightning damage (save ends).'
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I lightning damage'],['12–16','6 + I lightning damage'],['17+','9 + I lightning damage']],
+        effect: 'The first time on a turn that the target deals damage to another creature, the target of this ability takes 1d10 lightning damage (save ends).'
       }),
       ab('Call the Thunder Down', { cost: 3, resource: 'Piety',
-        flavor: 'You ask your saint for thunder.',
+        flavor: 'You ask your saint for thunder and your prayer is answered.',
         keywords: ['Area','Magic','Ranged'], type: 'Main action',
         distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Intuition', tiers: [['≤11','2 sonic; push 1'],['12–16','3 sonic; push 2'],['17+','5 sonic; push 3']],
+        powerRoll: 'Intuition', tiers: [['≤11','2 sonic damage; push 1'],['12–16','3 sonic damage; push 2'],['17+','5 sonic damage; push 3']],
         effect: 'You can push each willing ally in the area the same distance, ignoring stability.'
       }),
       ab('Judgment\'s Hammer', { cost: 3, resource: 'Piety',
-        flavor: 'Your divine fury is a hammer that crashes down.',
+        flavor: 'Your divine fury is a hammer that crashes down upon the unrighteous.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy; A<WEAK, prone'],['12–16','6 + I holy; A<AVERAGE, prone'],['17+','9 + I holy; A<STRONG, prone & can\'t stand (save)']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage; A < WEAK, prone'],['12–16','6 + I holy damage; I < AVERAGE, prone'],['17+','9 + I holy damage; I < STRONG, prone and can\'t stand (save ends)']],
       }),
       ab('Font of Wrath', { cost: 3, resource: 'Piety',
-        flavor: 'A column of holy light appears, striking nearby enemies.',
+        flavor: 'A brilliant column of holy light appears on the battlefield, striking out at nearby enemies.',
         keywords: ['Magic','Ranged'], type: 'Main action',
         distance: 'Ranged 10', target: 'Special',
-        effect: 'A size-2 spirit appears (untargetable). Enemies who enter or start within 2 squares of it take holy damage equal to your Intuition.'
+        effect: 'You summon a spirit of size 2 who can’t be harmed, and who appears in an unoccupied space within distance. The spirit lasts until the end of your next turn. You and your allies can move through the spirit’s space, but enemies can’t. Any enemy who moves within 2 squares of the spirit for the first time in a combat round or starts their turn there takes holy damage equal to your Intuition score.'
       }),
     ],
     heroic5: [
@@ -285,31 +285,31 @@ const DS_CLASSES = [
         flavor: 'Fear of divine judgment overwhelms your foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Intuition', tiers: [['≤11','6 + I holy; I<WEAK, frightened (save)'],['12–16','9 + I holy; I<AVERAGE, frightened (save)'],['17+','13 + I holy; I<STRONG, frightened (save)']],
+        powerRoll: 'Intuition', tiers: [['≤11','6 + I holy damage; I < WEAK, frightened (save ends)'],['12–16','9 + I holy damage; I < AVERAGE, frightened (save ends)'],['17+','13 + I holy damage; I < STRONG, frightened (save ends)']],
       }),
       ab('Sermon of Grace', { cost: 5, resource: 'Piety',
-        flavor: 'You inspire allies with tales of your saint\'s great deeds.',
+        flavor: 'You inspire your allies with tales of your saint’s great deeds.',
         keywords: ['Area','Magic'], type: 'Main action',
         distance: '4 burst', target: 'Each ally in the area',
-        effect: 'Each target spends a Recovery and can use a free triggered action to end one ongoing effect or stand up if prone.'
+        effect: 'Each target can spend a Recovery. Additionally, each target can use a free triggered action to end one effect on them that is ended by a saving throw or that ends at the end of their turn, or to stand up if prone.'
       }),
-      ab('Faith Is Our Armor', { cost: 5, resource: 'Piety',
-        flavor: 'Golden light envelops the heroes.',
+      ab('Faith Is Our Armor', { effect: 'You can target yourself instead of one ally with this ability.\n\n5 temporary Stamina 10 temporary Stamina 15 temporary Stamina', cost: 5, resource: 'Piety',
+        flavor: 'The heroes’ armor glows with golden light, granting divine protection.',
         keywords: ['Magic','Ranged'], type: 'Maneuver',
-        distance: 'Ranged 10', target: 'Four allies (or self instead of one)',
-        powerRoll: 'Intuition', tiers: [['≤11','Each gains 5 temporary Stamina'],['12–16','Each gains 10 temporary Stamina'],['17+','Each gains 15 temporary Stamina']],
+        distance: 'Ranged 10', target: 'Four allies',
+        powerRoll: 'Intuition', tiers: [['≤11','The target gains 5 temporary Stamina'],['12–16','The target gains 10 temporary Stamina'],['17+','The target gains 15 temporary Stamina']],
       }),
       ab('Corruption\'s Curse', { cost: 5, resource: 'Piety',
-        flavor: 'Cursed, your enemy suffers more from your allies\' blows.',
+        flavor: 'Cursed by you, your enemy takes more damage from your allies.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption; M<WEAK, damage weakness 5 (save)'],['12–16','6 + I corruption; M<AVERAGE, dmg weakness 5 (save)'],['17+','9 + I corruption; M<STRONG, dmg weakness 5 (save)']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption damage; M < WEAK, damage weakness 5 (save ends)'],['12–16','6 + I corruption damage; I < AVERAGE, damage weakness 5 (save ends)'],['17+','9 + I corruption damage; I < STRONG, damage weakness 5 (save ends)']],
       }),
     ],
   },
 
   // ───── Fury ─────
-  { id: 'fury', name: 'Fury', resource: 'Ferocity', glyph: 'icon:drop',
+  { id: 'fury', name: 'Fury', resource: 'Ferocity', turnGain: '1d3', epicResource: 'Primordial Power', glyph: 'icon:drop',
     role: 'Striker · Skirmisher',
     blurb: 'A mobile warrior coursing with primordial chaos. Leaps the battlefield felling foes and breaking down walls.',
     longBlurb: 'Your experience in the wild taught you the secrets of predators. You channel unfettered anger into martial prowess — let others use finesse to clean up the wreckage you leave behind.',
@@ -344,15 +344,15 @@ const DS_CLASSES = [
     aspectActions: {
       berserker: ab('Lines of Force', {
         flavor: 'You redirect the energy of motion.',
-        keywords: ['Magic','Melee'], type: 'Triggered action', badge: 'TRIGGER',
+        keywords: ['Magic','Melee'], type: 'Triggered', badge: 'TRIGGER',
         distance: 'Melee 1', target: 'Self or one creature',
         trigger: 'The target would be force moved.',
-        effect: 'Select a new target of the same size or smaller within distance to be force moved instead. You become the source, determine the destination, and can push the target. The forced movement distance gains a bonus equal to your Might score.',
+        effect: 'You can select a new target of the same size or smaller within distance to be force moved instead. You become the source of the forced movement, determine the new target’s destination, and can push the target instead of using the original forced movement type. Additionally, the forced movement distance gains a bonus equal to your Might score.',
         resource: 'Ferocity', spend: 'The forced movement distance gains a bonus equal to twice your Might score instead.',
       }),
       reaver: ab('Unearthly Reflexes', {
         flavor: 'You are as elusive as a hummingbird.',
-        type: 'Triggered action', badge: 'TRIGGER',
+        type: 'Triggered', badge: 'TRIGGER',
         distance: 'Self', target: 'Self',
         trigger: 'You take damage.',
         effect: 'You take half the damage from the triggering effect and can shift up to a number of squares equal to your Agility score.',
@@ -360,11 +360,11 @@ const DS_CLASSES = [
       }),
       stormwight: ab('Furious Change', {
         flavor: 'In your anger, you revert to a more bestial form.',
-        type: 'Triggered action', badge: 'TRIGGER',
+        type: 'Triggered', badge: 'TRIGGER',
         distance: 'Self', target: 'Self',
         trigger: 'You lose Stamina and are not dying.',
         effect: 'You gain temporary Stamina equal to your Might score and can enter your animal form or hybrid form.',
-        resource: 'Ferocity', spend: 'If you are not dying, you can spend a Recovery.',
+        resource: 'Ferocity', spend: 'if you are not dying, you can spend a Recovery.',
       }),
     },
     signatures: [
@@ -374,72 +374,72 @@ const DS_CLASSES = [
         powerRoll: 'Might', tiers: [['≤11','3 + M damage'],['12–16','6 + M damage'],['17+','9 + M damage']],
         effect: 'You gain 2 surges, and the target can make an opportunity attack against you as a free triggered action.'
       }),
-      ab('Brutal Slam', { flavor: 'Heavy impact drives your foes ever back.',
+      ab('Brutal Slam', { flavor: 'The heavy impact of your weapon attacks drives your foes ever back.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3 + M; push 1'],['12–16','6 + M; push 2'],['17+','9 + M; push 4']],
+        powerRoll: 'Might', tiers: [['≤11','3 + M damage; push 1'],['12–16','6 + M damage; push 2'],['17+','9 + M damage; push 4']],
       }),
-      ab('Hit and Run', { flavor: 'Constant motion helps you slip out of reach.',
+      ab('Hit and Run', { flavor: 'Staying in constant motion helps you slip out of reach after a brutal assault.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','2 + M damage'],['12–16','5 + M damage'],['17+','7 + M damage; A<STRONG, slowed (save)']],
+        powerRoll: 'Might', tiers: [['≤11','2 + M damage; M < WEAK'],['12–16','5 + M damage; M < AVERAGE'],['17+','7 + M damage; A < STRONG, slowed (save ends)']],
         effect: 'You can shift 1 square.'
       }),
-      ab('Impaled!', { flavor: 'You skewer your enemy like a boar.',
+      ab('Impaled!', { flavor: 'You skewer your enemy like a boar upon a spit.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature of your size or smaller',
-        powerRoll: 'Might', tiers: [['≤11','2 + M; M<WEAK, grabbed'],['12–16','5 + M; M<AVERAGE, grabbed'],['17+','7 + M; M<STRONG, grabbed']],
+        powerRoll: 'Might', tiers: [['≤11','2 + M damage; M < WEAK, grabbed'],['12–16','5 + M damage; M < AVERAGE, grabbed'],['17+','7 + M damage; M < STRONG, grabbed']],
       }),
     ],
     heroic3: [
       ab('Back!', { cost: 3, resource: 'Ferocity',
-        flavor: 'You hew about you, hurling enemies backward.',
+        flavor: 'You hew about you with your mighty weapon, hurling enemies backward.',
         keywords: ['Area','Melee','Weapon'], type: 'Main action',
         distance: '1 burst', target: 'Each enemy in the area',
         powerRoll: 'Might', tiers: [['≤11','5 damage'],['12–16','8 damage; push 1'],['17+','11 damage; push 3']],
       }),
       ab('Out of the Way!', { cost: 3, resource: 'Ferocity',
-        flavor: 'Your enemies clear your path — whether they want to or not.',
+        flavor: 'Your enemies will clear your path—whether they want to or not.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Might', tiers: [['≤11','3 + M; slide 2'],['12–16','5 + M; slide 3'],['17+','8 + M; slide 5']],
-        effect: 'You move into any square they leave. Opportunity-attack damage is dealt to the target too.'
+        powerRoll: 'Might', tiers: [['≤11','3 + M damage; slide 2'],['12–16','5 + M damage; slide 3'],['17+','8 + M damage; slide 5']],
+        effect: 'When you slide the target, you can move into any square they leave. If you take damage from an opportunity attack by moving this way, the target takes the same damage.'
       }),
       ab('Tide of Death', { cost: 3, resource: 'Ferocity',
         flavor: 'Teach them the folly of lining up for you.',
         keywords: ['Melee','Weapon'], type: 'Main action',
-        distance: 'Self; see below', target: 'Self (line of movement)',
+        distance: 'Self', target: 'Self',
         powerRoll: 'Might', tiers: [['≤11','2 damage'],['12–16','3 damage'],['17+','5 damage']],
-        effect: 'Move up to your speed in a straight line through enemies (their squares not difficult terrain). Power roll vs each enemy moved through.'
+        effect: 'You move up to your speed in a straight line, and enemy squares are not difficult terrain for this movement. You can end this movement in a creature’s space and move them to an adjacent unoccupied space. You make one power roll that targets each enemy whose space you move through.\n\nThe last target you damage takes extra damage equal to your Might score for each opportunity attack you trigger during your move.'
       }),
       ab('Your Entrails Are Your Extrails!', { cost: 3, resource: 'Ferocity',
-        flavor: 'Hard for them to fight when they\'re busy holding in their giblets.',
+        flavor: 'Hard for them to fight when they’re busy holding in their giblets.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3 + M; M<WEAK, bleeding (save)'],['12–16','5 + M; M<AVERAGE, bleeding (save)'],['17+','8 + M; M<STRONG, bleeding (save)']],
+        powerRoll: 'Might', tiers: [['≤11','3 + M damage; M < WEAK, bleeding (save ends)'],['12–16','5 + M damage; M < AVERAGE, bleeding (save ends)'],['17+','8 + M damage; M < STRONG, bleeding (save ends)']],
         effect: 'While bleeding this way, the target takes damage equal to your Might score at the end of each of your turns.'
       }),
     ],
     heroic5: [
       ab('Blood for Blood!', { cost: 5, resource: 'Ferocity',
-        flavor: 'See how well they fight after you\'ve bled them dry.',
+        flavor: 'See how well they fight after you’ve bled them dry.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','4 + M; M<WEAK, bleeding & weakened (save)'],['12–16','6 + M; M<AVERAGE, bleeding & weakened (save)'],['17+','10 + M; M<STRONG, bleeding & weakened (save)']],
-        effect: 'You can deal 1d6 damage to yourself to deal an extra 1d6 to the target.'
+        powerRoll: 'Might', tiers: [['≤11','4 + M damage; M < WEAK, bleeding and weakened (save ends)'],['12–16','6 + M damage; M < AVERAGE, bleeding and weakened (save ends)'],['17+','10 + M damage; M < STRONG, bleeding and weakened (save ends)']],
+        effect: 'You can deal 1d6 damage to yourself to deal an extra 1d6 damage to the target.'
       }),
-      ab('Thunder Roar', { cost: 5, resource: 'Ferocity',
+      ab('Thunder Roar', { effect: 'The targets are force moved one at a time, starting with the target nearest to you, and can be pushed into other targets in the same line.', cost: 5, resource: 'Ferocity',
         flavor: 'You unleash a howl that hurls your enemies back.',
         keywords: ['Area','Melee','Weapon'], type: 'Main action',
         distance: '5 × 1 line within 1', target: 'Each enemy in the area',
         powerRoll: 'Might', tiers: [['≤11','6 damage; push 2'],['12–16','9 damage; push 4'],['17+','13 damage; push 6']],
       }),
       ab('To the Uttermost End', { cost: 5, resource: 'Ferocity',
-        flavor: 'You gut your life force to ensure a foe\'s demise.',
+        flavor: 'You gut your life force to ensure a foe’s demise.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Might', tiers: [['≤11','7 + M damage'],['12–16','11 + M damage'],['17+','16 + M damage']],
-        effect: 'While winded, spend extra ferocity for +1d6 each; while dying, +1d10 each. You lose 1d6 Stamina after the strike.'
+        spendCost: '1+', spend: 'While you are winded, this ability deals an extra 1d6 damage for each ferocity spent. While you are dying, it deals an extra 1d10 damage for each ferocity spent. In either case, you lose 1d6 Stamina after making this strike.'
       }),
       ab('Make Peace With Your God!', { cost: 5, resource: 'Ferocity',
         flavor: 'Anger is your energy.',
@@ -451,7 +451,7 @@ const DS_CLASSES = [
   },
 
   // ───── Elementalist ─────
-  { id: 'elementalist', name: 'Elementalist', resource: 'Essence', glyph: 'icon:bolt',
+  { id: 'elementalist', name: 'Elementalist', resource: 'Essence', turnGain: '2', epicResource: 'Breath', glyph: 'icon:bolt',
     role: 'Controller · Striker',
     blurb: 'Commands earth, fire, void, and more. A versatile array of tricks for combat and environment.',
     longBlurb: 'You studied the elemental forces of the timescape and now bend them to your will. Choose Earth, Fire, Green, or Void as your specialization — your magic becomes persistent and worldly.',
@@ -479,24 +479,24 @@ const DS_CLASSES = [
         text: 'Acolyte of Earth — whenever you use an ability with the Earth and Magic keywords, your stability increases by 1 until the start of your next turn (cumulative).',
         acolyte: { name: 'Acolyte of Earth', text: 'Whenever you use an ability with the Earth and Magic keywords, your stability increases by 1 until the start of your next turn. This benefit is cumulative.' },
         abilities: [
-          ab('Motivate Earth', { flavor: 'The earth rises, falls, or opens up at your command.',
-            keywords: ['Earth','Magic','Melee'], type: 'Main action', distance: 'Melee 1', target: 'Special',
-            effect: 'Touch a square of mundane dirt, stone, or metal to raise a 5 wall of that material, or open / seal a 1-square opening in such a surface.' }),
+          ab('Motivate Earth', { noBadge: true, flavor: 'The earth rises, falls, or opens up at your command.',
+            keywords: ['Magic','Earth','Melee'], type: 'Main action', distance: 'Melee 1', target: 'Special',
+            effect: 'You touch a square containing mundane dirt, stone, or metal and create a 5 wall of the same material, which rises up out of the ground and must include the square you touched.\n\nAlternatively, you touch a structure made of mundane dirt, stone, or metal that occupies 2 or more squares. You can open a 1-square opening in the structure where you touched it. You can instead touch an existing doorway or other opening that is 1 square or smaller in a mundane dirt, stone, or metal surface. The opening is sealed by the same material that makes up the surface.' }),
           ab('Skin Like Castle Walls', { flavor: 'You cover yourself or an ally in protective stone.',
-            keywords: ['Earth','Magic','Ranged'], type: 'Triggered action', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
+            keywords: ['Magic','Earth','Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target takes damage.', effect: 'The target takes half the damage.',
-            resource: 'Essence', spend: 'If the damage has any potency effects, the potency is reduced by 1 for the target.' }),
+            resource: 'Essence', spend: 'If the damage has any potency effects associated with it, the potency is reduced by 1 for the target.' }),
         ],
       },
       { id: 'fire', name: 'Fire', tag: 'Flame',
         text: 'Acolyte of Fire — your abilities with the Fire and Magic keywords gain a +1 bonus to rolled damage (including Hurl Element when it deals fire damage).',
         acolyte: { name: 'Acolyte of Fire', text: 'Your abilities with the Fire and Magic keywords gain a +1 bonus to rolled damage. Your Hurl Element ability also gains this bonus when it deals fire damage.' },
         abilities: [
-          ab('Return to Formlessness', { flavor: 'With the merest touch, you cause an object to turn to slag or ash.',
-            keywords: ['Fire','Magic','Melee'], type: 'Main action', distance: 'Melee 1', target: 'One mundane object',
-            effect: 'You heat the target and cause it to melt or combust, destroying it. If larger than 1 square, only the square you touch is destroyed.' }),
+          ab('Return to Formlessness', { noBadge: true, flavor: 'With the merest touch, you cause an object to turn to slag or ash.',
+            keywords: ['Magic','Melee','Fire'], type: 'Main action', distance: 'Melee 1', target: 'One mundane object',
+            effect: 'You heat the target and cause it to melt or combust, destroy ing it. If the object is larger than 1 square, then only the square of the object you touch is destroyed.' }),
           ab('Explosive Assistance', { flavor: 'You add a little magic to an ally\u2019s aggression at just the right time.',
-            keywords: ['Fire','Magic','Ranged'], type: 'Triggered action', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
+            keywords: ['Magic','Ranged','Fire'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target force moves a creature or object.', effect: 'The forced movement distance gains a bonus equal to your Reason score.',
             resource: 'Essence', spend: 'The forced movement distance gains a bonus equal to twice your Reason score instead.' }),
         ],
@@ -509,7 +509,7 @@ const DS_CLASSES = [
         ],
         abilities: [
           ab('Breath of Dawn Remembered', { flavor: 'The power you channel grants the ability to get back in the fight.',
-            keywords: ['Green','Magic','Ranged'], type: 'Triggered action', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
+            keywords: ['Magic','Ranged','Green'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target starts their turn or takes damage.', effect: 'The target can spend a Recovery.',
             resource: 'Essence', spend: 'The target can spend an additional Recovery for each essence spent.' }),
         ],
@@ -521,26 +521,26 @@ const DS_CLASSES = [
           { name: 'A Beyonding of Vision', text: 'You recognize illusions, see invisible creatures, and supernatural effects can\u2019t conceal things from you. You always know if an observed area or object is magical and what that magic does.' },
         ],
         abilities: [
-          ab('Shared Void Sense', { flavor: 'You grant allies a taste of your unearthly vision.',
+          ab('Shared Void Sense', { noBadge: true, flavor: 'You grant allies a taste of your unearthly vision.',
             keywords: ['Magic','Ranged','Void'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special',
-            effect: 'For each Victory you have, target one creature. Each target gains the benefit of your A Beyonding of Vision feature until the end of your next turn.' }),
+            effect: 'For each Victory you have, you can target one creature. Each target gains the benefit of your A Beyonding of Vision feature until the end of your next turn, but doesn’t gain the use of the Shared Void Sense ability.' }),
           ab('Subtle Relocation', { flavor: 'You call on the void to swallow and spit out an ally.',
-            keywords: ['Magic','Ranged','Void'], type: 'Triggered action', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
-            trigger: 'The target starts their turn, moves, or is force moved.', effect: 'You teleport the target up to a number of squares equal to your Reason score.',
-            resource: 'Essence', spend: 'You teleport the target up to twice your Reason score instead.' }),
+            keywords: ['Magic','Ranged','Void'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
+            trigger: 'The target starts their turn, moves, or is force moved.', effect: 'You teleport the target up to a number of squares equal to your Reason score. If the target moves to trigger this ability, you can teleport them at any point during the move.',
+            resource: 'Essence', spend: 'You teleport the target up to a number of squares equal to twice your Reason score instead.' }),
         ],
       },
     ],
     features: [
-      { name: 'Hurl Element', ability: ab('Hurl Element', {
+      { name: 'Hurl Element', ability: ab('Hurl Element', { noBadge: true,
         flavor: 'You cast a ball of elemental energy at a foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R damage'],['12–16','4 + R damage'],['17+','6 + R damage']],
-        effect: 'Choose the damage type: acid, cold, corruption, fire, lightning, poison, or sonic. Can be used as a ranged free strike.' }) },
-      { name: 'Practical Magic', ability: ab('Practical Magic', {
+        powerRoll: 'Reason', tiers: [['≤11','2 + R acid and cold and corruption and fire and lightning and poison and sonic damage'],['12–16','4 + R acid and cold and corruption and fire and lightning and poison and sonic damage'],['17+','6 + R acid and cold and corruption and fire and lightning and poison and sonic damage']],
+        effect: 'When you make this strike, choose the damage type from one of the following options: acid, cold, corruption, fire, lightning, poison, or sonic.' }) },
+      { name: 'Practical Magic', ability: ab('Practical Magic', { noBadge: true,
         flavor: 'Your mastery of elemental power lets you customize your conjurations.',
         keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-        effect: 'Choose one: (a) use Knockback at Hurl Element\u2019s range using Reason; (b) a creature within Hurl Element\u2019s range takes damage of a chosen type equal to your Reason; or (c) teleport up to your Reason in squares (spend essence for +1 square each).' }) },
+        effect: 'Choose one of the following effects:\n\n- You use the Knockback maneuver, but its distance becomes the range of your Hurl Element ability, and you use Reason instead of Might for the power roll.\n- You choose a creature within the distance of your Hurl Element ability and one of the following damage types: your Reason score acid/cold/corruption/fire/lightning/poison/sonic damage. That creature takes damage of the chosen type equal to your Reason score.\n- You teleport up to a number of squares equal to your Reason score. If you choose this option, you can spend essence to teleport 1 additional square for each essence spent.' }) },
       { name: 'Persistent Magic', text: 'Some abilities have a Persistent value. While maintained, you earn that much less essence at the start of your turn to keep the effect going. Taking damage ≥ 5× your Reason in one turn ends all persistent effects.' },
       { name: 'Enchantment / Ward', text: 'Choose one Enchantment and one Elementalist Ward below. You can swap either by performing a complex ritual during a respite.', choose: 'enchantWard' },
     ],
@@ -559,73 +559,73 @@ const DS_CLASSES = [
     ],
     signatures: [
       ab('Bifurcated Incineration', { flavor: 'Two jets of flame lance out at your command.',
-        keywords: ['Fire','Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'Two creatures or objects',
+        keywords: ['Magic','Ranged','Fire','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'Two creature or objects',
         powerRoll: 'Reason', tiers: [['≤11','2 fire damage'],['12–16','4 fire damage'],['17+','6 fire damage']] }),
       ab('Viscous Fire', { flavor: 'A jet of heavy fire erupts where you strike.',
-        keywords: ['Fire','Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
+        keywords: ['Magic','Ranged','Strike','Fire'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','2 + R fire; push 2'],['12–16','5 + R fire; push 3'],['17+','7 + R fire; push 4']] }),
-      ab('Meteoric Introduction', { flavor: 'You give your enemy a gentle tap — like an asteroid impact.',
-        keywords: ['Earth','Magic','Melee','Strike'], type: 'Main action', distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','3 + R; push 2'],['12–16','5 + R; push 3'],['17+','8 + R; push 4']] }),
-      ab('Unquiet Ground', { flavor: 'A sudden storm of detritus assaults your foes and leaves them struggling to move.',
-        keywords: ['Area','Earth','Magic','Ranged'], type: 'Main action', distance: '2 cube within 10', target: 'Each enemy in the area',
+      ab('Meteoric Introduction', { flavor: 'You give your enemy a gentle tap—like an asteroid impact.',
+        keywords: ['Magic','Melee','Strike','Earth'], type: 'Main action', distance: 'Melee 1', target: 'One creature or object',
+        powerRoll: 'Reason', tiers: [['≤11','3 + R damage; push 2'],['12–16','5 + R damage; push 3'],['17+','8 + R damage; push 4']] }),
+      ab('Unquiet Ground', { flavor: 'A sudden storm of detritus assaults your foes and leaves them strug gling to move.',
+        keywords: ['Area','Magic','Ranged','Earth'], type: 'Main action', distance: '2 cube within 10', target: 'Each enemy in the area',
         powerRoll: 'Reason', tiers: [['≤11','2 damage'],['12–16','5 damage'],['17+','7 damage']],
         effect: 'The ground beneath the area is difficult terrain for enemies.' }),
       ab('The Green Within, the Green Without', { flavor: 'Whipping vines erupt from a foe\u2019s body to grasp at another close by.',
-        keywords: ['Green','Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
+        keywords: ['Magic','Ranged','Strike','Green'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
         powerRoll: 'Reason', tiers: [['≤11','2 + R damage'],['12–16','5 + R damage'],['17+','7 + R damage']],
         effect: 'You slide one creature within 10 squares of the target up to 2 squares.' }),
       ab('Afflict a Bountiful Decay', { flavor: 'Your curse causes your foe\u2019s flesh to rot off as spores that aid your allies.',
-        keywords: ['Green','Magic','Ranged','Rot','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R corruption'],['12–16','4 + R corruption'],['17+','6 + R corruption']],
-        effect: 'Choose yourself or an ally within distance; that character can end one effect on them that a save can end or that ends at the end of their turn.' }),
+        keywords: ['Magic','Ranged','Strike','Green','Rot'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
+        powerRoll: 'Reason', tiers: [['≤11','2 + R corruption damage'],['12–16','4 + R corruption damage'],['17+','6 + R corruption damage']],
+        effect: 'Choose yourself or one ally within distance. That character can end one effect on them that is ended by a saving throw or that ends at the end of their turn.' }),
       ab('Grasp of Beyond', { flavor: 'You absorb the life energy of another creature and use it to teleport.',
         keywords: ['Magic','Melee','Strike','Void'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','3 + R corruption'],['12–16','6 + R corruption'],['17+','9 + R corruption']],
+        powerRoll: 'Reason', tiers: [['≤11','3 + R corruption damage'],['12–16','6 + R corruption damage'],['17+','9 + R corruption damage']],
         effect: 'You can teleport up to a number of squares equal to your Reason score.' }),
       ab('Ray of Agonizing Self-Reflection', { flavor: 'You inflict pain and doubt in equal measure.',
         keywords: ['Magic','Ranged','Strike','Void'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R corruption; R<WEAK, slowed (save)'],['12–16','4 + R corruption; R<AVERAGE, slowed (save)'],['17+','6 + R corruption; R<STRONG, slowed (save)']] }),
+        powerRoll: 'Reason', tiers: [['≤11','2 + R corruption damage; R < WEAK, slowed (save ends)'],['12–16','4 + R corruption damage; R < AVERAGE, slowed (save ends)'],['17+','6 + R corruption damage; R < STRONG, slowed (save ends)']] }),
     ],
     heroic3: [
       ab('The Flesh, a Crucible', { cost: 3, resource: 'Essence', flavor: 'Fire engulfs your target and continues to churn.',
-        keywords: ['Fire','Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','5 + R fire'],['12–16','8 + R fire'],['17+','11 + R fire']],
-        effect: 'Persistent 1: if the target is within distance at the start of your turn, make the power roll again without spending essence (no action).' }),
+        keywords: ['Magic','Ranged','Strike','Fire'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
+        powerRoll: 'Reason', tiers: [['≤11','5 + R fire damage'],['12–16','8 + R fire damage'],['17+','11 + R fire damage']],
+        effect: '**Persistent 1:** If the target is within distance at the start of your turn, you can make the power roll again without spending essence (no action required).' }),
       ab('Behold the Mystery', { cost: 3, resource: 'Essence', flavor: 'You open a rift into the void to harry your foes.',
         keywords: ['Area','Magic','Ranged','Void'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','2 psychic'],['12–16','4 psychic'],['17+','6 psychic']],
-        effect: 'Persistent 1: at the start of your turn, use a maneuver to use this ability again without spending essence.' }),
-      ab('Invigorating Growth', { cost: 3, resource: 'Essence', flavor: 'Mushrooms erupt from a foe, sapping their vitality to spread strengthening spores.',
-        keywords: ['Green','Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','4 + R poison'],['12–16','7 + R poison'],['17+','11 + R poison']],
-        effect: 'Mushrooms cover the target. While present, you and allies adjacent to the target gain 1 surge when it takes damage. Removable by the target or an adjacent creature as a main action.' }),
-      ab('Ripples in the Earth', { cost: 3, resource: 'Essence', flavor: 'Like a stone dropped into a pond, waves in the earth radiate from you.',
-        keywords: ['Area','Earth','Magic'], type: 'Main action', distance: '2 burst', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','3 damage'],['12–16','5 damage'],['17+','8 damage; M<STRONG, prone']],
-        effect: 'You must be touching the ground. You can also raise a pillar of earth (height up to your Reason) from an unoccupied/allied square in the area.' }),
+        powerRoll: 'Reason', tiers: [['≤11','2 psychic damage'],['12–16','4 psychic damage'],['17+','6 psychic damage']],
+        effect: '**Persistent 1:** At the start of your turn, you can use a maneuver to use this ability again without spending essence.' }),
+      ab('Invigorating Growth', { cost: 3, resource: 'Essence', flavor: 'Mushrooms erupt from a foe, sapping their vitality to spread strength ening spores.',
+        keywords: ['Magic','Ranged','Strike','Green'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
+        powerRoll: 'Reason', tiers: [['≤11','4 + R poison damage'],['12–16','7 + R poison damage'],['17+','11 + R poison damage']],
+        effect: 'Mushrooms cover the target’s body. While the mushrooms are on the target, you and any ally adjacent to the target gains 1 surge whenever the target takes damage. The mushrooms can be removed by the target or an adjacent creature as a main action.' }),
+      ab('Ripples in the Earth', { cost: 3, resource: 'Essence', flavor: 'Like a stone was dropped into a pond, waves in the earth radiate from you.',
+        keywords: ['Area','Magic','Earth'], type: 'Main action', distance: '2 burst', target: 'Each enemy in the area',
+        powerRoll: 'Reason', tiers: [['≤11','3 damage'],['12–16','5 damage'],['17+','8 damage; M < STRONG, prone']],
+        effect: 'You must be touching the ground to use this ability. Additionally, you can choose a square of ground in the area that is unoccupied or is occupied by you or any ally. A pillar of earth rises out of the ground in that square, with a height in squares up to your Reason score. The pillar can’t collide with any creatures or objects, nor can it force creatures raised by it to collide with other creatures or objects.' }),
     ],
     heroic5: [
       ab('Conflagration', { cost: 5, resource: 'Essence', flavor: 'A storm of fire descends upon your enemies.',
-        keywords: ['Area','Fire','Magic','Ranged'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','4 fire'],['12–16','6 fire'],['17+','10 fire']],
-        effect: 'Persistent 2: at the start of your turn, use a maneuver to use this ability again without spending essence.' }),
+        keywords: ['Area','Magic','Ranged','Fire'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area',
+        powerRoll: 'Reason', tiers: [['≤11','4 fire damage'],['12–16','6 fire damage'],['17+','10 fire damage']],
+        effect: '**Persistent 2:** At the start of your turn, you can use a maneuver to use this ability again without spending essence.' }),
       ab('Instantaneous Excavation', { cost: 5, resource: 'Essence', flavor: 'The surface of the world around you opens up to swallow foes.',
-        keywords: ['Earth','Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special',
-        powerRoll: 'Reason', tiers: [['≤11','Target shifts 1 from the hole\u2019s edge'],['12–16','Target falls into the hole'],['17+','Target falls and can\u2019t reduce the fall height']],
-        effect: 'Open two 1-square, 4-deep holes on mundane surfaces within distance; roll separately for each creature above a hole. Persistent 1.' }),
+        keywords: ['Magic','Ranged','Earth'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special',
+        powerRoll: 'Reason', tiers: [['≤11','The target can shift 1 square from the edge of the hole to the nearest unoccupied space of their choice.'],['12–16','The target falls into the hole.'],['17+','The target falls into the hole and can’t reduce the height of the fall.']],
+        effect: 'You open up two holes with 1-square openings that are 4 squares deep, which can be placed on any mundane surface within distance. You can place these holes next to each other to create fewer holes with wider openings. When the holes open, make a separate power roll for each creature on the ground above a hole and small enough to fall in. (You can’t score a critical hit with this ability because it uses a maneuver.)\n\nAt the start of your turn, you open another hole, making a power roll against each creature who could fall into the hole when it opens without spending essence.' }),
       ab('No More Than a Breeze', { cost: 5, resource: 'Essence', flavor: 'The material substance of a creature shreds away at your command.',
         keywords: ['Magic','Ranged','Void'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'Until the start of your next turn, the target can move through solid matter, ignores difficult terrain, and isn\u2019t subject to opportunity attacks. If they end their turn inside solid matter, they\u2019re forced out and the effect ends. Persistent 1.' }),
+        effect: 'Until the start of your next turn, the target can move through solid matter, they ignore difficult terrain, and their movement can’t provoke opportunity attacks. If the target ends their turn inside solid matter, they are forced out into the space where they entered it and this effect ends.\n\n**Persistent 1:** The effect lasts until the start of your next turn.' }),
       ab('Test of Rain', { cost: 5, resource: 'Essence', flavor: 'You call down a rain that burns your enemies and restores your allies.',
-        keywords: ['Area','Green','Magic','Ranged'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','4 acid'],['12–16','6 acid'],['17+','10 acid']],
-        effect: 'You can end one effect on yourself that a save ends or that ends at the end of your turn. Each ally in the area also gains this benefit.' }),
+        keywords: ['Area','Magic','Ranged','Green'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area',
+        powerRoll: 'Reason', tiers: [['≤11','4 acid damage'],['12–16','6 acid damage'],['17+','10 acid damage']],
+        effect: 'You can end one effect on yourself that is ended by a saving throw or that ends at the end of your turn. Each ally in the area also gains this benefit.' }),
     ],
   },
 
   // ───── Null ─────
-  { id: 'null', name: 'Null', resource: 'Discipline', glyph: 'icon:fist',
+  { id: 'null', name: 'Null', resource: 'Discipline', turnGain: '2', epicResource: 'Order', glyph: 'icon:fist',
     role: 'Defender · Controller',
     blurb: 'A disciplined unarmed warrior whose psionic aura quells the supernatural and hinders enemy offense.',
     longBlurb: 'You are calm in the storm. Through psionic discipline you make your body stronger than steel, and the field of order radiating from you snuffs out the supernatural — dampening your foes\u2019 powers while your fists and momentum do the rest.',
@@ -653,22 +653,22 @@ const DS_CLASSES = [
     ],
     quickKit: null,
     features: [
-      { name: 'Null Field', ability: ab('Null Field', {
-        flavor: 'A field of psionic order radiates from you, dampening the supernatural.',
+      { name: 'Null Field', ability: ab('Null Field', { noBadge: true,
+        flavor: 'You project an aura that dampens the power of your foes.',
         keywords: ['Area','Psionic'], type: 'Maneuver',
         distance: '1 aura', target: 'Each enemy in the area',
-        effect: 'You project a permanent psionic aura that remains active even after an encounter ends — it ends only if you are dying or you willingly end it. Each enemy in the area reduces their potencies by 1.',
+        effect: 'Each target reduces their potencies by 1.\n\nOnce as a free maneuver on each of your turns, you can spend 1 discipline and give your Null Field one of the following additional effects until the start of your next turn:\n\n- **Gravitic Disruption**: The first time on a turn that a target takes damage, you can slide them up to 2 squares.\n- **Inertial Anchor:** Any target who starts their turn in the area can’t shift.\n- **Synaptic Break**: Whenever you or any ally uses an ability against a target that has a potency effect, the potency is increased by 1.\n\nThis ability remains active even after an encounter ends. It ends only if you are dying or if you willingly end it (no action required).',
         resource: 'Discipline', spendCost: 1,
         spend: 'Once per turn as a free maneuver, add one option until your next turn: Gravitic Disruption (the first time on a turn a target takes damage, slide it up to 2), Inertial Anchor (a target who starts their turn in the area can\u2019t shift), or Synaptic Break (whenever you or an ally uses an ability with a potency effect against a target in the area, increase that potency by 1).'
       }) },
-      { name: 'Inertial Shield', ability: ab('Inertial Shield', {
-        flavor: 'You blunt an incoming blow with a wall of force.',
+      { name: 'Inertial Shield', ability: ab('Inertial Shield', { noBadge: true,
+        flavor: 'You intuit the course of an incoming attack, reducing its effects.',
         keywords: ['Psionic'], type: 'Triggered',
         distance: 'Self', target: 'Self',
         trigger: 'You take damage.',
-        effect: 'You take half the damage from the triggering effect.',
+        effect: 'You take half the damage.',
         resource: 'Discipline', spendCost: 1,
-        spend: 'Also reduce one of the triggering effect\u2019s potency effects by 1 for you.'
+        spend: 'The potency of one effect associated with the damage is reduced by 1 for you.'
       }) },
       { name: 'Discipline', text: 'At the start of combat you gain discipline equal to your Victories, then 2 at the start of each turn. You gain 1 more the first time each round an enemy in your Null Field takes a main action, and 1 the first time the Director spends Malice.' },
       { name: 'Discipline Mastery', text: 'Your tradition grants benefits as your discipline grows (2/4/6, with more at 4th/7th/10th level): free surges, edges and then double edges on the Grab and Knockback maneuvers, and more. Benefits last until the end of your turn. Using Inertial Shield also lets you Disengage (Chronokinetic), Grab (Cryokinetic), or Knockback (Metakinetic) as a free triggered action.' },
@@ -687,7 +687,7 @@ const DS_CLASSES = [
       ab('Faster Than the Eye', {
         flavor: 'You strike so quickly that your hands become a blur.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
-        distance: 'Melee 1', target: 'Two creatures or objects',
+        distance: 'Melee 1', target: 'Two creature or objects',
         powerRoll: 'Agility', tiers: [['≤11','4 damage'],['12–16','5 damage'],['17+','7 damage']],
         effect: 'You can deal damage equal to your Agility score to one creature or object adjacent to you.'
       }),
@@ -709,19 +709,19 @@ const DS_CLASSES = [
         flavor: 'Your opponent staggers. They cannot ignore you.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; taunted (EoT)'],['12–16','5 + A; taunted (EoT), slide 1'],['17+','6 + A; taunted (EoT), slide 2']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; taunted (EoT);'],['12–16','5 + A damage; taunted (EoT); slide 1'],['17+','6 + A; taunted (EoT), slide 2']],
       }),
       ab('Joint Lock', {
         flavor: 'You contort your enemy\u2019s body into a stance they struggle to escape from.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; A<WEAK, grabbed'],['12–16','7 + A; A<AVERAGE, grabbed'],['17+','9 + A; A<STRONG, grabbed']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; A < WEAK, grabbed'],['12–16','7 + A damage; A < AVERAGE, grabbed'],['17+','9 + A damage; A < STRONG, grabbed']],
       }),
       ab('Pressure Points', {
         flavor: 'You strike at key nerve clusters to leave your foe staggered.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; A<WEAK, weakened (save)'],['12–16','7 + A; A<AVERAGE, weakened (save)'],['17+','9 + A; A<STRONG, weakened (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; A < WEAK, weakened (save ends)'],['12–16','7 + A damage; A < AVERAGE, weakened (save ends)'],['17+','9 + A damage; A < STRONG, weakened (save ends)']],
       }),
     ],
     heroic3: [
@@ -730,39 +730,39 @@ const DS_CLASSES = [
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
         powerRoll: 'Agility', tiers: [['≤11','7 + A damage'],['12–16','10 + A damage'],['17+','13 + A damage']],
-        effect: 'You can shift up to half your speed before or after the strike. Whenever an effect lets you make a free strike or use a signature ability, you can use this ability instead, paying its cost as usual.'
+        effect: 'You can shift up to half your speed before or after you make this strike. Additionally, whenever an effect lets you make a free strike or use a signature ability, you can use this ability instead, paying its discipline cost as usual.'
       }),
       ab('Magnetic Strike', { cost: 3, resource: 'Discipline',
-        flavor: 'The force of your blow extends past your body, pulling your enemy closer.',
+        flavor: 'The force of your blow extends past the limits of your body, pulling your enemy closer.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
-        distance: 'Melee 2', target: 'One creature',
+        distance: 'Melee 2', target: 'One creature or object',
         powerRoll: 'Agility', tiers: [['≤11','5 + A psychic; vertical pull 1'],['12–16','8 + A psychic; vertical pull 2'],['17+','11 + A psychic; vertical pull 3']],
       }),
       ab('Psychic Pulse', { cost: 3, resource: 'Discipline',
         flavor: 'A burst of psionic energy interferes with your enemy\u2019s synapses.',
         keywords: ['Area','Psionic'], type: 'Maneuver',
         distance: '2 burst', target: 'Each enemy in the area',
-        effect: 'Each target takes psychic damage equal to twice your Intuition score. Until the start of your next turn the size of your Null Field increases by 1; at the end of your turn each enemy in the field takes psychic damage equal to your Intuition score.'
+        effect: 'Each target takes psychic damage equal to twice your Intuition score. Until the start of your next turn, the size of your Null Field ability increases by 1. At the end of your current turn, each enemy in the area of your Null Field ability takes psychic damage equal to your Intuition score.'
       }),
       ab('Stunning Blow', { cost: 3, resource: 'Discipline',
         flavor: 'You focus your psionic technique into a concussive punch.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; I<WEAK, dazed & slowed (save)'],['12–16','5 + A; I<AVERAGE, dazed & slowed (save)'],['17+','7 + A; I<STRONG, dazed & slowed (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; I < WEAK, dazed and slowed (save ends)'],['12–16','5 + A; I<AVERAGE, dazed & slowed (save)'],['17+','7 + A; I<STRONG, dazed & slowed (save)']],
       }),
       ab('Phase Inversion Strike', { cost: 3, resource: 'Discipline',
         flavor: 'You step momentarily out of phase as you pull an enemy through you.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; push 2'],['12–16','6 + A; push 4'],['17+','8 + A; push 6']],
-        effect: 'Before the push is resolved, you teleport the target to a square adjacent to you and opposite the one they started in. If they can\u2019t be teleported this way, you can\u2019t push them.'
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; push 2'],['12–16','6 + A damage; push 4'],['17+','8 + A damage; push 6']],
+        effect: 'Before the push is resolved, you teleport the target to a square adjacent to you and opposite the one they started in. If the target can’t be teleported this way, you can’t push them.'
       }),
       ab('Relentless Nemesis', { cost: 3, resource: 'Discipline',
         flavor: 'You strike, and for the next few moments, your enemy can\u2019t escape you.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
         powerRoll: 'Agility', tiers: [['≤11','6 + A damage'],['12–16','8 + A damage'],['17+','12 + A damage']],
-        effect: 'Until the start of your next turn, whenever the target moves or is force moved, you can use a free triggered action to shift up to your speed. You must end this shift adjacent to the target.'
+        effect: 'Until the start of your next turn, whenever the target finishes moving or being force moved, you can use a free triggered action to shift up to your speed. You must end this shift adjacent to the target.'
       }),
     ],
     heroic5: [
@@ -775,30 +775,30 @@ const DS_CLASSES = [
       }),
       ab('Impart Force', { cost: 5, resource: 'Discipline',
         flavor: 'A single touch from you, and your enemy flies backward.',
-        keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Maneuver',
+        keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','Push 3'],['12–16','Push 5'],['17+','Push 7']],
-        effect: 'You gain an edge on this ability. For each square you push the target, they take 1 psychic damage. A targeted object must be your size or smaller.'
+        powerRoll: 'Intuition', tiers: [['≤11','push 3'],['12–16','push 5'],['17+','push 7']],
+        effect: 'An object you target must be your size or smaller. You gain an edge on this ability. Additionally, for each square you push the target, they take 1 psychic damage.'
       }),
       ab('Phase Strike', { cost: 5, resource: 'Discipline',
         flavor: 'For a moment, your foe slips out of phase with this manifold.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Agility', tiers: [['≤11','3 + A psychic; I<WEAK, out of phase (save)'],['12–16','4 + A psychic; I<AVERAGE, out of phase (save)'],['17+','6 + A psychic; I<STRONG, out of phase (save)']],
-        effect: 'A target out of phase is slowed, has stability reduced by 2, and can\u2019t obtain a tier 3 outcome on ability rolls.'
+        effect: 'A target who goes out of phase is slowed, has their stability reduced by 2, and can’t obtain a tier 3 outcome on ability rolls.'
       }),
       ab('Arcane Disruptor', { cost: 5, resource: 'Discipline',
-        flavor: 'Your blow reorders a foe\u2019s body, causing pain if they channel sorcery.',
+        flavor: 'Your blow reorders a foe’s body, causing pain if they attempt to channel sorcery.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Agility', tiers: [['≤11','8 + A psychic; M<WEAK, weakened (save)'],['12–16','12 + A psychic; M<AVERAGE, weakened (save)'],['17+','16 + A psychic; M<STRONG, weakened (save)']],
-        effect: 'While weakened this way, the target takes damage equal to your Intuition score whenever they use a supernatural ability or an ability that costs Malice.'
+        effect: 'While weakened this way, the target takes damage equal to your Intuition score whenever they use a supernatural ability that costs Malice.'
       }),
     ],
   },
 
   // ───── Shadow ─────
-  { id: 'shadow', name: 'Shadow', resource: 'Insight', glyph: '☾',
+  { id: 'shadow', name: 'Shadow', resource: 'Insight', turnGain: '1d3', epicResource: 'Subterfuge', glyph: '☾',
     role: 'Striker · Skirmisher',
     blurb: 'An expert assassin who fights equally well in melee and at range. Stays mobile, hidden, and three steps ahead — with more skills than any other hero.',
     longBlurb: 'Subtlety is your art, the tip of the blade your brush. You studied at a secret college, specializing in alchemy, illusion, or shadow-magics, joining the elite ranks of assassins, spies, and commandos. But more potent than any weapon is your insight into your enemies\u2019 weaknesses.',
@@ -825,41 +825,39 @@ const DS_CLASSES = [
         abilities: [
           ab('Black Ash Teleport', { flavor: 'In a swirl of black ash, you step from one place to another.',
             keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-            effect: 'You teleport up to 5 squares. If you have concealment or cover at your destination, you can use the Hide maneuver even if observed. If you successfully hide using this maneuver, you gain 1 surge.',
-            resource: 'Insight', spend: 'You teleport 1 additional square for each insight spent.' }),
+            effect: 'You teleport up to 5 squares. If you have concealment or cover at your destination, you can use the Hide maneuver even if you are observed. If you successfully hide using this maneuver, you gain 1 surge.',
+            resource: 'Insight', spendCost: '1+', spend: 'You teleport 1 additional square for each insight spent.' }),
           ab('In All This Confusion', { flavor: 'You vanish in a plume of black smoke to avoid danger.',
-            keywords: ['Magic'], type: 'Triggered action', badge: 'TRIGGER', distance: 'Self', target: 'Self',
+            keywords: ['Magic'], type: 'Triggered', badge: 'TRIGGER', distance: 'Self', target: 'Self',
             trigger: 'You take damage.',
             effect: 'You take half the damage, then can teleport up to 4 squares after the triggering effect resolves.',
-            resource: 'Insight', spend: 'You teleport 1 additional square for each insight spent.' }),
+            resource: 'Insight', spendCost: '1+', spend: 'You teleport 1 additional square for each insight spent.' }),
         ],
       },
       { id: 'caustic-alchemy', name: 'College of Caustic Alchemy', tag: 'Poison',  text: 'You learned recipes for the acids, bombs, and poisons of grim work, becoming an exceptional assassin.', skill: 'Alchemy',
         features: [
-          { name: 'Smoke Bomb', text: 'You always carry smoke bombs for distractions and easy getaways. You can use the Hide maneuver even if observed and without cover or concealment, shifting up to your Agility score as you do. If you end this movement with cover or concealment, you are automatically hidden.' },
+          { name: 'Smoke Bomb', text: 'You always carry a supply of smoke bombs to use for distractions and easy getaways. You can use the Hide maneuver even if you are observed and don’t initially have cover or concealment. When you do so, you can shift a number of squares equal to your Agility score. If you end this movement with cover or concealment, you are automatically hidden.' },
         ],
         abilities: [
           ab('Coat the Blade', { flavor: 'A little poison goes a long way.',
-            type: 'Maneuver', distance: 'Self', target: 'Self',
+            keywords: ['—'], type: 'Maneuver', distance: 'Self', target: 'Self',
             effect: 'You gain 2 surges. Additionally, whenever you use a surge before the end of the encounter, you can choose to have it deal poison damage.',
-            resource: 'Insight', spend: 'For each insight you spend, you gain 1 additional surge.' }),
-          ab('Defensive Roll', { flavor: 'Just quick enough to slip out of harm\u2019s way.',
-            type: 'Triggered action', badge: 'TRIGGER', distance: 'Self', target: 'Self',
+            resource: 'Insight', spendCost: '1+', spend: 'For each insight you spend, you gain 1 additional surge.' }),
+          ab('Defensive Roll', { flavor: 'You instinctively tumble away from danger.',
+            keywords: ['—'], type: 'Triggered', distance: 'Self', target: 'Self',
             trigger: 'Another creature damages you.',
-            effect: 'You take half the triggering damage, then can shift up to 2 squares after the triggering effect resolves. If you end this shift with concealment or cover, you can use the Hide maneuver even if observed.',
-            resource: 'Insight', spend: 'The potency of any effects associated with the damage is reduced by 1 for you.' }),
+            effect: 'You take half the triggering damage, then can shift up to 2 squares after the triggering effect resolves. If you end this shift with concealment or cover, you can use the Hide maneuver even if you are observed.',
+            resource: 'Insight', spend: 'The potency of any effects associated with the damage are reduced by 1 for you.' }),
         ],
       },
       { id: 'harlequin-mask', name: 'College of the Harlequin Mask', tag: 'Illusion', text: 'You learned illusion magic, used to infiltrate strongholds and sow orchestrated chaos in combat.', skill: 'Lie',
         abilities: [
-          ab('I\u2019m No Threat', { flavor: 'Taking on an illusory countenance gives you an advantage on subterfuge.',
+          ab('I’m No Threat', { flavor: 'Taking on an illusory countenance gives you an advantage on subterfuge.',
             keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-            effect: 'You cloak yourself in an illusion that makes you appear nonthreatening and harmless — a sheep, a capybara, or an unarmed version of yourself. While it lasts, your strikes gain an edge and you gain +1 to Disengage distance. The illusion ends if you harm or physically interact with a creature, use this ability again, or end it freely; ending it by harming a creature gives you 1 surge.',
-            resource: 'Insight', spend: 'Appear as a specific creature (size up to 1 greater than yours, within 10 squares), including their voice, clothing, and armor. You gain an edge on tests to convince their allies you are them.' }),
-          ab('Clever Trick', { flavor: 'You sow a moment of confusion in combat, to your enemy\u2019s peril.',
-            keywords: ['Magic'], type: 'Triggered action', badge: 'TRIGGER',
-            cost: 1, resource: 'Insight',
-            distance: 'Self', target: 'Self',
+            effect: 'You envelop yourself in an illusion that makes you appear nonthreatening and harmless to your enemies. You might take on the appearance of a harmless animal of your size, such as a sheep or capybara, or you might appear as a less heroic and unarmed version of yourself. While this illusion lasts, your strikes gain an edge, and when you take the Disengage move action, you gain a +1 bonus to the distance you can shift. The illusion ends when you harm another creature, when you physically interact with a creature, when you use this ability again, or when you end the illusion (no action required). If you end this illusion by harming another creature, you gain 1 surge.',
+            resource: 'Insight', spend: 'Choose a creature whose size is no more than 1 greater than yours and who is within 10 squares. This ability’s illusion makes you appear as that creature. This illusion covers your entire body, including clothing and armor, and alters your voice to sound like that of the creature. You gain an edge on tests made to convince the creature’s allies that you are the creature.' }),
+          ab('Clever Trick', { flavor: 'You sow a moment of confusion in combat, to your enemy’s peril.',
+            keywords: ['Magic'], type: 'Triggered', cost: 1, resource: 'Insight', distance: 'Self', target: 'Self',
             trigger: 'An enemy targets you with a strike.',
             effect: 'Choose an enemy within distance of the triggering strike, including the enemy who targeted you. The strike targets that enemy instead.' }),
         ],
@@ -870,12 +868,12 @@ const DS_CLASSES = [
     features: [
       { name: 'Insight', text: 'At the start of combat you gain insight equal to your Victories, then 1d3 at the start of each turn. The first time each round you deal damage with one or more surges, gain 1 insight. A heroic ability that uses a power roll costs 1 less insight while you have an edge or double edge on it. Lost at end of encounter.' },
       { name: 'Hesitation Is Weakness', ability: ab('Hesitation Is Weakness', {
-        flavor: 'You seize the opening before anyone else can react.',
-        keywords: ['Psionic'], type: 'Free triggered',
+        flavor: 'Keep up the attack. Never give them a moment’s grace.',
+        keywords: ['—'], type: 'Free triggered action',
         cost: 1, resource: 'Insight',
         distance: 'Self', target: 'Self',
-        trigger: 'Another hero ends their turn (and didn\u2019t use this ability to start their own turn).',
-        effect: 'You take your turn next.'
+        trigger: 'Another hero ends their turn. That hero can’t have used this ability to start their turn.',
+        effect: 'You take your turn after the triggering hero.'
       }) },
     ],
     signatures: [
@@ -897,7 +895,7 @@ const DS_CLASSES = [
         flavor: 'Your precise strikes let your allies take advantage of a target\u2019s agony.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','3 + A damage'],['12–16','5 + A damage'],['17+','8 + A; I<STRONG, prone']],
+        powerRoll: 'Agility', tiers: [['≤11','3 + A damage'],['12–16','5 + A damage'],['17+','8 + A damage; I < STRONG, prone']],
         effect: 'One ally within 5 squares of the target gains 1 surge.'
       }),
       ab('You Were Watching the Wrong One', {
@@ -905,7 +903,7 @@ const DS_CLASSES = [
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Agility', tiers: [['≤11','3 + A damage'],['12–16','5 + A damage'],['17+','8 + A damage']],
-        effect: 'While you have one or more allies within 5 squares of the target, you gain 1 surge. If you are flanking the target, one ally flanking with you also gains 1 surge.'
+        effect: 'As long as you have one or more allies within 5 squares of the target, gain 1 surge. If you are flanking the target when you use this ability, choose one ally who is flanking with you. That ally also gains 1 surge.'
       }),
     ],
     heroic3: [
@@ -920,19 +918,19 @@ const DS_CLASSES = [
         flavor: 'You leave your foe bleeding out after a devastating attack.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; A<WEAK, bleeding (save)'],['12–16','6 + A; A<AVERAGE, bleeding (save)'],['17+','10 + A; A<STRONG, bleeding (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; A < WEAK, bleeding (save ends)'],['12–16','6 + A damage; A < AVERAGE, bleeding (save ends)'],['17+','10 + A damage; A < STRONG, bleeding (save ends)']],
       }),
       ab('Disorienting Strike', { cost: 3, resource: 'Insight',
         flavor: 'Your attack leaves them reeling, allowing you to follow up.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A; slide 2'],['12–16','6 + A; slide 3'],['17+','10 + A; slide 5']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; slide 2'],['12–16','6 + A damage; slide 3'],['17+','10 + A damage; slide 5']],
         effect: 'You can shift into any square the target leaves when you slide them.'
       }),
       ab('Two Throats at Once', { cost: 3, resource: 'Insight',
         flavor: 'A bargain.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
-        distance: 'Melee 1 or ranged 5', target: 'Two creatures or objects',
+        distance: 'Melee 1 or ranged 5', target: 'Two creature or objects',
         powerRoll: 'Agility', tiers: [['≤11','4 damage'],['12–16','6 damage'],['17+','10 damage']],
       }),
     ],
@@ -941,33 +939,32 @@ const DS_CLASSES = [
         flavor: 'Your blade might be the last thing they see.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','2d6 + 7 + A damage'],['12–16','2d6 + 11 + A damage'],['17+','2d6 + 16 + A damage']],
+        powerRoll: 'Agility', tiers: [['≤11','2d6 +7 + A damage'],['12–16','2d6 + 11 + A damage'],['17+','2d6 + 16 + A damage']],
       }),
       ab('Shadowstrike', { cost: 5, resource: 'Insight',
         flavor: 'They have no idea what the college taught you.',
         keywords: ['Magic','Melee','Ranged'], type: 'Main action',
-        distance: 'Self; see below', target: 'Self',
+        distance: 'Self', target: 'Self',
         effect: 'You use a strike signature ability twice.'
       }),
       ab('Setup', { cost: 5, resource: 'Insight',
         flavor: 'Your friends will thank you.',
         keywords: ['Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Ranged 5', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','6 + A; R<WEAK, weakness 5 (save)'],['12–16','9 + A; R<AVERAGE, weakness 5 (save)'],['17+','13 + A; R<STRONG, weakness 5 (save)']],
-        effect: 'The target has damage weakness 5 while the condition lasts.'
+        powerRoll: 'Agility', tiers: [['≤11','6 + A damage; R < WEAK, the target has damage weakness 5 (save ends)'],['12–16','9 + A damage; A < AVERAGE, the target has damage weakness 5 (save ends)'],['17+','13 + A damage; A < STRONG, the target has damage weakness 5 (save ends)']],
       }),
       ab('One Hundred Throats', { cost: 5, resource: 'Insight',
         flavor: 'As you move across the battlefield, every foe within reach feels your wrath.',
         keywords: ['Melee','Weapon'], type: 'Main action',
-        distance: 'Self; see below', target: 'Self',
+        distance: 'Self', target: 'Self',
         powerRoll: 'Agility', tiers: [['≤11','3 damage'],['12–16','6 damage'],['17+','9 damage']],
-        effect: 'You shift up to your speed and make one power roll targeting up to three enemies who came adjacent to you during your move.'
+        effect: 'You shift up to your speed and make one power roll that targets up to three enemies who came adjacent to you during the move.'
       }),
     ],
   },
 
   // ───── Tactician ─────
-  { id: 'tactician', name: 'Tactician', resource: 'Focus', glyph: '⚔',
+  { id: 'tactician', name: 'Tactician', resource: 'Focus', turnGain: '2', epicResource: 'Command', glyph: '⚔',
     role: 'Support · Defender',
     blurb: 'A brilliant strategist and weapons master. Grants allies extra movement, damage, and attacks while standing between friends and death.',
     longBlurb: 'Strategist. Defender. Leader. With weapon in hand you lead allies into the maw of battle, barking commands that inspire them to move faster and strike truer — all while you taunt the followers of evil to best you if they can.',
@@ -1003,19 +1000,19 @@ const DS_CLASSES = [
     features: [
       { name: 'Focus', text: 'At the start of combat you gain focus equal to your Victories, then 2 at the start of each turn. The first time each round that you or an ally damages a creature you\u2019ve Marked, gain 1 focus; the first time each round an ally within 10 uses a heroic ability, gain 1. Lost at end of encounter.' },
       { name: 'Field Arsenal', text: 'You can use and gain the benefits of two kits, including both their signature abilities. When both kits grant the same benefit, you take the higher of the two. Whenever you would choose or change one kit, you can choose or change the other as well.' },
-      { name: 'Mark', ability: ab('Mark', {
-        flavor: 'You single out a foe for your squad to focus.',
-        keywords: ['Weapon'], type: 'Maneuver',
+      { name: 'Mark', ability: ab('Mark', { noBadge: true,
+        flavor: 'You draw your allies’ attention to a specific foe—with devastating effect.',
+        keywords: ['Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'One creature',
-        effect: 'The target is Marked by you until the encounter ends or you re-mark. While a Marked creature is in your line of effect, you and your allies gain an edge on power rolls against it; when you or an ally deals rolled damage to it you can spend 1 focus for extra damage, a free Recovery, a free shift, or to taunt it.'
+        effect: 'The target is marked by you until the end of the encounter, until you are dying, or until you use this ability again. You can willingly end your mark on a creature (no action required), and if another tactician marks a creature, your mark on that creature ends. When a creature marked by you is reduced to 0 Stamina, you can use a free triggered action to mark a new target within distance.\n\nYou can initially mark only one creature using this ability, though other tactician abilities allow you to mark additional creatures at the same time. The mastermind tactical doctrine’s Anticipation feature allows you to target additional creatures with this ability starting at 5th level.\n\nWhile a creature marked by you is within your line of effect, you and allies within your line of effect gain an edge on power rolls made against that creature. Additionally, whenever you or any ally uses an ability to deal rolled damage to a creature marked by you, you can spend 1 focus to gain one of the following benefits as a free triggered action:\n\n- The ability deals extra damage equal to twice your Reason score.\n- The creature dealing the damage can spend a Recovery.\n- The creature dealing the damage can shift up to a number of squares equal to your Reason score.\n- If you damage a creature marked by you with a melee ability, the creature is taunted by you until the end of their next turn.\n\nYou can’t gain more than one benefit from the same trigger.'
       }) },
-      { name: '\u201cStrike Now!\u201d', ability: ab('\u201cStrike Now!\u201d', {
-        flavor: 'On your command, an ally attacks in an instant.',
+      { name: '\u201cStrike Now!\u201d', ability: ab('\u201cStrike Now!\u201d', { noBadge: true,
+        flavor: 'Your foe left an opening. You point this out to an ally!',
         keywords: ['Ranged'], type: 'Main action',
         distance: 'Ranged 10', target: 'One ally',
         effect: 'The target can use a signature ability as a free triggered action.',
         resource: 'Focus', spendCost: 5,
-        spend: 'Target two allies instead.'
+        spend: 'You target two allies instead of one.'
       }) },
     ],
     heroic3: [
@@ -1023,45 +1020,44 @@ const DS_CLASSES = [
         flavor: 'Your attack gives an ally hope.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3 + M; an ally spends a Recovery'],['12–16','5 + M; an ally spends a Recovery'],['17+','8 + M; you and an ally spend a Recovery & gain an edge']],
-        effect: 'You or one ally within 10 squares can spend a Recovery.'
+        powerRoll: 'Might', tiers: [['≤11','3+M damage; you or one ally within 10 squares of you can spend a Recovery'],['12–16','5+M damage; you or one ally within 10 squares of you can spend a Recovery'],['17+','8+M damage; you or one ally within 10 squares of you can spend a Recovery, and each of you gains an edge on the next ability roll you make during the encounter']],
       }),
       ab('Concussive Strike', { cost: 3, resource: 'Focus',
         flavor: 'Your precise strike leaves your foe struggling to respond.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3 + M; M<WEAK, dazed (save)'],['12–16','5 + M; M<AVERAGE, dazed (save)'],['17+','8 + M; M<STRONG, dazed (save)']],
+        powerRoll: 'Might', tiers: [['≤11','3+M damage; M < WEAK, dazed (save ends)'],['12–16','5+M damage; M < AVERAGE, dazed (save ends)'],['17+','8+M damage; M < STRONG, dazed (save ends)']],
       }),
       ab('Battle Cry', { cost: 3, resource: 'Focus',
         flavor: 'You shout a phrase that galvanizes your team.',
         keywords: ['Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Three allies',
-        powerRoll: 'Reason', tiers: [['≤11','Each gains 1 surge'],['12–16','Each gains 2 surges'],['17+','Each gains 3 surges']],
+        powerRoll: 'Reason', tiers: [['≤11','Each target gains 1 surge'],['12–16','Each target gains 2 surges'],['17+','Each target gains 3 surges']],
       }),
       ab('Squad! Forward!', { cost: 3, resource: 'Focus',
         flavor: 'On your command, you and your allies force back the enemy line.',
         keywords: ['Ranged'], type: 'Maneuver',
-        distance: 'Ranged 10', target: 'Self and two allies',
+        distance: 'Ranged 10', target: 'Self and one ally',
         effect: 'Each target can move up to their speed.'
       }),
     ],
     heroic5: [
       ab('Hammer and Anvil', { cost: 5, resource: 'Focus',
-        flavor: '\u201cLet\u2019s not argue about who\u2019s the hammer and who\u2019s the anvil!\u201d',
+        flavor: '“Let’s not argue about who’s the hammer and who’s the anvil!',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','5 + M; an ally free-strikes the target'],['12–16','9 + M; an ally free-strikes with an edge'],['17+','12 + M; two allies free-strike with an edge']],
-        effect: 'If the target drops before an ally strikes, that ally can pick a new target.'
+        powerRoll: 'Might', tiers: [['≤11','5+M damage; one ally within 10 squares can make a signature strike against the target as a free triggered action'],['12–16','9+M damage; one ally within 10 squares can make a signature strike that gains an edge against the target as a free triggered action'],['17+','12+M damage; two allies within 10 squares can each make a signature strike that gains an edge against the target as free triggered actions']],
+        effect: 'If the target is reduced to 0 Stamina and a strike granted by this ability hasn’t been made, the striker can pick a different target.'
       }),
       ab('Mind Game', { cost: 5, resource: 'Focus',
         flavor: 'Your attack demoralizes your foe. Your allies begin to think you can win.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
         powerRoll: 'Might', tiers: [['≤11','4 + M; R<WEAK, weakened (save)'],['12–16','6 + M; R<AVERAGE, weakened (save)'],['17+','10 + M; R<STRONG, weakened (save)']],
-        effect: 'You mark the target. Before your next turn, the first time any ally damages a target you\u2019ve Marked, that ally can spend a Recovery.'
+        effect: 'The first time any ally deals damage any target you’ve marked before the start of your next turn, that ally can spend a Recovery.'
       }),
       ab('Now!', { cost: 5, resource: 'Focus',
-        flavor: 'Your allies wait for your command — then unleash death!',
+        flavor: 'Your allies wait for your command - then unleash death!',
         keywords: ['Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Three allies',
         effect: 'Each target can make a free strike.'
@@ -1076,7 +1072,7 @@ const DS_CLASSES = [
   },
 
   // ───── Talent ─────
-  { id: 'talent', name: 'Talent', resource: 'Clarity', glyph: '◈',
+  { id: 'talent', name: 'Talent', resource: 'Clarity', turnGain: '1d3', epicResource: 'Vision', glyph: '◈',
     role: 'Controller · Striker',
     blurb: 'A psionic master who manipulates objects, minds, time, and the laws of physics — limited only by the strength of their mind, and the deadly cost of pushing too hard.',
     longBlurb: 'A rare few are born with psionic potential, but only an awakening unlocks it. You can move and change matter, time, gravity, the laws of physics, or another creature\u2019s mind — but every manifestation risks harming you, and talents who use too much power too quickly pay a deadly price.',
@@ -1117,12 +1113,12 @@ const DS_CLASSES = [
     ],
     features: [
       { name: 'Clarity and Strain', text: 'At the start of combat you gain clarity equal to your Victories, then 1d3 each turn; gain 1 the first time each round a creature is force moved. You can spend clarity you don\u2019t have, down to \u2212(1 + Reason); while clarity is below 0 you are strained and take 1 damage per negative point at end of turn. Some abilities have extra effects when strained.' },
-      { name: 'Mind Spike', ability: ab('Mind Spike', {
-        flavor: 'A telepathic bolt instantly zaps a creature\u2019s brain. (Usable as a ranged free strike.)',
+      { name: 'Mind Spike', ability: ab('Mind Spike', { noBadge: true,
+        flavor: 'A telepathic bolt instantly zaps a creature’s brain.',
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R psychic'],['12–16','4 + R psychic'],['17+','6 + R psychic']],
-        effect: 'Strained: the target takes 2 extra psychic, and you take 2 psychic that can\u2019t be reduced.'
+        powerRoll: 'Reason', tiers: [['≤11','2 + R psychic damage'],['12–16','4 + R psychic damage'],['17+','6 + R psychic damage']],
+        effect: '**Strained:** The target takes an extra 2 psychic damage. You also take 2 psychic damage that can’t be reduced in any way.'
       }) },
       { name: 'Augmentation / Ward', text: 'Choose one Psionic Augmentation and one Talent Ward below. You can swap either by undergoing a psionic meditation during a respite.', choose: 'augmentWard' },
       { name: 'Telepathic Speech', text: 'You know the Mindspeech language and can telepathically communicate with any creature within Mind Spike\u2019s distance that shares a language with you; they can answer telepathically.' },
@@ -1133,57 +1129,57 @@ const DS_CLASSES = [
         flavor: 'You lift and hurl your foe away from you.',
         keywords: ['Psionic','Ranged','Telekinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','Slide 2 + R'],['12–16','Slide 4 + R'],['17+','Slide 6 + R; prone']],
-        effect: 'Strained: you must vertical push the target instead of sliding them.'
+        powerRoll: 'Reason', tiers: [['≤11','Slide 2 + R'],['12–16','slide 4 + @chr; R < AVERAGE'],['17+','slide 6 + @chr; prone']],
+        effect: 'You must vertical push the target instead of sliding them.'
       }),
       ab('Incinerate', {
         flavor: 'The air erupts into a column of smokeless flame.',
-        keywords: ['Area','Fire','Psionic','Pyrokinesis','Ranged'], type: 'Main action',
+        keywords: ['Area','Psionic','Ranged','Fire','Pyrokinesis'], type: 'Main action',
         distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','2 fire'],['12–16','4 fire'],['17+','6 fire']],
-        effect: 'A column of fire remains until the start of your next turn; enemies entering or starting there take 2 fire. Strained: the cube grows by 2 but the fire vanishes at end of turn.'
+        powerRoll: 'Reason', tiers: [['≤11','2 fire damage'],['12–16','4 fire damage'],['17+','6 fire damage']],
+        effect: 'A column of fire remains in the area until the start of your next turn. Each enemy who enters the area for the first time in a combat round or starts their turn there takes 2 fire damage.\n\nThe size of the cube increases by 2, but the fire disappears at the end of your turn.'
       }),
       ab('Entropic Bolt', {
         flavor: 'You advance an enemy\u2019s age for a moment.',
-        keywords: ['Chronopathy','Psionic','Ranged','Strike'], type: 'Main action',
+        keywords: ['Psionic','Ranged','Strike','Chronopathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Presence', tiers: [['≤11','2 + P corruption; P<WEAK, slowed (save)'],['12–16','3 + P corruption; P<AVERAGE, slowed (save)'],['17+','5 + P corruption; P<STRONG, slowed (save)']],
-        effect: 'The target takes 1 extra corruption for each additional time they\u2019re targeted by this ability this encounter. Strained: gain 1 clarity on a tier 2 or tier 3 outcome.'
+        powerRoll: 'Presence', tiers: [['≤11','2 + P corruption; P<WEAK, slowed (save)'],['12–16','3 + P corruption damage; P < AVERAGE, slowed (save ends)'],['17+','5 + P corruption damage; P < STRONG, slowed (save ends)']],
+        effect: 'The target takes an extra 1 corruption damage for each additional time they are targeted by this ability during the encounter.\n\nYou gain 1 clarity when you obtain a tier 2 or tier 3 outcome on the power roll.'
       }),
       ab('Kinetic Pulse', {
         flavor: 'The force of your mind hurls enemies backward.',
         keywords: ['Area','Psionic','Telepathy'], type: 'Main action',
         distance: '1 burst', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','2 psychic'],['12–16','5 psychic; push 1'],['17+','7 psychic; push 2']],
-        effect: 'Strained: the burst grows by 2, and you are bleeding until the start of your next turn.'
+        powerRoll: 'Reason', tiers: [['≤11','2 psychic damage;'],['12–16','5 psychic damage; push 1'],['17+','7 psychic damage; push 2']],
+        effect: 'The size of the burst increases by 2, and you are bleeding until the start of your next turn.'
       }),
       ab('Materialize', {
-        flavor: 'You picture an object in your mind and give it form — directly above your opponent\u2019s head.',
-        keywords: ['Psionic','Ranged','Resopathy','Strike'], type: 'Main action',
+        flavor: 'You picture an object in your mind and give it form—directly above your opponent’s head.',
+        keywords: ['Psionic','Ranged','Strike','Resopathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','3 + R damage'],['12–16','5 + R damage'],['17+','8 + R damage']],
-        effect: 'A worthless size 1M wood, stone, or metal object drops onto the target, then rolls into an adjacent square. Strained: the object explodes, dealing your Reason to each creature adjacent to the target; you take Reason damage that can\u2019t be reduced.'
+        effect: 'A worthless size 1M object drops onto the target to deal the damage, then rolls into an adjacent unoccupied space of your choice. The object is made of wood, stone, or metal (your choice).\n\nThe object explodes after the damage is dealt, and each creature adjacent to the target takes damage equal to your Reason score. You also take damage equal to your Reason score that can’t be reduced in any way.'
       }),
       ab('Hoarfrost', {
         flavor: 'You blast a foe with a pulse of cold energy.',
-        keywords: ['Cryokinesis','Psionic','Ranged','Strike'], type: 'Main action',
+        keywords: ['Psionic','Ranged','Strike','Cryokinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R cold; M<WEAK, slowed (EoT)'],['12–16','4 + R cold; M<AVERAGE, slowed (EoT)'],['17+','6 + R cold; M<STRONG, slowed (EoT)']],
-        effect: 'Strained: you are slowed until your next turn, and a slowed target is restrained instead.'
+        powerRoll: 'Reason', tiers: [['≤11','2 + R cold damage; M < WEAK, slowed (EoT)'],['12–16','4 + R cold; M<AVERAGE, slowed (EoT)'],['17+','6 + R cold; M<STRONG, slowed (EoT)']],
+        effect: 'You are slowed until the end of your next turn. Additionally, a target slowed by this ability is restrained instead.'
       }),
       ab('Spirit Sword', {
         flavor: 'You form a blade of mind energy and stab your target, invigorating yourself.',
-        keywords: ['Animapathy','Melee','Psionic','Strike'], type: 'Main action',
+        keywords: ['Melee','Psionic','Strike','Animapathy'], type: 'Main action',
         distance: 'Melee 2', target: 'One creature or object',
         powerRoll: 'Presence', tiers: [['≤11','3 + P damage'],['12–16','6 + P damage'],['17+','9 + P damage']],
-        effect: 'You gain 1 surge. Strained: the target takes 3 extra damage; you take 3 that can\u2019t be reduced.'
+        effect: 'You gain 1 surge.\n\nThe target takes an extra 3 damage. You also take 3 damage that can’t be reduced in any way.'
       }),
       ab('Optic Blast', {
         flavor: 'Your eyes emit rays of powerful enervating force.',
-        keywords: ['Metamorphosis','Psionic','Ranged','Strike'], type: 'Main action',
+        keywords: ['Psionic','Ranged','Strike','Metamorphosis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R; M<WEAK, prone'],['12–16','4 + R; M<AVERAGE, prone'],['17+','6 + R; M<STRONG, prone']],
-        effect: 'Against a reflective object (or a creature carrying one) you can hit one more target within 3. Strained: gain 1 surge to use now; take damage equal to Reason that can\u2019t be reduced.'
+        powerRoll: 'Reason', tiers: [['≤11','2 + R damage; M < WEAK, prone'],['12–16','4 + R; M<AVERAGE, prone'],['17+','6 + R; M<STRONG, prone']],
+        effect: 'When targeting an object with a solid reflective surface or a creature carrying or wearing such an object (such as a mirror, an unpainted metal shield, or shiny metal plate armor), you can target one additional creature or object within 3 squares of the first target.\n\nYou gain 1 surge that you can use immediately, and you take damage equal to your Reason score that can’t be reduced in any way.'
       }),
     ],
     heroic3: [
@@ -1191,60 +1187,60 @@ const DS_CLASSES = [
         flavor: 'You crush a foe in a telekinetic grip.',
         keywords: ['Psionic','Ranged','Strike','Telekinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','3 + R; M<WEAK, slowed (save)'],['12–16','5 + R; M<AVERAGE, slowed (save)'],['17+','8 + R; M<STRONG, restrained (save)']],
-        effect: 'You can vertical pull the target up to 2 squares; if restrained, this movement ignores their stability.'
+        powerRoll: 'Reason', tiers: [['≤11','3 + R damage; M < WEAK, slowed (save ends)'],['12–16','5 + R damage; R < AVERAGE, slowed (save ends)'],['17+','8 + R damage; R < STRONG, restrained (save ends)']],
+        effect: 'You can vertical pull the target up to 2 squares. If the target is made restrained by this ability, this forced movement ignores their stability.'
       }),
       ab('Awe', { cost: 3, resource: 'Clarity',
-        flavor: 'You project psionic energy and take on a new visage in their mind.',
+        flavor: 'You project psionic energy out to a creature and take on a new visage in their mind.',
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','3 + P psychic; I<WEAK, frightened (save)'],['12–16','6 + P psychic; I<AVERAGE, frightened (save)'],['17+','9 + P psychic; I<STRONG, frightened (save)']],
-        effect: 'If you target an ally instead: they gain temp Stamina equal to 3× your Presence and can end one save-ends/end-of-turn effect.'
+        powerRoll: 'Presence', tiers: [['≤11','3 + P psychic damage; I < WEAK, frightened (save ends)'],['12–16','6 + P psychic; I<AVERAGE, frightened (save)'],['17+','9 + P psychic; I<STRONG, frightened (save)']],
+        effect: 'If you target an ally, they gain three times your Presence score temporary Stamina equal to three times your Presence score, and they can end one effect on them that is ended by a saving throw or that ends at the end of their turn. If you target an enemy, you make a power roll.'
       }),
       ab('Smolder', { cost: 3, resource: 'Clarity',
-        flavor: 'Smoke flows from your enemy as their skin begins to blacken and flake.',
-        keywords: ['Psionic','Pyrokinesis','Ranged','Strike'], type: 'Main action',
+        flavor: 'Smoke flows from your enemy like tears as their skin begins to blacken and flake.',
+        keywords: ['Psionic','Ranged','Strike','Pyrokinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','3 + R; R<WEAK, weakness 5 (save)'],['12–16','6 + R; R<AVERAGE, weakness 5 (save)'],['17+','9 + R; R<STRONG, weakness 5 + Reason (save)']],
-        effect: 'Choose the damage type and weakness type: acid, corruption, or fire.'
+        powerRoll: 'Reason', tiers: [['≤11','3 + R damage; R < WEAK, the target has weakness 5 (save ends)'],['12–16','6 + R damage; R < AVERAGE, the target has weakness 5 (save ends)'],['17+','9 + R damage; R < STRONG, the target has weakness equal to 5 + your Reason score (save ends)']],
+        effect: 'Choose the damage type and the weakness for this ability from one of the following: acid, corruption, or fire. The target takes damage before this ability imposes any weakness.'
       }),
       ab('Precognition', { cost: 3, resource: 'Clarity',
-        flavor: 'You give a target a glimpse of the future so they\u2019re ready for what comes next.',
-        keywords: ['Chronopathy','Melee','Psionic'], type: 'Main action',
+        flavor: 'You give a target a glimpse into the future so that they’re ready for what comes next.',
+        keywords: ['Melee','Psionic','Chronopathy'], type: 'Main action',
         distance: 'Melee 2', target: 'Self or one ally',
-        effect: 'Ability rolls against the target take a bane until the start of your next turn. While under this effect, whenever the target takes damage they can use a triggered action to free-strike the source.'
+        effect: 'Ability rolls made against the target take a bane until the start of your next turn. Whenever the target takes damage while under this effect, they can use a triggered action to make a free strike against the source of the damage.'
       }),
     ],
     heroic5: [
       ab('Inertia Soak', { cost: 5, resource: 'Clarity',
-        flavor: 'Your psionic energy surrounds the target and pushes everything else away.',
+        flavor: 'Your psionic energy surrounds the target and pushes everything else away from them.',
         keywords: ['Psionic','Ranged','Telekinesis'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target ignores difficult terrain and takes no forced-movement damage until your next turn. When they enter a square, they can push one adjacent creature up to your Reason score (once per turn). Strained: you are weakened (save), and your forced movement gains +5.'
+        effect: 'The target ignores difficult terrain and takes no damage from forced movement until the start of your next turn. Whenever the target enters a square while under this effect, they can push one adjacent creature up to a number of squares equal to your Reason score. When pushing an ally, the target can ignore that ally’s stability. A creature can only be force moved this way once a turn.\n\n**Strained:** You are weakened (save ends). While you are weakened this way, whenever you are force moved, the forced movement distance gains a +5 bonus.'
       }),
       ab('Iron', { cost: 5, resource: 'Clarity',
-        flavor: 'The target\u2019s skin turns to hard, dark metal — impenetrable and dense.',
-        keywords: ['Metamorphosis','Psionic','Ranged'], type: 'Maneuver',
+        flavor: 'The target’s skin turns to hard, dark metal, impenetrable and dense.',
+        keywords: ['Psionic','Ranged','Metamorphosis'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target\u2019s stability increases by your Reason score and they gain 10 temporary Stamina and 2 surges (stability lasts while the temp Stamina remains). Strained: you can\u2019t use maneuvers (save ends).'
+        effect: 'Effect: The target’s stability increases by an amount equal to your Reason score, and they gain 10 Stamina and gains 2 surges. This stability increase lasts until the target no longer has temporary Stamina from this ability.\n\n**Strained:** You can’t use maneuvers (save ends).'
       }),
       ab('Perfect Clarity', { cost: 5, resource: 'Clarity',
         flavor: 'You clear the mind of nothing but the goal.',
         keywords: ['Psionic','Ranged','Telepathy'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'Until your next turn the target gains +3 speed and a double edge on their next power roll; if it\u2019s a tier 3, you gain 1 clarity. Strained: you take 1d6 damage and can\u2019t use triggered actions (save ends).'
+        effect: 'Until the start of your next turn, the target gains a +3 bonus to speed, and they have a double edge on the next power roll they make. If the target obtains a tier 3 outcome on that roll, you gain 1 clarity.\n\n**Strained:** You take 1d6 damage, and you can’t use triggered actions (save ends).'
       }),
       ab('Flashback', { cost: 5, resource: 'Clarity',
         flavor: 'The target is thrown several seconds back through time and gets to do it all again.',
-        keywords: ['Chronopathy','Psionic','Ranged'], type: 'Maneuver',
+        keywords: ['Psionic','Ranged','Chronopathy'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target reuses an ability (base cost 7 or lower) they\u2019ve already used this round, free of its base cost. Strained: you take 1d6 damage and are slowed (save ends).'
+        effect: 'The target uses an ability with a base Heroic Resource cost of 7 or lower that they’ve previously used this round, without needing to spend the base cost. Augmentations to the ability can be paid for as usual.\n\n**Strained:** You take 1d6 damage and are slowed (save ends).'
       }),
     ],
   },
 
   // ───── Troubadour ─────
-  { id: 'troubadour', name: 'Troubadour', resource: 'Drama', glyph: '♪',
+  { id: 'troubadour', name: 'Troubadour', resource: 'Drama', turnGain: '1d3', epicResource: 'Applause', glyph: '♪',
     role: 'Support · Striker',
     blurb: 'A storyteller-warrior whose quips, songs, dances, and tales produce real magic — bolstering allies, harming foes, and rewriting the scene of battle in real time.',
     longBlurb: 'The whole world\u2019s a stage, and everyone on it an actor. You find energy in the drama of everyday life and draw spectacle from the mundane, accenting highs and deepening lows for whoever witnesses your performance. You take to the world stage not to die, but to find out if you\u2019re truly alive.',
@@ -1283,28 +1279,30 @@ const DS_CLASSES = [
         flavor: 'A lyrical (and physical) jab insults an enemy and inspires an ally.',
         keywords: ['Magic','Melee','Ranged','Strike'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','4 + P psychic'],['12–16','5 + P psychic'],['17+','7 + P psychic']],
-        effect: 'One ally within 10 can end one save-ends or end-of-turn effect on them. Spend 1 drama: that ally can spend a Recovery.'
+        powerRoll: 'Presence', tiers: [['≤11','4 + P psychic damage'],['12–16','5 + P psychic damage'],['17+','7 + P psychic damage']],
+        effect: 'One ally within 10 squares of you can end one effect on them that is ended by a saving throw or that ends at the end of their turn.',
+        resource: 'Drama', spend: 'The chosen ally can spend a Recovery.'
       }),
       ab('Artful Flourish', {
         flavor: 'And they said practicing fencing was a waste!',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'Two creatures or objects',
         powerRoll: 'Agility', tiers: [['≤11','2 damage'],['12–16','5 damage'],['17+','7 damage']],
-        effect: 'You can shift up to 3 squares. Spend 2+ drama: one more target per 2 drama.'
+        effect: 'You can shift up to 3 squares.',
+        resource: 'Drama', spendCost: '2+', spend: 'You can target one additional creature or object for every 2 drama spent.'
       }),
       ab('Instigator', {
         flavor: 'I didn\u2019t do it! What?',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Presence', tiers: [['≤11','3 + P damage'],['12–16','6 + P damage'],['17+','9 + P damage']],
-        effect: 'The target is taunted by you or a willing adjacent ally until the end of its next turn.'
+        effect: 'The target is taunted by you or a willing ally adjacent to you until the end of the target’s next turn.'
       }),
       ab('Cutting Sarcasm', {
         flavor: 'There you are, radiating your usual charisma.',
         keywords: ['Magic','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','2 + P psychic; P<WEAK, bleeding (save)'],['12–16','5 + P psychic; P<AVERAGE, bleeding (save)'],['17+','7 + P psychic; P<STRONG, bleeding (save)']],
+        powerRoll: 'Presence', tiers: [['≤11','2 + P psychic damage; P < WEAK, bleeding (save ends)'],['12–16','5 + P psychic damage; P < AVERAGE, bleeding (save ends)'],['17+','7 + P psychic damage; P < STRONG, bleeding (save ends)']],
       }),
     ],
     heroic3: [
@@ -1312,29 +1310,29 @@ const DS_CLASSES = [
         flavor: 'Just one bad review will ruin their day.',
         keywords: ['Magic','Melee','Ranged','Strike'], type: 'Main action',
         distance: 'Melee 1 or ranged 10', target: 'One creature or object',
-        powerRoll: 'Presence', tiers: [['≤11','7 + P sonic'],['12–16','10 + P sonic'],['17+','13 + P sonic']],
-        effect: 'The first time the target uses an ability before your next turn, its non-damage tier outcomes are negated for all targets.'
+        powerRoll: 'Presence', tiers: [['≤11','7 + P sonic damage'],['12–16','10 + P sonic damage'],['17+','13 + P sonic damage']],
+        effect: 'The first time the target uses an ability before the start of your next turn, any effects from the ability’s tier outcomes other than damage are negated for all targets. Ability effects that always happen regardless of the power roll work as usual.'
       }),
       ab('Hypnotic Overtones', { cost: 3, resource: 'Drama',
-        flavor: 'You produce an entrancing note that twists the senses.',
+        flavor: 'You produce an entrancing note that twists the senses in a spectacular fashion.',
         keywords: ['Area','Magic'], type: 'Main action',
         distance: '2 burst', target: 'Each enemy in the area',
-        powerRoll: 'Presence', tiers: [['≤11','Slide 1; I<WEAK, dazed (save)'],['12–16','Slide 1; I<AVERAGE, dazed (save)'],['17+','Slide 2; I<STRONG, dazed (save)']],
-        effect: 'Spend 2+ drama: the burst grows by 1 per 2 drama.'
+        powerRoll: 'Presence', tiers: [['≤11','Slide 1; I < WEAK, dazed (save ends)'],['12–16','Slide 1; I < AVERAGE, dazed (save ends)'],['17+','Slide 2; I < STRONG, dazed (save ends)']],
+        spendCost: '2+', spend: 'The size of the burst increases by 1 for every 2 drama spent.'
       }),
       ab('Quick Rewrite', { cost: 3, resource: 'Drama',
         flavor: 'You write something unexpected into the scene that hinders your enemy.',
         keywords: ['Area','Magic','Ranged'], type: 'Main action',
         distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Presence', tiers: [['≤11','4; P<WEAK, slowed (save)'],['12–16','5; P<AVERAGE, slowed (save)'],['17+','6; P<STRONG, restrained (save)']],
+        powerRoll: 'Presence', tiers: [['≤11','4 damage; P < WEAK, slowed (save ends)'],['12–16','5 damage; P < AVERAGE, slowed (save ends)'],['17+','6 damage; P < STRONG, slowed (save ends)']],
         effect: 'The area is difficult terrain for enemies.'
       }),
       ab('Upstage', { cost: 3, resource: 'Drama',
-        flavor: 'Bobbing and weaving through the crowd, you leave the audience wanting more.',
+        flavor: 'As you bob and weave through the crowd, you can’t help but leave the audience wanting more.',
         keywords: ['Melee','Strike','Weapon'], type: 'Maneuver',
-        distance: 'Self; see below', target: 'Self',
-        powerRoll: 'Agility or Presence', tiers: [['≤11','Taunted (EoT); A<WEAK, prone'],['12–16','Taunted (EoT); A<AVERAGE, prone'],['17+','Taunted (EoT); A<STRONG, prone & can\u2019t stand']],
-        effect: 'You shift up to your speed and make one power roll against each enemy you move adjacent to during the shift.'
+        distance: 'Self', target: 'Self',
+        powerRoll: 'Agility or Presence', tiers: [['≤11','Taunted (EoT); A < WEAK, prone'],['12–16','Taunted (EoT); A<AVERAGE, prone'],['17+','Taunted (EoT); A<STRONG, prone & can\u2019t stand']],
+        effect: 'You shift up to your speed. You make one power roll that targets each enemy you move adjacent to during this shift.'
       }),
     ],
     heroic5: [
@@ -1342,17 +1340,17 @@ const DS_CLASSES = [
         flavor: 'Give the audience a surprise.',
         keywords: ['Area','Magic'], type: 'Main action',
         distance: '3 burst', target: 'Self and each ally in the area',
-        powerRoll: 'Presence', tiers: [['≤11','Shift 1 & free strike'],['12–16','Shift 2 & free strike with an edge'],['17+','Shift 3 & free strike with an edge, then spend a Recovery']],
+        powerRoll: 'Presence', tiers: [['≤11','The target can shift 1 square and make a free strike.'],['12–16','The target can shift up to 2 squares and make a free strike that gains an edge.'],['17+','The target can shift up to 3 squares and make a free strike that gains an edge, then can spend a Recovery.']],
       }),
       ab('Method Acting', { cost: 5, resource: 'Drama',
         flavor: 'They\u2019re so hurt by your performance, you start to believe it yourself.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Agility', tiers: [['≤11','6 + A; P<WEAK, weakened (save)'],['12–16','10 + A; P<AVERAGE, weakened (save)'],['17+','14 + A; P<STRONG, weakened (save)']],
-        effect: 'You can become bleeding (save ends) to deal 5 extra corruption damage to the target.'
+        effect: 'You can become bleeding (save ends) to deal an extra 5 corruption damage to the target.'
       }),
       ab('Flip the Script', { cost: 5, resource: 'Drama',
-        flavor: 'You try a different take on events, justifying where everyone ended up.',
+        flavor: 'You try a different take on events, justifying the new locations every one ended up in.',
         keywords: ['Area','Magic'], type: 'Main action',
         distance: '3 burst', target: 'Self and each ally in the area',
         effect: 'Each target can teleport up to 5 squares. Any teleported target who was slowed is no longer slowed.'
@@ -1361,7 +1359,7 @@ const DS_CLASSES = [
         flavor: 'O happy dagger, this is thy sheath!',
         keywords: ['Magic'], type: 'Maneuver',
         distance: 'Self', target: 'Self',
-        effect: 'You turn invisible and leave an illusory corpse. While invisible you gain +3 speed and ignore difficult terrain. It lasts until your next turn ends, the illusion is touched, you take damage, or you use a main action or maneuver.'
+        effect: 'You turn invisible and create a magical illusion of your corpse falling in your space. While you are invisible, you gain a +3 bonus to speed and you ignore difficult terrain. The illusion and your invisibility last until the end of your next turn, or until the illusion is interacted with, you take damage, or you use a main action or a maneuver.'
       }),
     ],
   },

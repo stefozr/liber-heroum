@@ -899,8 +899,10 @@ const PLAY_CSS = `
 }
 
 .vitals {
-  display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr 1fr; gap: 12px;
-  margin-bottom: 24px;
+  /* The 2:2:1:1:1:1 ratio only holds with minmax(0, …); bare fr units floor each
+     track at its content and the gauges stop being twice the width of a tile. */
+  display: grid; gap: 12px; margin-bottom: 24px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr));
 }
 /* Read-only viewer (not owner/director/admin): the session trackers are inert. The
    underlying update is already a no-op; this makes the controls look non-interactive. */
@@ -959,7 +961,7 @@ const PLAY_CSS = `
 .cnt-ctl button:hover { border-color: var(--gold); color: var(--ink); }
 
 .play-grid {
-  display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px;
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px;
 }
 .play-col-l, .play-col-r { display: flex; flex-direction: column; gap: 18px; }
 
@@ -993,7 +995,9 @@ const PLAY_CSS = `
 .panel-chevron.down { transform: rotate(0deg); }
 .panel-chevron.up { transform: rotate(180deg); }
 
-.chars-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+/* minmax(0, …) — the boxes are labelled with full characteristic names, so a bare
+   1fr floors each track at "Intuition"/"Presence" and the five come out unequal. */
+.chars-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .char-box { border: 1px solid var(--line-2); background: var(--bg-2); padding: 10px 6px; text-align: center; }
 .ch-name { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
 .ch-val { font-family: var(--display); font-size: 2rem; font-weight: 700; color: var(--ink); margin-top: 6px; }
@@ -1001,7 +1005,7 @@ const PLAY_CSS = `
 
 .empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: 0.875rem; padding: 14px; text-align: center; }
 
-.cond-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cond-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .cond {
   font-family: var(--mono); font-size: 0.625rem; padding: 8px 6px;
   background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink-2);
@@ -1115,7 +1119,7 @@ ${MQ.rail} {
 
 ${MQ.tab} {
   .play-grid { grid-template-columns: 1fr; }
-  .vitals { grid-template-columns: repeat(3, 1fr); }
+  .vitals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .hero-masthead { grid-template-columns: auto 1fr; gap: 16px; padding: 16px 18px; }
   .hb-level { grid-column: 2; padding-left: 0; border-left: none; text-align: left; margin-top: 4px; }
   .hb-name { font-size: 2rem; }
@@ -1130,11 +1134,11 @@ ${MQ.phone} {
   .play-top .left, .play-top .right { gap: 8px; }
   .brand-mark .brand-text { display: none; }
 
-  .vitals { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   /* The two gauges carry a bar and a control row; keep them full width. */
   .vitals .vital { grid-column: 1 / -1; }
-  .chars-row { grid-template-columns: repeat(3, 1fr); }
-  .cond-grid { grid-template-columns: repeat(2, 1fr); }
+  .chars-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cond-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kv-row, .kv-row.kv-src { grid-template-columns: 1fr; gap: 2px 0; }
   .kv-row .k { margin-top: 6px; }
   .prog-row { grid-template-columns: auto 1fr; }
