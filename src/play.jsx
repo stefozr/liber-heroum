@@ -5,7 +5,8 @@ import { ManeuversPanel, RulesGlossary } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
-import { parseKitSig, PERKS, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
+import { SheetStyles, AncestryTraitsList, KitDetails } from './theme/sheet.jsx';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
 import { MQ } from './theme/breakpoints.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
@@ -119,30 +120,15 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
     const h5 = cls.heroic5.find(x => x.name === character.cclass.heroic5);
     if (h5) heroic.push(h5);
   }
-  const mkKitSig = (kt) => {
-    const s = parseKitSig(kt.sig);
-    return {
-      name: s.name, flavor: '', keywords: ['Weapon'], type: 'Main action', badge: 'SIG',
-      distance: s.distance || undefined,
-      tiers: s.rows || undefined,
-      powerRoll: s.rows ? '' : undefined,
-      effect: s.effect || undefined,
-    };
-  };
-  const kitSig = kit ? mkKitSig(kit) : null;
-  const kitSig2 = kit2 ? mkKitSig(kit2) : null;
+  const kitSig = kit ? kitSigAbility(kit) : null;
+  const kitSig2 = kit2 ? kitSigAbility(kit2) : null;
 
   // Conduit domain ability (chosen at creation), normalized for AbilityCard.
   const domainAbilities = [];
   if (character.cclass.domainAbility) {
     const da = character.cclass.domainAbility;
     const found = (DOMAIN_2_ABILITIES[da.domain] || []).find(a => a.name === da.name);
-    if (found) {
-      const normalized = found.tiers && !Array.isArray(found.tiers)
-        ? { ...found, tiers: [['\u2264 11', found.tiers.t1], ['12\u201316', found.tiers.t2], ['\u2265 17', found.tiers.t3]], powerRoll: found.powerRoll || 'I' }
-        : found;
-      domainAbilities.push(normalized);
-    }
+    if (found) domainAbilities.push(normalizeAbilityTiers(found, 'I'));
   }
 
   // Abilities learned via level-up flow (stored in cclass.levelAbilities[level])
@@ -150,10 +136,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
   const la = character.cclass.levelAbilities || {};
   for (const lvl of Object.keys(la).sort((a, b) => +a - +b)) {
     for (const a of (la[lvl] || [])) {
-      const normalized = a.tiers && !Array.isArray(a.tiers)
-        ? { ...a, tiers: [['\u2264 11', a.tiers.t1], ['12\u201316', a.tiers.t2], ['\u2265 17', a.tiers.t3]], powerRoll: a.powerRoll || (a.resource === 'Piety' ? 'I' : 'M') }
-        : a;
-      levelAbilities.push(normalized);
+      levelAbilities.push(normalizeAbilityTiers(a, a.resource === 'Piety' ? 'I' : 'M'));
     }
   }
 
@@ -222,6 +205,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
   return (
     <div className={`play${canEdit ? '' : ' play-readonly'}`}>
       <PlayStyles />
+      <SheetStyles />
       <LevelUpStyles />
 
       {/* Top bar */}
@@ -482,49 +466,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
               {/* Traits */}
               {anc && (
                 <Panel title="Ancestry Traits" collapsible>
-                  {ancestrySignatures(anc).map(sig => (
-                    <div className="trait-block" key={sig.name}>
-                      <div className="trait-name">{sig.name} <span className="sig-tag">SIG</span></div>
-                      <div className="trait-text">{sig.text}</div>
-                      {sig.name === 'Former Life' && formerLifeDef(character) && (
-                        <div className="trait-text" style={{ marginTop: 6 }}>
-                          Former Life: <b>{formerLifeDef(character).name}</b> — Size {formerLifeDef(character).size}
-                        </div>
-                      )}
-                      {sig.optionChoice && (() => {
-                        const norm = sig.optionChoice.options.map(o => typeof o === 'string' ? { name: o, text: null } : o);
-                        const picked = (character.ancestry.sigOptions || {})[sig.name] || [];
-                        const active = norm.find(o => o.name === picked[0]);
-                        const setOpt = (o) => update(c => ({ ...c, ancestry: { ...c.ancestry, sigOptions: { ...(c.ancestry.sigOptions || {}), [sig.name]: [o] } } }));
-                        return (
-                          <>
-                            <div className="sig-option-row">
-                              <span className="sig-option-label">{sig.optionChoice.label}</span>
-                              <select className="sig-option-select" value={picked[0] || ''} onChange={(e) => setOpt(e.target.value)}>
-                                <option value="" disabled>Choose…</option>
-                                {norm.map(o => <option key={o.name} value={o.name}>{o.name}</option>)}
-                              </select>
-                            </div>
-                            {active && active.text && <div className="trait-text" style={{marginTop:6}}>{active.text}</div>}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ))}
-                  {resolvedAncestryTraits(character).map((t, i) => (
-                    <div className="trait-block" key={`${t.name}-${i}`}>
-                      <div className="trait-name">
-                        {t.name} <span className="cost-tag">{t.cost} PT</span>
-                        {t.borrowedFrom && <span className="sig-tag">PREVIOUS LIFE — {t.borrowedFrom.toUpperCase()}</span>}
-                      </div>
-                      <div className="trait-text">{t.text}</div>
-                      {t.chosen?.length > 0 && (
-                        <div className="trait-text" style={{ marginTop: 6 }}>
-                          {t.choiceLabel}: <b>{t.chosen.join(', ')}</b>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  <AncestryTraitsList character={character} update={update} interactive />
                 </Panel>
               )}
 
@@ -549,58 +491,9 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
               {/* Kit */}
               {kit && (
                 <Panel title={kit2 ? 'Kits' : 'Kit'} collapsible>
-                  {[kit, kit2].filter(Boolean).map((kt, i) => {
-                    const b = kt.bonuses || {};
-                    const sig = parseKitSig(kt.sig);
-                    const meleeDmg = fmt2KitDmg(b.melee);
-                    const rangedDmg = fmt2KitDmg(b.ranged);
-                    return (
-                    <React.Fragment key={kt.id}>
-                      <div className="trait-block" style={i > 0 ? {marginTop:18, paddingTop:18, borderTop:'1px dashed var(--line)'} : undefined}>
-                        <div className="trait-name">{kt.name}</div>
-                        <div className="kit-meta-line">{kt.weapon} Weapon · {kt.armor} Armor</div>
-                        <div className="trait-text">{kt.desc}</div>
-                      </div>
-                      <div className="trait-block">
-                        <div className="kv-row">
-                          <span className="k">Armor</span><span className="v">{kt.armor}</span>
-                          <span className="k">Weapon</span><span className="v">{kt.weapon}</span>
-                          {meleeDmg && <><span className="k">Melee Damage</span><span className="v">{meleeDmg}</span></>}
-                          {rangedDmg && <><span className="k">Ranged Damage</span><span className="v">{rangedDmg}</span></>}
-                          {b.mDist && <><span className="k">Melee Reach</span><span className="v">+{b.mDist}</span></>}
-                          {b.rngDist && <><span className="k">Ranged Distance</span><span className="v">{b.rngDist}</span></>}
-                          {b.sta_per ? <><span className="k">Stamina / Echelon</span><span className="v">+{b.sta_per}</span></> : null}
-                          {b.spd ? <><span className="k">Speed</span><span className="v">+{b.spd}</span></> : null}
-                          {b.stab ? <><span className="k">Stability</span><span className="v">+{b.stab}</span></> : null}
-                          {b.disengage ? <><span className="k">Disengage</span><span className="v">+{b.disengage}</span></> : null}
-                        </div>
-                      </div>
-                      <div className="kit-card" style={{marginTop: 4}}>
-                        <div className="kit-sig">
-                          <div className="kit-sig-head">
-                            <span className="kit-sig-name">{sig.name}</span>
-                            <span className="ac-tags">
-                              <span className="ac-action act-main">Main Action</span>
-                              <span className="kit-sig-badge">⚔ Signature</span>
-                            </span>
-                          </div>
-                          {sig.distance && <div className="kit-sig-kw">{sig.distance}</div>}
-                          {sig.rows && (
-                            <div className="kit-roll">
-                              {sig.rows.map(([t, e], ri) => (
-                                <React.Fragment key={ri}>
-                                  <span className={`t tier-${ri + 1}`}>{t}</span>
-                                  <span className={`e tier-${ri + 1}`}>{e}</span>
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          )}
-                          {sig.effect && <div className="kit-sig-effect"><b>Effect.</b> {sig.effect}</div>}
-                        </div>
-                      </div>
-                    </React.Fragment>
-                    );
-                  })}
+                  {[kit, kit2].filter(Boolean).map((kt, i) => (
+                    <KitDetails key={kt.id} kit={kt} divider={i > 0} />
+                  ))}
                 </Panel>
               )}
 
@@ -714,15 +607,6 @@ function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
       </div>
     </div>
   );
-}
-
-// Show a kit's damage triple, collapsing uniform triples ("+2/+2/+2" → "+2") and
-// keeping tier-varied ones ("+0/+0/+4") intact. Returns null for empty/"—".
-function fmt2KitDmg(v) {
-  if (!v || v === '\u2014') return null;
-  const m = String(v).match(/^([+-]?\d+)\/([+-]?\d+)\/([+-]?\d+)$/);
-  if (m && m[1] === m[2] && m[2] === m[3]) return m[1];
-  return v;
 }
 
 function CounterBox({ label, value, total, onPlus, onMinus }) {
@@ -910,6 +794,9 @@ const PLAY_CSS = `
   border: 1px solid var(--gold);
   background: var(--surface-vital);
   padding: 12px 14px;
+  /* Bottom-pin the control row so −5/−1/+1/+5 lines up with the counter tiles'
+     +/− buttons; the leftover height distributes between head, bar and controls. */
+  display: flex; flex-direction: column; justify-content: space-between;
 }
 .vital-head { display: flex; justify-content: space-between; align-items: baseline; }
 .vital-lbl { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
@@ -928,8 +815,10 @@ const PLAY_CSS = `
 .vital-fill { height: 100%; transition: width .3s; }
 .winded-mark { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--rubric); box-shadow: 0 0 6px var(--rubric); }
 .vital-ctl { display: flex; gap: 4px; margin-top: 8px; }
+/* Both button rows share one explicit height so the gauge and counter controls
+   read as a single line across the vitals strip. */
 .vital-ctl button {
-  flex: 1; padding: 5px 0; background: var(--bg-2); border: 1px solid var(--line-2);
+  flex: 1; height: 1.5rem; padding: 0; background: var(--bg-2); border: 1px solid var(--line-2);
   color: var(--ink-2); font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
   cursor: pointer; letter-spacing: 0.06em;
 }
@@ -948,7 +837,7 @@ const PLAY_CSS = `
 .cnt-tot { font-size: 0.875rem; color: var(--ink-3); font-weight: 400; }
 .cnt-ctl { display: flex; gap: 4px; width: 100%; }
 .cnt-ctl button {
-  flex: 1; padding: 5px 0; background: var(--bg-2); border: 1px solid var(--line-2);
+  flex: 1; height: 1.5rem; padding: 0; background: var(--bg-2); border: 1px solid var(--line-2);
   color: var(--ink-2); font-family: var(--mono); font-size: 0.8125rem; cursor: pointer;
 }
 .cnt-ctl button:hover { border-color: var(--gold); color: var(--ink); }
@@ -1008,9 +897,8 @@ const PLAY_CSS = `
 .cond:hover { border-color: var(--line-strong); }
 .cond.on { background: var(--rubric); border-color: var(--rubric); color: #fff; box-shadow: 0 0 10px var(--rubric-glow); }
 
-.trait-block { padding: 10px 0; border-bottom: 1px dashed var(--line); }
-.trait-block:last-child { border-bottom: none; padding-bottom: 0; }
-.trait-block:first-child { padding-top: 0; }
+/* .trait-block / .trait-name / .sig-tag / .cost-tag / .trait-text / .sig-option-* /
+   .kit-meta-line / .kv-row live in theme/sheet.jsx (SHEET_CSS) — shared with Review. */
 .perk-leveled { margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--line); }
 .perk-lvl-tag {
   display: inline-block; margin-left: 8px; vertical-align: middle;
@@ -1018,26 +906,6 @@ const PLAY_CSS = `
   color: var(--gold-2); border: 1px solid var(--line-2); border-radius: 2px;
   padding: 2px 6px; line-height: 1;
 }
-.trait-name {
-  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.14em;
-  color: var(--ink); display: flex; align-items: center; gap: 8px; text-transform: uppercase;
-}
-.sig-tag, .cost-tag {
-  font-family: var(--mono); font-size: 0.5625rem; padding: 2px 6px;
-  border: 1px solid var(--gold); color: var(--gold-2); letter-spacing: 0.18em;
-  text-transform: uppercase; font-weight: 500;
-}
-.cost-tag { border-color: var(--line-2); color: var(--ink-3); }
-.trait-text { font-family: var(--serif); font-size: 0.84375rem; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
-.sig-option-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.sig-option-label { font-family: var(--mono); font-size: 0.59375rem; color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
-.sig-option-select {
-  font-family: var(--display-2); font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.08em;
-  color: var(--gold-2); background: var(--panel, transparent); border: 1px solid var(--gold);
-  padding: 5px 10px; cursor: pointer; text-transform: uppercase;
-}
-.sig-option-select:focus { outline: none; border-color: var(--gold-2); }
-.kit-meta-line { font-family: var(--mono); font-size: 0.59375rem; color: var(--gold-2); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 5px; }
 
 /* Progression panel */
 .prog-list { display: flex; flex-direction: column; gap: 12px; }
@@ -1066,11 +934,6 @@ const PLAY_CSS = `
   transition: border-color .12s, color .12s, box-shadow .12s;
 }
 .prog-edit:hover { color: var(--gold-2); border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow); }
-.kv-row { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 4px 12px; align-items: baseline; font-family: var(--mono); font-size: 0.6875rem; }
-/* Two-column variant used for kit source rows. */
-.kv-row.kv-src { grid-template-columns: 110px 1fr; }
-.kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: 0.625rem; text-transform: uppercase; }
-.kv-row .v { color: var(--ink); }
 
 /* Top-bar overflow menu (phone only — see Responsive below) */
 .pt-menu-wrap { position: relative; display: none; }
@@ -1099,9 +962,6 @@ const PLAY_CSS = `
 /* ══════════════════════ Responsive ══════════════════════ */
 
 ${MQ.rail} {
-  /* At 1024 the right column is only ~390px, and 240px of that is fixed track. */
-  .kv-row { grid-template-columns: 90px 1fr; }
-
   /* Swap the button row for the ⋯ menu. Measured, not a device tier: branding
      plus six buttons needs ~930px, so the bar overflows well above the tablet
      breakpoint. This is the only place the threshold is expressed — play.jsx
@@ -1132,8 +992,6 @@ ${MQ.phone} {
   .vitals .vital { grid-column: 1 / -1; }
   .chars-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .cond-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kv-row, .kv-row.kv-src { grid-template-columns: 1fr; gap: 2px 0; }
-  .kv-row .k { margin-top: 6px; }
   .prog-row { grid-template-columns: auto 1fr; }
   .prog-row .prog-edit { grid-column: 1 / -1; justify-self: start; margin-top: 8px; }
 
@@ -1147,8 +1005,8 @@ ${MQ.phone} {
   .play-content { padding: 16px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
   .panel-body { padding: 14px; }
 
-  /* The most-tapped controls on the sheet; 5px of padding is far under 44px. */
-  .vital-ctl button, .cnt-ctl button { padding: 11px 0; }
+  /* The most-tapped controls on the sheet; the desktop height is far under 44px. */
+  .vital-ctl button, .cnt-ctl button { height: 2rem; }
 }
 
 ${MQ.touch} {

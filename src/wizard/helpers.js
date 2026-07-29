@@ -310,6 +310,29 @@ function fmtKitDmg(v) {
   return v;
 }
 
+// A kit's signature ability parsed into the shape AbilityCard expects.
+function kitSigAbility(kt) {
+  const s = parseKitSig(kt.sig);
+  return {
+    name: s.name, flavor: '', keywords: ['Weapon'], type: 'Main action', badge: 'SIG',
+    distance: s.distance || undefined,
+    tiers: s.rows || undefined,
+    powerRoll: s.rows ? '' : undefined,
+    effect: s.effect || undefined,
+  };
+}
+
+// Some data ships tiers as { t1, t2, t3 } objects; AbilityCard needs the
+// [[label, text], …] array form plus a powerRoll to show the table at all.
+function normalizeAbilityTiers(a, fallbackRoll = 'M') {
+  if (!a?.tiers || Array.isArray(a.tiers)) return a;
+  return {
+    ...a,
+    tiers: [['≤ 11', a.tiers.t1], ['12–16', a.tiers.t2], ['≥ 17', a.tiers.t3]],
+    powerRoll: a.powerRoll || fallbackRoll,
+  };
+}
+
 const PREV_LIFE_RE = /^Previous Life: (\d)pt$/;
 
 // The ancestry the revenant was before dying, or null.
@@ -372,4 +395,4 @@ function resolvedAncestryTraits(c) {
 
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
-export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints };
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints };

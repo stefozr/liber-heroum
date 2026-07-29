@@ -3,7 +3,9 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, chosenFeatureOptions, collectDistanceBonuses, applyDistanceBonuses } from '../../app.jsx';
-import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestrySignatures } from '../helpers.js';
+import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, normalizeAbilityTiers, resolvedAncestryTraits, ancestrySignatures } from '../helpers.js';
+import { DOMAIN_2_ABILITIES } from '../../data/conduit-domains.js';
+import { SheetStyles, AncestryTraitsList, KitDetails } from '../../theme/sheet.jsx';
 import { StepHeader } from '../StepHeader.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
@@ -40,8 +42,31 @@ function ReviewStep({ character, update }) {
     ? (cls.features || []).filter(f => f.choose).flatMap(f => chosenFeatureOptions(character, cls, f))
     : [];
 
+  // Chosen heroic abilities, resolved to full defs. Mirrors play.jsx so the
+  // section shows whatever exists rather than hiding behind one stored field.
+  const sigPicks = (character.cclass.signatures || [])
+    .map(n => ((cls && cls.signatures) || []).find(x => x.name === n))
+    .filter(Boolean);
+  const heroicPicks = [
+    cls && cls.heroic3 && cls.heroic3.find(x => x.name === character.cclass.heroic3),
+    cls && cls.heroic5 && cls.heroic5.find(x => x.name === character.cclass.heroic5),
+  ].filter(Boolean);
+  const domainCards = (() => {
+    const da = character.cclass.domainAbility;
+    if (!da) return [];
+    const found = (DOMAIN_2_ABILITIES[da.domain] || []).find(x => x.name === da.name);
+    return found ? [normalizeAbilityTiers(found, 'I')] : [];
+  })();
+
+  const incident = car && character.career.incident
+    ? (car.incidents || []).find(i => i.name === character.career.incident)
+    : null;
+  // The Class card already prints "Resource · X"; drop the synthetic row.
+  const featureRows = benefits.features.filter(f => f.name !== 'Heroic Resource');
+
   return (
     <div className="stack-22">
+      <SheetStyles />
       <div className="orn-frame bracket-corners" style={{padding: '22px 28px', textAlign:'center'}}>
         <GlyphRow>✠ · ❦ · ✦ · ❦ · ✠</GlyphRow>
         <div style={{height: 10}}></div>
@@ -69,6 +94,12 @@ function ReviewStep({ character, update }) {
           <StatTile label="Recoveries" value={derived.recoveries || '—'} />
           <StatTile label="Speed" value={derived.speed || '—'} />
         </div>
+        <div className="grid-4" style={{gap: 10, marginTop: 10, maxWidth: 700, margin: '10px auto 0'}}>
+          <StatTile label="Stability" value={derived.stability} />
+          <StatTile label="Size" value={derived.size || '—'} />
+          <StatTile label="Disengage" value={derived.disengage} />
+          <StatTile label="Recovery" value={derived.recoveryValue || '—'} />
+        </div>
       </div>
 
       <div className="grid-2" style={{gap: 16}}>
@@ -76,31 +107,24 @@ function ReviewStep({ character, update }) {
           <>
             <div style={{fontFamily:'var(--display)', fontSize: '1rem', color:'var(--ink)', letterSpacing:'0.10em'}}>{anc.name}</div>
             <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:6}}>SIG: {ancestrySignatures(anc).map(s => s.name).join(' · ').toUpperCase()}</div>
-            {Object.values(character.ancestry.sigSkills || {}).flat().filter(Boolean).length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
-                Signature skill: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigSkills || {}).flat().filter(Boolean).join(', ')}</b>
-              </div>
-            )}
-            {Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
-                {ancestrySignatures(anc).find(s => s.optionChoice)?.optionChoice.label || 'Choice'}: <b style={{color:'var(--gold-2)'}}>{Object.values(character.ancestry.sigOptions || {}).flat().filter(Boolean).join(', ')}</b>
-              </div>
-            )}
+            {ancestrySignatures(anc).flatMap(sig => {
+              const rows = [];
+              const skills = ((character.ancestry.sigSkills || {})[sig.name] || []).filter(Boolean);
+              if (skills.length) rows.push([`${sig.name} skill`, skills.join(', ')]);
+              const opts = ((character.ancestry.sigOptions || {})[sig.name] || []).filter(Boolean);
+              if (opts.length) rows.push([sig.optionChoice?.label || sig.name, opts.join(', ')]);
+              return rows.map(([label, val]) => (
+                <div key={`${sig.name}-${label}`} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
+                  {label}: <b style={{color:'var(--gold-2)'}}>{val}</b>
+                </div>
+              ));
+            })}
             {anc.id === 'revenant' && character.ancestry.formerLife && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Former Life: <b style={{color:'var(--gold-2)'}}>{(DS_ANCESTRIES.find(a => a.id === character.ancestry.formerLife) || {}).name}</b>
                 {Object.entries(character.ancestry.prevLifeTraits || {}).filter(([, v]) => v).map(([, v]) => (
                   <span key={v}> · borrowed {v}</span>
                 ))}
-              </div>
-            )}
-            {resolvedAncestryTraits(character).length > 0 && (
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
-                Traits: {resolvedAncestryTraits(character).map(t =>
-                  t.name
-                  + (t.chosen?.length ? ` (${t.chosen.join(', ')})` : '')
-                  + (t.borrowedFrom ? ` [${t.borrowedFrom}]` : '')
-                ).join(', ')}
               </div>
             )}
           </>
@@ -128,6 +152,9 @@ function ReviewStep({ character, update }) {
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{car.name}</div>
             {character.career.incident && (
               <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6}}>{character.career.incident}</div>
+            )}
+            {incident?.text && (
+              <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{incident.text}</div>
             )}
             {character.career.perk && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>Perk: {character.career.perk}</div>
@@ -189,6 +216,9 @@ function ReviewStep({ character, update }) {
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{comp.name}</div>
             <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>+ {comp.benefit}</div>
             <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>
+            {character.complication.custom && (
+              <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6, lineHeight:1.5}}>{character.complication.custom}</div>
+            )}
           </>
         ) : 'None — a simpler life.'} />
       </div>
@@ -235,15 +265,37 @@ function ReviewStep({ character, update }) {
       )}
 
       {/* Class Features */}
-      {benefits.features.length > 0 && (
+      {featureRows.length > 0 && (
         <div className="orn-frame" style={{padding:'16px 22px'}}>
           <H4Meta>Class Features</H4Meta>
           <div className="grid-2" style={{gap:14, marginTop: 8}}>
-            {benefits.features.map(f => (
+            {featureRows.map(f => (
               <div key={f.name} style={{padding:'8px 0'}}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
                 <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55}}>{f.text}</div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ancestry Traits — signatures and purchased traits in full */}
+      {anc && (
+        <div className="orn-frame" style={{padding:'16px 22px'}}>
+          <H4Meta>Ancestry Traits</H4Meta>
+          <div style={{marginTop: 8}}>
+            <AncestryTraitsList character={character} />
+          </div>
+        </div>
+      )}
+
+      {/* Kit — description, stat bonuses, signature power roll */}
+      {kit && (
+        <div className="orn-frame" style={{padding:'16px 22px'}}>
+          <H4Meta>{kit2 ? 'Kits' : 'Kit'}</H4Meta>
+          <div style={{marginTop: 8}}>
+            {[kit, kit2].filter(Boolean).map((kt, i) => (
+              <KitDetails key={kt.id} kit={kt} divider={i > 0} />
             ))}
           </div>
         </div>
@@ -260,27 +312,30 @@ function ReviewStep({ character, update }) {
         </div>
       )}
 
-      {character.cclass.signatures?.length > 0 && cls && cls.deep && (
+      {(benefits.classAbilities || []).length > 0 && (
+        <div>
+          <H3>Class Abilities</H3>
+          <div className="grid-2" style={{marginTop: 12, gap: 12}}>
+            {benefits.classAbilities.map((a, i) => (
+              <AbilityCard key={`${a.name}-${i}`} ability={boost(a)} kind="sig" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(sigPicks.length + heroicPicks.length + domainCards.length) > 0 && (
         <div>
           <H3>Heroic Abilities</H3>
           <div className="grid-2" style={{marginTop: 12, gap: 12}}>
-            {character.cclass.signatures.map(name => {
-              const a = cls.signatures.find(x => x.name === name);
-              return a ? <AbilityCard key={name} ability={boost(a)} kind="sig" /> : null;
-            })}
-            {character.cclass.heroic3 && (() => {
-              const a = cls.heroic3.find(x => x.name === character.cclass.heroic3);
-              return a ? <AbilityCard ability={boost(a)} kind="heroic" /> : null;
-            })()}
-            {character.cclass.heroic5 && (() => {
-              const a = cls.heroic5.find(x => x.name === character.cclass.heroic5);
-              return a ? <AbilityCard ability={boost(a)} kind="heroic" /> : null;
-            })()}
-            {character.cclass.domainAbility && (() => {
-              const da = character.cclass.domainAbility;
-              const a = (window.DOMAIN_2_ABILITIES?.[da.domain] || []).find(x => x.name === da.name);
-              return a ? <AbilityCard key={da.name} ability={boost(a)} kind="heroic" /> : null;
-            })()}
+            {sigPicks.map(a => (
+              <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
+            ))}
+            {heroicPicks.map(a => (
+              <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
+            ))}
+            {domainCards.map(a => (
+              <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
+            ))}
           </div>
         </div>
       )}
