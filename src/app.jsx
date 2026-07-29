@@ -9,7 +9,8 @@ import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from '.
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
-import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { LEVELUP_DATA } from './levelup.jsx';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
 
 const { useState, useEffect, useMemo, useReducer, useCallback } = React;
@@ -769,6 +770,64 @@ function App() {
 }
 
 
+// Choice-bearing class features (feature.choose) → the pick slots they own.
+// Each slot: [display label, class option-array key, cclass state key].
+// Keep in sync with PrayerWardPicker's CONFIG in wizard/steps/class.jsx.
+const CLASS_CHOICE_SLOTS = {
+  prayerWard:  [['Prayer', 'prayers', 'prayer'], ['Ward', 'wards', 'ward']],
+  triggered:   [['Triggered Action', 'triggereds', 'triggeredAction']],
+  enchantWard: [['Enchantment', 'enchantments', 'enchantment'], ['Ward', 'wards', 'ward']],
+  augmentWard: [['Augmentation', 'enchantments', 'enchantment'], ['Ward', 'wards', 'ward']],
+  augment:     [['Augmentation', 'enchantments', 'enchantment']],
+};
+
+// Chosen options for one choice-bearing class feature → [{ label, name, text }].
+function chosenFeatureOptions(c, cls, f) {
+  const out = [];
+  for (const [label, clsKey, stateKey] of (CLASS_CHOICE_SLOTS[f.choose] || [])) {
+    const chosen = c.cclass?.[stateKey];
+    if (!chosen) continue;
+    const opt = (cls[clsKey] || []).find(x => x.name === chosen);
+    out.push({ label, name: chosen, text: opt ? opt.text : '' });
+  }
+  return out;
+}
+
+// ───────── Keyword-gated ability distance bonuses ─────────
+// Always-on features that increase ability distance by keyword (Acolyte of the
+// Mystery, Prayer/Enchantment of Distance, Distance Augmentation) carry a
+// machine-readable `distanceBonus: { keywords, amount }` in the data. Kit
+// rngDist/mDist are deliberately excluded: kit signature strings already print
+// final distances, and the kit stat row displays those bonuses.
+function collectDistanceBonuses(c) {
+  const out = [];
+  const cls = classDef(c);
+  if (!cls) return out;
+  const sub = (cls.subclasses || []).find(s => s.id === c.cclass?.subclass || s.name === c.cclass?.subclass);
+  if (sub?.acolyte?.distanceBonus) out.push(sub.acolyte.distanceBonus);
+  for (const f of cls.features || []) {
+    for (const [, clsKey, stateKey] of CLASS_CHOICE_SLOTS[f.choose] || []) {
+      const chosen = c.cclass?.[stateKey];
+      const opt = chosen && (cls[clsKey] || []).find(x => x.name === chosen);
+      if (opt?.distanceBonus) out.push(opt.distanceBonus);
+    }
+  }
+  return out;
+}
+
+// Bump the ranged components of an ability's distance string when the ability
+// carries every keyword a bonus requires. Handles "Ranged N", "Melee N or
+// Ranged N", and "… within N" area shapes; Melee/Self/aura/burst untouched.
+function applyDistanceBonuses(a, bonuses) {
+  if (!a?.distance || !a.keywords?.length || !bonuses?.length) return a;
+  const total = bonuses
+    .filter(b => b.keywords.every(k => a.keywords.includes(k)))
+    .reduce((s, b) => s + b.amount, 0);
+  if (!total) return a;
+  const distance = a.distance.replace(/\b(Ranged|within)\s+(\d+)/gi, (m, w, n) => `${w} ${+n + total}`);
+  return distance === a.distance ? a : { ...a, distance };
+}
+
 // ───────── Summarise benefits (skills / languages / perks / class features) ─────────
 function summarizeBenefits(c) {
   const cls = classDef(c);
@@ -819,7 +878,8 @@ function summarizeBenefits(c) {
   }
   const comp = complicationDef(c);
   if (comp) {
-    const parts = [...(comp.skills || [])];
+    // Fixed grants with duplicate-grant swaps shown as "Original → Replacement".
+    const parts = swapLabel(comp.skills || [], effectiveComplicationSkills(c));
     (comp.skillChoices || []).forEach((ch, i) => {
       const picked = (c.complication?.skills || {})[i] || [];
       parts.push(...picked);
@@ -869,24 +929,12 @@ function summarizeBenefits(c) {
             ability = { ...ability, orderBenefit: cls.judgmentOrder[c.cclass.subclass] };
           }
           classAbilities.push(ability);
-        } else if (f.choose === 'prayerWard') {
-          const parts = [];
-          if (c.cclass?.prayer) parts.push(`Prayer: ${c.cclass.prayer}`);
-          if (c.cclass?.ward) parts.push(`Ward: ${c.cclass.ward}`);
-          features.push({ name: f.name, text: parts.length ? parts.join(' \u00b7 ') : f.text });
-        } else if (f.choose === 'enchantWard') {
-          const parts = [];
-          if (c.cclass?.enchantment) parts.push(`Enchantment: ${c.cclass.enchantment}`);
-          if (c.cclass?.ward) parts.push(`Ward: ${c.cclass.ward}`);
-          features.push({ name: f.name, text: parts.length ? parts.join(' \u00b7 ') : f.text });
-        } else if (f.choose === 'augmentWard') {
-          const parts = [];
-          if (c.cclass?.enchantment) parts.push(`Augmentation: ${c.cclass.enchantment}`);
-          if (c.cclass?.ward) parts.push(`Ward: ${c.cclass.ward}`);
-          features.push({ name: f.name, text: parts.length ? parts.join(' \u00b7 ') : f.text });
-        } else if (f.choose === 'augment') {
-          // Null: augmentation only (stored in the shared enchantment field), no ward.
-          features.push({ name: f.name, text: c.cclass?.enchantment ? `Augmentation: ${c.cclass.enchantment}` : f.text });
+        } else if (CLASS_CHOICE_SLOTS[f.choose]) {
+          // Chosen options surface as their own entries with full rules text
+          // (e.g. "Prayer: Steel"). Unchosen features keep the prompt text.
+          const picks = chosenFeatureOptions(c, cls, f);
+          if (picks.length) for (const p of picks) features.push({ name: `${p.label}: ${p.name}`, text: p.text });
+          else features.push({ name: f.name, text: f.text });
         } else {
           features.push({ name: f.name, text: f.text });
         }
@@ -921,9 +969,12 @@ function summarizeBenefits(c) {
     const existing = classAbilities.findIndex(x => x.name === a.name);
     if (existing >= 0) {
       if (a.name === 'Motivate Earth') {
+        // modifiedFields marks app-side changes that must survive the Foundry export's
+        // official-doc substitution (see ABILITY_OVERRIDE_FIELDS in foundry-export.js).
         classAbilities[existing] = { ...classAbilities[existing],
           distance: 'Ranged 5',
-          keywords: (classAbilities[existing].keywords || []).map(k => (k === 'Melee' ? 'Ranged' : k)) };
+          keywords: (classAbilities[existing].keywords || []).map(k => (k === 'Melee' ? 'Ranged' : k)),
+          modifiedFields: ['distance', 'keywords'] };
       }
     } else {
       classAbilities.push(a);
@@ -969,7 +1020,7 @@ function collectSkillPicks(c) {
     for (const s of effectiveClassGrants(c)) push(s, cls.name, 'class');
     for (const s of c.cclass?.skills || []) push(s, cls.name, 'class');
   }
-  const lvl = cls && typeof window !== 'undefined' && window.LEVELUP_DATA && window.LEVELUP_DATA[cls.id];
+  const lvl = cls && LEVELUP_DATA[cls.id];
   if (lvl) Object.entries(c.levelChoices || {}).forEach(([L, stored]) => {
     for (const ch of ((lvl[L] && lvl[L].choices) || [])) {
       if (ch.kind !== 'skill-group') continue;
@@ -979,7 +1030,8 @@ function collectSkillPicks(c) {
   });
   const comp = complicationDef(c);
   if (comp) {
-    for (const s of comp.skills || []) push(s, comp.name, 'comp:fixed');
+    // Fixed grants read through duplicate-grant swaps (comp step is the last granter).
+    for (const s of effectiveComplicationSkills(c)) push(s, comp.name, 'comp:fixed');
     (comp.skillChoices || []).forEach((ch, i) =>
       (((c.complication && c.complication.skills) || {})[i] || []).forEach(s => push(s, comp.name, 'comp:' + i)));
   }
@@ -992,7 +1044,7 @@ function collectPerkPicks(c) {
   const push = (name, source, key) => { if (name) out.push({ name, source, key }); };
   if (c.career && c.career.perk) push(c.career.perk, 'Career', 'career');
   const cls = classDef(c);
-  const lvl = cls && typeof window !== 'undefined' && window.LEVELUP_DATA && window.LEVELUP_DATA[cls.id];
+  const lvl = cls && LEVELUP_DATA[cls.id];
   if (lvl) Object.entries(c.levelChoices || {}).forEach(([L, stored]) => {
     for (const ch of ((lvl[L] && lvl[L].choices) || [])) {
       if (ch.kind !== 'perk') continue;
@@ -1063,8 +1115,10 @@ Object.assign(window, {
   newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived,
   summarizeBenefits, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept,
   collectLanguagePicks, languagesTakenExcept, normalizeLanguages,
+  collectDistanceBonuses, applyDistanceBonuses,
 });
-export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits };
+export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, chosenFeatureOptions };
+export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
 export { canEditCharacterFor };

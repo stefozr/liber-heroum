@@ -2,8 +2,9 @@ import React from 'react';
 import { OrnDivider, GlyphRow, renderGlyph, Pill, Button, H3, H4Meta, StatTile, Modal, AbilityCard } from './theme.jsx';
 import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary } from './rules.jsx';
-import { LevelUpFlow, LevelUpStyles } from './levelup.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from './app.jsx';
+import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures } from './levelup.jsx';
+import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
 import { parseKitSig, PERKS, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
 import { MQ } from './theme/breakpoints.js';
@@ -103,7 +104,11 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
     }
   };
 
-  // Ability collections
+  // Ability collections. Keyword-gated distance bonuses (Acolyte of the Mystery,
+  // Prayer/Enchantment of Distance, …) apply to every card except kit signatures,
+  // whose printed strings already carry the kit's distance bonus.
+  const distBonuses = collectDistanceBonuses(character);
+  const boost = (a) => applyDistanceBonuses(a, distBonuses);
   const signatures = (cls && cls.signatures || []).filter(a => (character.cclass.signatures || []).includes(a.name));
   const heroic = [];
   if (cls && cls.heroic3) {
@@ -129,9 +134,9 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
 
   // Conduit domain ability (chosen at creation), normalized for AbilityCard.
   const domainAbilities = [];
-  if (character.cclass.domainAbility && window.DOMAIN_2_ABILITIES) {
+  if (character.cclass.domainAbility) {
     const da = character.cclass.domainAbility;
-    const found = (window.DOMAIN_2_ABILITIES[da.domain] || []).find(a => a.name === da.name);
+    const found = (DOMAIN_2_ABILITIES[da.domain] || []).find(a => a.name === da.name);
     if (found) {
       const normalized = found.tiers && !Array.isArray(found.tiers)
         ? { ...found, tiers: [['\u2264 11', found.tiers.t1], ['12\u201316', found.tiers.t2], ['\u2265 17', found.tiers.t3]], powerRoll: found.powerRoll || 'I' }
@@ -154,7 +159,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
 
   // Progression history — levels the player has resolved choices for, newest first.
   const levelChoiceMap = character.levelChoices || {};
-  const lvlData = (cls && window.LEVELUP_DATA && window.LEVELUP_DATA[cls.id]) ? window.LEVELUP_DATA[cls.id] : null;
+  const lvlData = cls ? (LEVELUP_DATA[cls.id] || null) : null;
   const progressionLevels = Object.keys(levelChoiceMap)
     .map(Number)
     .filter(n => !isNaN(n))
@@ -189,36 +194,16 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
       if (!p || !p.chosen) continue;
       const group = typeof p.name === 'string' ? p.name.replace(/\s*Perk$/i, '') : (p.id || '');
       let text = p.chosenText || null;
-      if (!text && window.PERKS && window.PERKS[group]) {
-        const found = window.PERKS[group].find(x => x.name === p.chosen);
+      if (!text && PERKS[group]) {
+        const found = PERKS[group].find(x => x.name === p.chosen);
         if (found) text = found.text;
       }
       levelUpPerks.push({ level: lvl, name: p.chosen, group, text });
     }
   }
 
-  // Collect class features gained through level-ups: auto-granted features plus
-  // any 'feature'-kind choice picks (e.g. domain features), oldest level first.
-  const levelUpFeatures = [];
-  {
-    const ctx = window.makeContext ? window.makeContext(character) : {};
-    const ascending = [...progressionLevels].sort((a, b) => a - b);
-    for (const lvl of ascending) {
-      const stored = levelChoiceMap[lvl];
-      const dataForLvl = lvlData && lvlData[lvl];
-      if (!dataForLvl) continue;
-      const auto = typeof dataForLvl.autoFeatures === 'function' ? dataForLvl.autoFeatures(ctx) : (dataForLvl.autoFeatures || []);
-      for (const f of auto) {
-        if (f && f.name) levelUpFeatures.push({ level: lvl, name: f.name, text: f.text });
-      }
-      for (const ch of (dataForLvl.choices || [])) {
-        if (ch.kind !== 'feature') continue;
-        const p = stored?.picks?.[ch.id];
-        if (!p) continue;
-        levelUpFeatures.push({ level: lvl, name: p.name || p.id, text: p.body || p.text || '' });
-      }
-    }
-  }
+  // Class features gained through level-ups (shared collector — also feeds the export).
+  const levelUpFeatures = collectLevelUpFeatures(character);
 
   // Single source of truth for the top-bar actions. `pinned` entries stay visible
   // on phones; the rest collapse into the ⋯ menu. Both renderers below map this
@@ -361,13 +346,13 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
               <Panel title="Abilities" collapsible>
                 <div className="stack-12">
                   {signatures.map(a => (
-                    <AbilityCard key={a.name} ability={a} kind="sig" />
+                    <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
                   ))}
                   {(benefits.classAbilities || []).map(a => (
-                    <AbilityCard key={a.name} ability={a} kind="sig" />
+                    <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
                   ))}
                   {(benefits.ancestryAbilities || []).map(a => (
-                    <AbilityCard key={a.name} ability={a} kind="sig" />
+                    <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
                   ))}
                   {kitSig && (
                     <AbilityCard ability={kitSig} kind="sig" />
@@ -376,13 +361,13 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                     <AbilityCard ability={kitSig2} kind="sig" />
                   )}
                   {heroic.map(a => (
-                    <AbilityCard key={a.name} ability={a} kind="heroic" />
+                    <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
                   ))}
                   {levelAbilities.map(a => (
-                    <AbilityCard key={a.name} ability={a} kind="heroic" />
+                    <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
                   ))}
                   {domainAbilities.map(a => (
-                    <AbilityCard key={a.name} ability={a} kind="heroic" />
+                    <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
                   ))}
                   {(signatures.length + heroic.length + levelAbilities.length + domainAbilities.length + (benefits.classAbilities || []).length + (benefits.ancestryAbilities || []).length) === 0 && (
                     <div className="empty-note">No abilities yet — this class is in basics-only mode. Use Edit to add more.</div>

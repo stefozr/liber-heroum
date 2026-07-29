@@ -5,9 +5,11 @@
 // max, recoveries max, potency) are recomputed by Foundry from the embedded class item.
 import {
   classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef,
-  computeDerived, summarizeBenefits, collectSkillPicks, collectPerkPicks,
+  computeDerived, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
 } from './app.jsx';
 import { parseKitSig, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
+import { collectLevelUpFeatures } from './levelup.jsx';
 import { DS_CULTURES } from './data/cultures.js';
 import { DS_SKILL_GROUPS } from './data/skills.js';
 
@@ -221,7 +223,7 @@ function lookupOfficial(index, type, name) {
 // for options the app names differently, e.g. prayer 'Steel' → official 'Prayer of
 // Steel'). Collision entries ({scope, doc}[]) are disambiguated by overlap with ctx
 // (normalized class/subclass/ancestry names).
-function officialOrGenerated(index, type, name, generated, ctx = [], level = 1) {
+function officialOrGenerated(index, type, name, generated, ctx = [], level = 1, overrides = null) {
   if (!index || !index.items || !name) return generated;
   const candidates = Array.isArray(name) ? name : [name];
   let entry = null;
@@ -256,6 +258,18 @@ function officialOrGenerated(index, type, name, generated, ctx = [], level = 1) 
   delete clone._key;
   delete clone.folder;
   if (clone.type === 'class') clone.system.level = level;
+  // overrides: system-field patch applied ON TOP of the official clone (app-side
+  // modifications that must survive substitution). `appendDescription` is reserved:
+  // its HTML is appended to the official description rather than replacing it.
+  // Not applied on the generated fallback — the generated item already carries the data.
+  if (overrides) {
+    const { appendDescription, ...fields } = overrides;
+    Object.assign(clone.system, fields);
+    if (appendDescription) {
+      const desc = clone.system.description || {};
+      clone.system.description = { ...desc, value: (desc.value || '') + appendDescription };
+    }
+  }
   return clone;
 }
 
@@ -286,6 +300,14 @@ const ABILITY_TYPE_MAP = {
 };
 
 // App ability object (from src/data/classes.js `ab()` and friends) → Foundry ability item.
+// App ability field → the Foundry system fields abilityItem derives from it. Used to
+// build the overrides patch when an app-side modification (a.modifiedFields) must
+// survive official-doc substitution (e.g. Grounded's Ranged-5 Motivate Earth rider).
+const ABILITY_OVERRIDE_FIELDS = {
+  distance: (gen) => ({ distance: gen.system.distance, damageDisplay: gen.system.damageDisplay }),
+  keywords: (gen) => ({ keywords: gen.system.keywords }),
+};
+
 function abilityItem(a, category, sort) {
   const item = baseItem(a.name, 'ability', sort);
   const tiers = normalizeTiers(a.tiers);
@@ -415,8 +437,8 @@ function characterToFoundryHero(c, officialIndex = null) {
     ? (cls.subclasses || []).find(s => s.id === c.cclass.subclass || s.name === c.cclass.subclass)
     : null;
   const ctx = [cls?.name, subDef?.name, anc?.name].filter(Boolean).map(dsid);
-  const official = (type, itemName, generated) =>
-    officialOrGenerated(officialIndex, type, itemName, generated, ctx, c.level || 1);
+  const official = (type, itemName, generated, overrides) =>
+    officialOrGenerated(officialIndex, type, itemName, generated, ctx, c.level || 1, overrides);
 
   // ── embedded items ──
   const items = [];
@@ -491,8 +513,10 @@ function characterToFoundryHero(c, officialIndex = null) {
   }
 
   if (comp) {
+    const custom = c.complication?.custom;
     add(official('complication', comp.name, descriptionItem(comp.name, 'complication', 0,
-      section('Benefit', comp.benefit) + section('Drawback', comp.drawback) + para(c.complication?.custom))));
+      section('Benefit', comp.benefit) + section('Drawback', comp.drawback) + para(custom)),
+      custom ? { appendDescription: para(custom) } : null));
   }
 
   const kitItems = [kit, kit2].filter(Boolean).map(k => add(official('kit', k.name, kitItem(k, 0))));
@@ -541,6 +565,9 @@ function characterToFoundryHero(c, officialIndex = null) {
   for (const f of (cls?.features || [])) {
     const slots = f.choose && CHOOSE_SLOTS[f.choose];
     if (!slots) continue;
+    // summarizeBenefits surfaces each chosen option as "Label: Name" — skip those
+    // entries below, since the picks are exported here with official-name candidates.
+    for (const p of chosenFeatureOptions(c, cls, f)) expandedComposites.add(`${p.label}: ${p.name}`);
     for (const slot of slots) {
       const chosen = c.cclass?.[slot.field];
       if (!chosen) continue;
@@ -565,12 +592,29 @@ function characterToFoundryHero(c, officialIndex = null) {
     add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
   }
 
+  // Features gained at levels 2-10: auto-granted + 'feature'-kind level-up picks.
+  // Dedupe by name — 'Characteristic Increase' style entries recur across levels.
+  const seenFeatures = new Set((benefits.features || []).map(f => f.name));
+  for (const f of collectLevelUpFeatures(c)) {
+    if (seenFeatures.has(f.name)) continue;
+    seenFeatures.add(f.name);
+    const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
+    const names = bare !== f.name ? [f.name, bare] : [f.name];
+    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
+  }
+
   // Abilities, mirroring the Play view's collections (play.jsx:51-97).
   const seenAbilities = new Set();
   const addAbility = (a, category) => {
     if (!a || !a.name || seenAbilities.has(a.name)) return;
     seenAbilities.add(a.name);
-    add(official('ability', a.name, abilityItem(a, category, 0)));
+    const generated = abilityItem(a, category, 0);
+    let overrides = null;
+    for (const f of (a.modifiedFields || [])) {
+      const patch = ABILITY_OVERRIDE_FIELDS[f] && ABILITY_OVERRIDE_FIELDS[f](generated);
+      if (patch) overrides = { ...(overrides || {}), ...patch };
+    }
+    add(official('ability', a.name, generated, overrides));
   };
   if (cls) {
     for (const a of (cls.signatures || []).filter(a => (c.cclass?.signatures || []).includes(a.name))) {
@@ -583,9 +627,9 @@ function characterToFoundryHero(c, officialIndex = null) {
   }
   for (const a of (benefits.classAbilities || [])) addAbility(a, a.cost ? 'heroic' : '');
   for (const a of (benefits.ancestryAbilities || [])) addAbility(a, '');
-  if (c.cclass?.domainAbility && typeof window !== 'undefined' && window.DOMAIN_2_ABILITIES) {
+  if (c.cclass?.domainAbility) {
     const da = c.cclass.domainAbility;
-    const found = (window.DOMAIN_2_ABILITIES[da.domain] || []).find(a => a.name === da.name);
+    const found = (DOMAIN_2_ABILITIES[da.domain] || []).find(a => a.name === da.name);
     if (found) addAbility(found, found.cost ? 'heroic' : '');
   }
   const la = c.cclass?.levelAbilities || {};

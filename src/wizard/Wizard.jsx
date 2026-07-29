@@ -1,7 +1,7 @@
 // wizard/Wizard.jsx — the orchestrator: main Wizard + CharacterPreview + isStepValid + the step map.
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
-import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, resolvedAncestryTraits, ancestrySignatures } from './helpers.js';
+import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
 import { CultureStep } from './steps/culture.jsx';
@@ -317,6 +317,9 @@ function isStepValid(c, idx) {
         if ((((c.complication.skills) || {})[i] || []).length < comp.skillChoices[i].count) return false;
       }
       if (comp.languageChoice && ((c.complication.languages || []).length < comp.languageChoice.count)) return false;
+      // Fixed grants colliding with an earlier slot must carry a same-group swap.
+      const ownNames = [...(comp.skills || []), ...Object.values(c.complication.skills || {}).flat()];
+      if (!swapsResolved(c, complicationGrantCollisions(c), c.complication.skillSwaps, 'comp:fixed', ownNames)) return false;
       return true;
     }
     case 'identity':

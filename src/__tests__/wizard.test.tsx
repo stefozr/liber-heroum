@@ -346,6 +346,28 @@ describe('duplicate-grant swap UI', () => {
     const { container: cc } = renderWizard(clean);
     expect(cc.textContent).not.toContain('is already granted by');
   });
+
+  it('a complication fixed-grant collision renders the block and gates the step until swapped', () => {
+    const COMP_STEP = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
+    const c = atStep(COMP_STEP, { cls: 'fury', career: 'agent', complication: 'silent-sentinel' });
+    c.complication.skillSwaps = {};
+    expect(isStepValid(c, COMP_STEP)).toBe(false);
+    const { container, latest } = renderWizard(c);
+    expect(container.textContent).toContain('Sneak is already granted by Career');
+    const matches = [...container.querySelectorAll<HTMLElement>('div')].filter(
+      d => d.textContent?.startsWith('Sneak is already granted'));
+    const block = matches[matches.length - 1].parentElement!;
+    const chip = [...block.querySelectorAll<HTMLButtonElement>('.skill-chip')].find(ch => !ch.disabled);
+    fireEvent.click(chip!);
+    const after = latest();
+    expect(after.complication.skillSwaps.Sneak).toBe(chip!.textContent);
+    expect(isStepValid(after, COMP_STEP)).toBe(true);
+    cleanup();
+    // Skipping the complication stays always-valid.
+    const skipped = atStep(COMP_STEP, { cls: 'fury', career: 'agent' });
+    expect(skipped.complication.id).toBeFalsy();
+    expect(isStepValid(skipped, COMP_STEP)).toBe(true);
+  });
 });
 
 describe('culture and career storage semantics', () => {

@@ -3,15 +3,16 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
+import { timeString, parseCareerSkills, complicationGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import { SkillSwapBlock } from './skill-swap.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 function ComplicationStep({ character, update }) {
   const sel = character.complication.id;
-  const pick = (id) => update(c => ({ ...c, complication: { id, custom: '', skills: {}, languages: [] } }));
-  const skip = () => update(c => ({ ...c, complication: { id: null, custom: '', skills: {}, languages: [] } }));
+  const pick = (id) => update(c => ({ ...c, complication: { id, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
+  const skip = () => update(c => ({ ...c, complication: { id: null, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
   const comp = complicationDef(character);
   const compSkills = character.complication.skills || {};
   const compLangs = character.complication.languages || [];
@@ -25,6 +26,14 @@ function ComplicationStep({ character, update }) {
     const cur = c.complication.languages || [];
     const next = cur.includes(L) ? cur.filter(x => x !== L) : (cur.length >= count ? cur : [...cur, L]);
     return { ...c, complication: { ...c.complication, languages: next } };
+  });
+  // Fixed grants duplicated by an earlier slot — official rules allow a same-group swap.
+  const collisions = comp ? complicationGrantCollisions(character) : [];
+  const swaps = character.complication.skillSwaps || {};
+  const setSwap = (skill, name) => update(c => {
+    const next = { ...(c.complication.skillSwaps || {}) };
+    if (name) next[skill] = name; else delete next[skill];
+    return { ...c, complication: { ...c.complication, skillSwaps: next } };
   });
   const hasGrants = comp && ((comp.skills || []).length || (comp.skillChoices || []).length || comp.languageChoice || (comp.abilities || []).length);
   // Scroll the wizard body so a freshly-rolled complication card is brought into view.
@@ -65,10 +74,19 @@ function ComplicationStep({ character, update }) {
             <div style={{marginTop:12, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
               <Tag kind="gold">Skills</Tag>
               {(comp.skills || []).map(s => (
-                <span key={s} className="skill-chip on" style={{cursor:'default'}}>{s}</span>
+                <span key={s} className="skill-chip on" style={{cursor:'default'}}>
+                  {swaps[s] && collisions.some(x => x.skill === s) ? `${s} → ${swaps[s]}` : s}
+                </span>
               ))}
             </div>
           )}
+          <SkillSwapBlock
+            collisions={collisions}
+            swaps={swaps}
+            taken={skillsTakenExcept(character, 'comp:fixed')}
+            ownNames={[...(comp.skills || []), ...Object.values(compSkills).flat()]}
+            onSwap={setSwap}
+          />
 
           {(comp.skillChoices || []).map((ch, i) => {
             const pool = ch.options || Array.from(new Set((ch.groups || []).flatMap(g => DS_SKILL_GROUPS[g] || [])));

@@ -199,7 +199,7 @@ const DS_CLASSES = [
     ],
     prayers: [
       { name: 'Destruction', text: 'Your god infuses wrath within your being. You gain a +1 bonus to rolled damage with magic abilities.' },
-      { name: 'Distance',    text: 'You have a +2 bonus to the distance of your ranged magic abilities.' },
+      { name: 'Distance',    text: 'You have a +2 bonus to the distance of your ranged magic abilities.', distanceBonus: { keywords: ['Magic', 'Ranged'], amount: 2 } },
       { name: 'Soldier\'s Skill', text: 'You can wear light armor and wield light weapons effectively even without a kit. While you wear light armor you gain a +3 bonus to Stamina (increasing by 3 at 4th, 7th, and 10th levels); while you wield a light weapon you gain a +1 damage bonus with weapon abilities, including free strikes. You can use light armor and light weapon treasures. If you have a kit, you can\u2019t take this prayer.', bonuses: { sta_per: 3 } },
       { name: 'Speed',       text: 'You gain a +1 bonus to speed and to the distance you can shift when you take the Disengage move action.', bonuses: { spd: 1, disengage: 1 } },
       { name: 'Steel',       text: 'You gain a +6 bonus to Stamina (increasing by 6 at 4th, 7th, and 10th levels) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
@@ -537,7 +537,7 @@ const DS_CLASSES = [
       },
       { id: 'void', name: 'Void', tag: 'Mystery',
         text: 'Acolyte of the Mystery — the distance of your abilities with the Magic, Ranged, and Void keywords increases by 2 squares.',
-        acolyte: { name: 'Acolyte of the Mystery', text: 'The distance of all your abilities with the Magic, Ranged, and Void keywords increases by 2 squares.' },
+        acolyte: { name: 'Acolyte of the Mystery', text: 'The distance of all your abilities with the Magic, Ranged, and Void keywords increases by 2 squares.', distanceBonus: { keywords: ['Magic', 'Ranged', 'Void'], amount: 2 } },
         features: [
           { name: 'A Beyonding of Vision', text: 'You recognize illusions, see invisible creatures, and supernatural effects can\u2019t conceal things from you. You always know if an observed area or object is magical and what that magic does.' },
         ],
@@ -569,7 +569,7 @@ const DS_CLASSES = [
       { name: 'Enchantment of Battle', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities.', bonuses: { sta_per: 3 } },
       { name: 'Enchantment of Celerity', text: 'You gain a +1 bonus to speed and to the distance you shift when you Disengage.', bonuses: { spd: 1, disengage: 1 } },
       { name: 'Enchantment of Destruction', text: 'You gain a +1 bonus to rolled damage with magic abilities.' },
-      { name: 'Enchantment of Distance', text: 'You gain a +2 bonus to the distance of your ranged magic abilities.' },
+      { name: 'Enchantment of Distance', text: 'You gain a +2 bonus to the distance of your ranged magic abilities.', distanceBonus: { keywords: ['Magic', 'Ranged'], amount: 2 } },
       { name: 'Enchantment of Permanence', text: 'You gain a +6 bonus to Stamina (increasing at 4th/7th/10th) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
     ],
     wards: [
@@ -1199,7 +1199,7 @@ const DS_CLASSES = [
     enchantments: [
       { name: 'Battle Augmentation', text: 'You can wear light armor and wield light weapons without a kit. Light armor grants +3 Stamina (increasing at 4th/7th/10th); a light weapon grants +1 damage with weapon abilities. Can\u2019t be taken if you have a kit.', bonuses: { sta_per: 3 } },
       { name: 'Density Augmentation', text: 'You gain a +6 bonus to Stamina (increasing at 4th/7th/10th) and a +1 bonus to stability.', bonuses: { sta_per: 6, stab: 1 } },
-      { name: 'Distance Augmentation', text: 'Your ranged psionic abilities gain a +2 bonus to distance.' },
+      { name: 'Distance Augmentation', text: 'Your ranged psionic abilities gain a +2 bonus to distance.', distanceBonus: { keywords: ['Psionic', 'Ranged'], amount: 2 } },
       { name: 'Force Augmentation', text: 'Your damage-dealing psionic abilities gain a +1 bonus to rolled damage.' },
       { name: 'Speed Augmentation', text: 'You gain a +1 bonus to speed and to the distance you shift when you Disengage.', bonuses: { spd: 1, disengage: 1 } },
     ],

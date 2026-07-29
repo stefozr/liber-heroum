@@ -8,7 +8,8 @@ import {
   characterToFoundryHero, officialOrGenerated, parseTiers, parseTierClause,
   parseDistance, parseTarget, skillId, langId, randomId, dsid,
 } from '../foundry-export.js';
-import { buildValidCharacter } from './helpers/factories';
+import { buildValidCharacter, levelTo } from './helpers/factories';
+import { collectLevelUpFeatures } from '../levelup.jsx';
 
 // ───────── parsers ─────────
 
@@ -391,6 +392,61 @@ describe('officialOrGenerated (fake index)', () => {
     expect(ward.system._dsid).toBe('steel-ward');
     expect(officialOrGenerated(idx, 'feature', ['Nope', 'Also Nope'], generated)).toBe(generated);
   });
+
+  it('applies system-field overrides on top of the official clone', () => {
+    const out: any = officialOrGenerated(fakeIndex, 'ability', 'Halt Miscreant!', generated, [], 1,
+      { distance: { type: 'ranged', primary: '5' }, keywords: ['magic', 'ranged'] });
+    expect(out.system.distance).toEqual({ type: 'ranged', primary: '5' });
+    expect(out.system.keywords).toEqual(['magic', 'ranged']);
+    expect(out.system._dsid).toBe('halt-miscreant'); // still the official doc
+    expect((officialAbility.system as any).distance).toBeUndefined(); // source not mutated
+  });
+
+  it('appendDescription appends to the official description instead of replacing it', () => {
+    const idx = { items: { 'complication:haunted': {
+      name: 'Haunted', type: 'complication',
+      system: { description: { value: '<p>Official benefit.</p>' } },
+    } } };
+    const out: any = officialOrGenerated(idx, 'complication', 'Haunted', generated, [], 1,
+      { appendDescription: '<p>My custom note.</p>' });
+    expect(out.system.description.value).toBe('<p>Official benefit.</p><p>My custom note.</p>');
+  });
+
+  it('overrides are ignored on a lookup miss — generated returned as-is', () => {
+    const out = officialOrGenerated(fakeIndex, 'ability', 'Totally Homebrew', generated, [], 1,
+      { distance: { type: 'ranged', primary: '5' } });
+    expect(out).toBe(generated);
+  });
+});
+
+// ───────── whole-document presence — MISSING-item detection ─────────
+// The matrix test below only catches WRONG items; these pin that expected items
+// actually appear at all (a silently-dropped item passes the unmatched check).
+describe('whole-document presence (no index)', () => {
+  it('a conduit with the grounded complication exports every expected item', () => {
+    const c: any = buildValidCharacter({ cls: 'conduit', complication: 'grounded' });
+    const doc: any = characterToFoundryHero(c);
+    const names = doc.items.map((i: any) => i.name);
+    expect(names).toContain(c.cclass.domainAbility.name);
+    expect(names).toContain(`${c.cclass.domainFeature.domain}: ${c.cclass.domainFeature.name}`);
+    for (const s of c.cclass.signatures) expect(names, `signature ${s}`).toContain(s);
+    expect(names).toContain(c.career.perk);
+    expect(names).toContain('Motivate Earth'); // complication grant
+  });
+
+  it('a censor leveled to 7 exports its level-up features and abilities', () => {
+    const c: any = levelTo(buildValidCharacter({ cls: 'censor' }), 7);
+    const doc: any = characterToFoundryHero(c);
+    const names = doc.items.map((i: any) => i.name);
+    const feats = collectLevelUpFeatures(c);
+    expect(feats.length).toBeGreaterThan(0);
+    for (const f of feats) expect(names, `level ${f.level} feature ${f.name}`).toContain(f.name);
+    const la = c.cclass.levelAbilities || {};
+    for (const lvl of Object.keys(la)) {
+      for (const a of la[lvl]) expect(names, `level ${lvl} ability ${a.name}`).toContain(a.name);
+    }
+    expect(doc.items.find((i: any) => i.type === 'class').system.level).toBe(7);
+  });
 });
 
 const INDEX_PATH = 'public/foundry-items.json';
@@ -530,6 +586,12 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
           .map((i: any) => `${i.type} :: ${i.name}`)
           .filter((k: string) => !INTENTIONALLY_GENERATED.has(k));
         expect(unmatched, `${cls.id}/${sub} unmatched items`).toEqual([]);
+        // Presence: expected picks must actually appear (a dropped item passes the
+        // unmatched check above, so absence has to be pinned separately).
+        const names = doc.items.map((i: any) => i.name);
+        if (c.cclass.domainAbility) expect(names, `${cls.id}/${sub} domain ability`).toContain(c.cclass.domainAbility.name);
+        if (c.cclass.heroic3) expect(names, `${cls.id}/${sub} heroic3`).toContain(c.cclass.heroic3);
+        for (const s of c.cclass.signatures) expect(names, `${cls.id}/${sub} signature ${s}`).toContain(s);
         // Chosen class skills reach the actor's skill list.
         for (const s of c.cclass.skills) {
           const id = skillId(s);
@@ -546,6 +608,50 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     const doc: any = characterToFoundryHero(c, index);
     expect(doc.system.skills.value).toContain(skillId(replacement));
     expect(doc.system.skills.value).toContain(skillId('Sneak')); // career still grants it once
+  });
+
+  it('a complication fixed-grant collision exports the replacement skill', () => {
+    const c: any = buildValidCharacter({ cls: 'fury', career: 'agent', complication: 'silent-sentinel' });
+    const replacement = c.complication.skillSwaps.Sneak; // factory resolved it
+    expect(replacement).toBeTruthy();
+    const doc: any = characterToFoundryHero(c, index);
+    expect(doc.system.skills.value).toContain(skillId('Sneak')); // career's copy, once
+    expect(doc.system.skills.value).toContain(skillId(replacement));
+    expect(doc.system.skills.value.filter((id: string) => id === skillId('Sneak'))).toHaveLength(1);
+  });
+
+  it("grounded's ranged rider survives official substitution of Motivate Earth", () => {
+    const c: any = buildValidCharacter({ cls: 'elementalist', subclass: 'earth', complication: 'grounded' });
+    const doc: any = characterToFoundryHero(c, index);
+    const me = doc.items.filter((i: any) => i.name === 'Motivate Earth');
+    expect(me).toHaveLength(1);
+    expect(me[0].img).toMatch(/^(icons|systems|assets)\//); // official doc substituted...
+    expect(me[0].system.distance).toMatchObject({ type: 'ranged', primary: '5' }); // ...with the rider kept
+    expect(me[0].system.keywords).toContain('ranged');
+    expect(me[0].system.keywords).not.toContain('melee');
+  });
+
+  it('custom complication text survives official substitution', () => {
+    const c: any = buildValidCharacter({ complication: 'amnesia' });
+    c.complication.custom = 'Haunted by the gap in my memory';
+    const doc: any = characterToFoundryHero(c, index);
+    const comp = doc.items.find((i: any) => i.type === 'complication');
+    expect(comp.img).toMatch(/^(icons|systems|assets)\//);
+    expect(comp.system.description.value).toContain('Haunted by the gap in my memory');
+  });
+
+  it('a conduit leveled to 5 exports Minor Miracle from the official compendium', () => {
+    const c: any = levelTo(buildValidCharacter({ cls: 'conduit' }), 5);
+    const doc: any = characterToFoundryHero(c, index);
+    const mm = doc.items.find((i: any) => i.system._dsid === 'minor-miracle');
+    expect(mm).toBeTruthy();
+    expect(mm.img).toMatch(/^(icons|systems|assets)\//);
+    // Every level-up feature is present, under its own or its official (bare) name.
+    const names = doc.items.map((i: any) => i.name);
+    for (const f of collectLevelUpFeatures(c)) {
+      const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
+      expect(names.includes(f.name) || names.includes(bare), `level ${f.level} feature ${f.name}`).toBe(true);
+    }
   });
 
   it('an archetype culture substitutes the official culture document', () => {

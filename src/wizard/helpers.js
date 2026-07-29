@@ -3,6 +3,7 @@ import { DS_SKILL_GROUPS } from '../data.jsx';
 import { DS_ANCESTRIES } from '../data/ancestries.js';
 import { DS_CAREERS } from '../data/careers.js';
 import { DS_CLASSES } from '../data/classes.js';
+import { DS_COMPLICATIONS } from '../data/complications.js';
 
 function timeString(at) {
   const d = at != null ? new Date(at) : new Date();
@@ -82,10 +83,11 @@ function groupsOfSkill(name) {
   return Object.keys(DS_SKILL_GROUPS).filter(g => DS_SKILL_GROUPS[g].includes(name));
 }
 
-// Skills held by slots earlier than the career step: ancestry sig picks + culture.
+// Skills held by slots earlier than the career step: ancestry sig/trait picks + culture.
 function heldBeforeCareer(c) {
   const held = new Map();
   Object.values(c.ancestry?.sigSkills || {}).forEach(arr => (arr || []).forEach(s => { if (s) held.set(s, 'Ancestry'); }));
+  Object.values(c.ancestry?.traitSkills || {}).forEach(arr => (arr || []).forEach(s => { if (s) held.set(s, 'Ancestry'); }));
   Object.values(c.culture?.skills || {}).forEach(s => { if (s) held.set(s, 'Culture'); });
   return held;
 }
@@ -128,6 +130,33 @@ function effectiveClassGrants(c) {
   const swaps = c.cclass?.skillSwaps || {};
   const colliding = new Set(classGrantCollisions(c).map(x => x.skill));
   return classGrantedSkills(cls, sub).map(s => (colliding.has(s) && swaps[s]) ? swaps[s] : s);
+}
+
+// Skills held by every slot earlier than the complication step.
+function heldBeforeComplication(c) {
+  const held = heldBeforeCareer(c);
+  for (const s of effectiveCareerSkills(c)) if (!held.has(s)) held.set(s, 'Career');
+  for (const s of effectiveClassGrants(c)) if (!held.has(s)) held.set(s, 'Class');
+  for (const s of (c.cclass?.skills || [])) if (s && !held.has(s)) held.set(s, 'Class');
+  if (c.cclass?.domainSkill && !held.has(c.cclass.domainSkill)) held.set(c.cclass.domainSkill, 'Domain');
+  return held;
+}
+
+// Fixed complication skills duplicated by any earlier slot → [{ skill, source }].
+function complicationGrantCollisions(c) {
+  const comp = DS_COMPLICATIONS.find(x => x.id === c.complication?.id);
+  if (!comp) return [];
+  const held = heldBeforeComplication(c);
+  return (comp.skills || []).filter(s => held.has(s)).map(s => ({ skill: s, source: held.get(s) }));
+}
+
+// The complication's fixed skills with valid swaps applied.
+function effectiveComplicationSkills(c) {
+  const comp = DS_COMPLICATIONS.find(x => x.id === c.complication?.id);
+  if (!comp) return [];
+  const swaps = c.complication?.skillSwaps || {};
+  const colliding = new Set(complicationGrantCollisions(c).map(x => x.skill));
+  return (comp.skills || []).map(s => (colliding.has(s) && swaps[s]) ? swaps[s] : s);
 }
 
 // Attribute each chosen career skill to exactly one pick group. Storage stays a flat
@@ -343,4 +372,4 @@ function resolvedAncestryTraits(c) {
 
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
-export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints };
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints };

@@ -7,7 +7,7 @@ import {
 } from '../../data.jsx';
 import {
   parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, defaultFlexValues, PERKS,
-  groupsOfSkill, careerAutoCollisions, classGrantCollisions,
+  groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions,
   resolvedAncestryTraits, ancestrySignatures,
 } from '../../wizard/helpers.js';
 import {
@@ -278,6 +278,7 @@ export function resolveGrantSwaps(c: any) {
   for (const [collide, slot] of [
     [careerAutoCollisions, 'career'],
     [classGrantCollisions, 'cclass'],
+    [complicationGrantCollisions, 'complication'],
   ] as const) {
     for (const { skill } of collide(c)) {
       if ((c[slot].skillSwaps || {})[skill]) continue;

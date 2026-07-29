@@ -4,6 +4,7 @@
 // grey out an already-held skill/perk. See src/wizard/steps/* and src/levelup.jsx pickers.
 import { describe, it, expect } from 'vitest';
 import { newCharacter, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept, collectLanguagePicks, languagesTakenExcept, normalizeLanguages, summarizeBenefits } from '../app.jsx';
+import { complicationGrantCollisions, effectiveComplicationSkills } from '../wizard/helpers.js';
 
 function charWithPicks() {
   const c: any = newCharacter('u-test', null);
@@ -156,6 +157,42 @@ describe('complication grant dedupe', () => {
     const clean = charWithComplication('exile', {}, ['Zaliac']);
     expect(normalizeLanguages(clean)).toBe(clean);
   });
+
+  it('fixed grants colliding with earlier slots are detected, tagged by source', () => {
+    const c = charWithComplication('silent-sentinel');
+    c.career.skills = ['Sneak'];
+    expect(complicationGrantCollisions(c)).toEqual([{ skill: 'Sneak', source: 'Career' }]);
+    // Ancestry trait skill picks count as held too (heldBeforeCareer fix).
+    const orc = charWithComplication('raised-by-beasts');
+    orc.ancestry.traitSkills = { 'Passionate Artisan': ['Handle Animals'] };
+    expect(complicationGrantCollisions(orc)).toEqual([{ skill: 'Handle Animals', source: 'Ancestry' }]);
+  });
+
+  it('a valid swap reads through to collectSkillPicks; the raw duplicate disappears', () => {
+    const c = charWithComplication('silent-sentinel');
+    c.career.skills = ['Sneak'];
+    // Without a swap the duplicate is collected twice (the bug being fixed at read time).
+    expect(collectSkillPicks(c).filter(p => p.name === 'Sneak')).toHaveLength(2);
+    c.complication.skillSwaps = { Sneak: 'Hide' };
+    const names = collectSkillPicks(c).map(p => p.name);
+    expect(names.filter(n => n === 'Sneak')).toHaveLength(1);
+    expect(collectSkillPicks(c).find(p => p.name === 'Hide')!.key).toBe('comp:fixed');
+    expect(effectiveComplicationSkills(c)).toEqual(['Eavesdrop', 'Hide']);
+  });
+
+  it('a stale swap is ignored once the collision goes away', () => {
+    const c = charWithComplication('silent-sentinel');
+    c.complication.skillSwaps = { Sneak: 'Hide' };
+    expect(effectiveComplicationSkills(c)).toEqual(['Eavesdrop', 'Sneak']);
+  });
+
+  it('summarizeBenefits shows the swap as "Sneak → replacement"', () => {
+    const c = charWithComplication('silent-sentinel');
+    c.career.skills = ['Sneak'];
+    c.complication.skillSwaps = { Sneak: 'Hide' };
+    const row = summarizeBenefits(c).skills.find((s: any) => s.source === 'Silent Sentinel');
+    expect(row.text).toContain('Sneak → Hide');
+  });
 });
 
 describe('complication grants in summarizeBenefits', () => {
@@ -193,5 +230,40 @@ describe('complication grants in summarizeBenefits', () => {
     const all = summarizeBenefits(c).classAbilities.filter((a: any) => a.name === 'Motivate Earth');
     expect(all).toHaveLength(1);
     expect(all[0].distance).toBe('Melee 1');
+  });
+});
+
+describe('class feature picks in summarizeBenefits', () => {
+  it('conduit picks surface as their own entries with full rules text', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'conduit';
+    c.cclass.triggeredAction = 'Word of Guidance';
+    c.cclass.prayer = 'Steel';
+    c.cclass.ward = 'Bastion';
+    const features = summarizeBenefits(c).features;
+    for (const name of ['Triggered Action: Word of Guidance', 'Prayer: Steel', 'Ward: Bastion']) {
+      const f = features.find((x: any) => x.name === name);
+      expect(f, name).toBeDefined();
+      expect(f.text.length, name).toBeGreaterThan(0);
+      expect(f.text, name).not.toMatch(/^Choose one/);
+    }
+  });
+
+  it('unchosen features fall back to the prompt text', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'conduit';
+    const features = summarizeBenefits(c).features;
+    expect(features.find((x: any) => x.name === 'Triggered Action')?.text).toMatch(/^Choose one/);
+    expect(features.find((x: any) => x.name === 'Prayer / Ward')?.text).toMatch(/^Choose one/);
+  });
+
+  it('null augmentation (stored in the shared enchantment field) is labeled Augmentation', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'null';
+    c.cclass.enchantment = 'Density Augmentation';
+    const features = summarizeBenefits(c).features;
+    const f = features.find((x: any) => x.name === 'Augmentation: Density Augmentation');
+    expect(f).toBeDefined();
+    expect(f.text.length).toBeGreaterThan(0);
   });
 });

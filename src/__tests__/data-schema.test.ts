@@ -80,6 +80,31 @@ describe('bonus fields use only known stat keys', () => {
   }
 });
 
+// ─── distanceBonus fields: keyword-gated ability distance increases ───
+describe('distanceBonus fields are well-formed', () => {
+  function collectDistanceBonuses(node: any, path: string, out: Array<[string, any]>) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach((v, i) => collectDistanceBonuses(v, `${path}[${i}]`, out)); return; }
+    for (const [k, v] of Object.entries(node)) {
+      if (k === 'distanceBonus' && v && typeof v === 'object') out.push([`${path}.${k}`, v]);
+      else collectDistanceBonuses(v, `${path}.${k}${(node as any).name ? `(${(node as any).name})` : ''}`, out);
+    }
+  }
+
+  it('DS_CLASSES distanceBonus entries carry keywords + numeric amount', () => {
+    const found: Array<[string, any]> = [];
+    collectDistanceBonuses(DS_CLASSES, 'DS_CLASSES', found);
+    // Acolyte of the Mystery, Prayer of Distance, Enchantment of Distance, Distance Augmentation.
+    expect(found.length).toBe(4);
+    for (const [path, b] of found) {
+      expect(Array.isArray(b.keywords) && b.keywords.length > 0, `${path} needs a non-empty keywords array`).toBe(true);
+      for (const k of b.keywords) expect(typeof k, `${path} keyword should be a string`).toBe('string');
+      expect(typeof b.amount === 'number' && b.amount > 0, `${path} needs a positive numeric amount`).toBe(true);
+      expect(Object.keys(b).sort()).toEqual(['amount', 'keywords']);
+    }
+  });
+});
+
 // ─── LEVELUP_DATA completeness: every class × subclass × level 2–10 ───
 describe('level-up data completeness', () => {
   for (const cls of DS_CLASSES as any[]) {

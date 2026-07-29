@@ -1111,6 +1111,35 @@ function makeContext(character) {
   };
 }
 
+// All class features gained through level-ups, oldest level first: auto-granted
+// features plus 'feature'-kind choice picks (domain features, invocations, ...).
+// Shared by the play sheet and the Foundry export so the two can't drift.
+// Returns [{ level: number, name: string, text: string }].
+function collectLevelUpFeatures(character) {
+  const cls = classDef(character);
+  const data = cls && LEVELUP_DATA[cls.id];
+  if (!data) return [];
+  const ctx = makeContext(character);
+  const out = [];
+  const levels = Object.keys(character.levelChoices || {})
+    .map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b);
+  for (const lvl of levels) {
+    const dataForLvl = data[lvl];
+    if (!dataForLvl) continue;
+    const stored = character.levelChoices[lvl];
+    const auto = typeof dataForLvl.autoFeatures === 'function'
+      ? dataForLvl.autoFeatures(ctx) : (dataForLvl.autoFeatures || []);
+    for (const f of auto) if (f && f.name) out.push({ level: lvl, name: f.name, text: f.text || '' });
+    for (const ch of (dataForLvl.choices || [])) {
+      if (ch.kind !== 'feature') continue;
+      const p = stored && stored.picks && stored.picks[ch.id];
+      if (!p) continue;
+      out.push({ level: lvl, name: p.name || p.id, text: p.body || p.text || '' });
+    }
+  }
+  return out;
+}
+
 // The choices the level-up flow presents for a class at a level, with condition-gated
 // entries filtered by the character context (exactly what the UI shows).
 function levelChoicesFor(cls, level, ctx) {
@@ -1504,4 +1533,4 @@ const LEVELUP_CSS = `
 function LevelUpStyles() { return <style>{LEVELUP_CSS}</style>; }
 
 Object.assign(window, { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 });
-export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, levelChoicesFor, applyLevelUp, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };
+export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, collectLevelUpFeatures, levelChoicesFor, applyLevelUp, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };
