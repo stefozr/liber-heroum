@@ -146,8 +146,11 @@ const CAMPAIGN_CSS = `
 .hc-camp {
   background: transparent; border: none; cursor: pointer; color: var(--ink-3);
   font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 4px 6px; transition: color .12s;
+  padding: 4px 0; transition: color .12s; white-space: nowrap;
+  position: relative;
 }
+/* Touch target without changing the visual size (padding no longer supplies it). */
+.hc-camp::after { content: ''; position: absolute; inset: -9px; }
 .hc-camp:hover { color: var(--gold-2); }
 
 /* ══════════════════════ Responsive ══════════════════════ */

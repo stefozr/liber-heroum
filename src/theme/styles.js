@@ -472,13 +472,20 @@ body[data-theme="obsidian"] .app .bg-grain {
   background: rgba(12,19,48,0.85); border: 1px solid var(--gold); padding: 4px 10px;
 }
 .hero-card .hc-bottom {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
   padding: 10px 16px; border-top: 1px solid var(--line);
-  font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.16em;
+  font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.12em;
 }
+/* When the row runs out of room the actions drop to their own line, still
+   right-aligned — nothing ever pushes past the card's 16px inset. */
+.hero-card .hc-bottom > span { min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-card .hc-bottom .hc-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; margin-left: auto; }
 .hero-card .hc-bottom .hc-del {
   background: transparent; border: none; color: var(--ink-3); cursor: pointer;
-  font-family: var(--mono); font-size: 0.6875rem; padding: 4px 6px;
+  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase;
+  /* No horizontal padding: the label's edge is the flex box edge, so it sits
+     exactly on the container's 16px inset, mirroring the status text. */
+  padding: 4px 0; white-space: nowrap;
   position: relative;
 }
 /* Touch target without changing the visual size. */

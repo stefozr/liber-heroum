@@ -24,7 +24,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           <div className="glyphs-top"><GlyphRow>✠ · ❦ · ✦ · ❦ · ✠</GlyphRow></div>
           <h1>LIBER HEROUM</h1>
           <div className="sub">A Chronicle of Heroes, Drawn from Steel</div>
-          <div className="meta">A Draw Steel Character Manager · v 1.1</div>
+          <div className="meta">A Draw Steel Character Manager · v 1.2</div>
           <div style={{marginTop: 22, display:'flex', justifyContent:'center'}}>
             <RulesButton large onClick={() => setRulesOpen(true)}>Rules Glossary</RulesButton>
           </div>
@@ -146,7 +146,7 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
       </div>
       <div className="hc-bottom">
         <span>{status}{c.status !== 'complete' ? ` · ${stepPct}%` : ''}</span>
-        <div style={{display:'flex', gap:6, alignItems:'center'}}>
+        <div className="hc-actions">
           <button
             className="hc-camp"
             onClick={(e) => { e.stopPropagation(); onAssign && onAssign(); }}
@@ -154,7 +154,7 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
             {campaignName ? '⚚ move' : '✦ add to campaign'}
           </button>
           <button className="hc-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-            remove
+            ✦ remove
           </button>
         </div>
       </div>
