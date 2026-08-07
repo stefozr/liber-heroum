@@ -377,7 +377,11 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
               <Panel title="Abilities" collapsible>
                 {abilityGroups.map(g => (
                   <div className="abil-group" key={g.label}>
-                    <div className="abil-group-head">{g.label}</div>
+                    <div className="abil-group-head">
+                      <span className="agh-line" aria-hidden="true"></span>
+                      <span className="agh-label">{g.label}</span>
+                      <span className="agh-line" aria-hidden="true"></span>
+                    </div>
                     <div className="stack-12">
                       {g.items.map(a => (
                         <AbilityCard key={a.name} ability={g.noBoost ? a : boost(a)} kind={g.kind} />
@@ -821,7 +825,9 @@ const PLAY_CSS = `
    defaults to min-width auto — the unshrinkable vitals tiles would floor the
    shared column track past the viewport and widen every row, top bar included. */
 .play-pinned { position: relative; z-index: 2; min-width: 0; }
-.play-pinned-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 0; }
+/* Bottom padding keeps a band of empty page background between the tab bar and
+   the scroll boundary, so clipped content doesn't merge into the buttons. */
+.play-pinned-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 16px; }
 
 .hero-masthead {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
@@ -866,7 +872,7 @@ const PLAY_CSS = `
 }
 .play-content {
   position: relative; z-index: 2;
-  max-width: 1320px; margin: 0 auto; padding: 20px 32px 28px;
+  max-width: 1320px; margin: 0 auto; padding: 16px 32px 28px;
 }
 
 .vitals {
@@ -996,13 +1002,28 @@ const PLAY_CSS = `
 
 .empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: var(--fs-7); padding: 14px; text-align: center; }
 
-/* Source-group headers inside the Abilities panel */
+/* Source-group headers inside the Abilities panel. Sticky: the current group's
+   header pins to the top of the .play-body scrollport until its group passes,
+   so long ability lists never lose their section context. */
 .abil-group + .abil-group { margin-top: 18px; }
 .abil-group-head {
-  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.24em;
-  text-transform: uppercase; color: var(--gold-2);
-  padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-bottom: 10px;
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0; margin-bottom: 10px;
+  /* Same surface recipe as .panel, so cards blur beneath the pinned header. */
+  background: var(--surface-panel); backdrop-filter: blur(6px);
 }
+.abil-group-head .agh-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-2)); }
+.abil-group-head .agh-line:last-child { background: linear-gradient(90deg, var(--line-2), transparent); }
+.abil-group-head .agh-label {
+  font-family: var(--display-2); font-size: var(--fs-6); font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-2);
+  text-align: center;
+}
+/* Ornament glyphs live in pseudo-elements: they stay out of textContent, so the
+   header still reads as exactly its label (screen readers, tests). */
+.abil-group-head .agh-label::before { content: '❦'; margin-right: 10px; opacity: 0.55; }
+.abil-group-head .agh-label::after { content: '❦'; margin-left: 10px; opacity: 0.55; }
 
 /* Pinned conditions strip — one scrollable row beside the other live trackers,
    with the same right-edge fade as the vitals and tab strips. */
@@ -1110,7 +1131,7 @@ ${MQ.rail} {
      vitals row and the 2-column grid collide labels with values. Same
      collapse as the tablet tier, one breakpoint earlier. */
   .play-grid { grid-template-columns: minmax(0, 1fr); }
-  .play-pinned-inner { padding: 16px 20px 0; }
+  .play-pinned-inner { padding: 16px 20px 14px; }
   /* The vitals live in the pinned region now, so they must not wrap into a
      second row: one horizontally scrollable strip, right-edge fade signalling
      the rest (same pattern as the tab strip and the app-bar nav). */
@@ -1156,7 +1177,7 @@ ${MQ.phone} {
   .vitals .vital { flex: 0 0 220px; }
   .vitals .counter { flex: 0 0 96px; }
 
-  .play-pinned-inner { padding: 10px max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right)); }
+  .play-pinned-inner { padding: 10px max(14px, env(safe-area-inset-left)) 12px max(14px, env(safe-area-inset-right)); }
   .play-content { padding: 14px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
   .panel-body { padding: 14px; }
 
