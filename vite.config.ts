@@ -8,6 +8,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: './',
   plugins: [react()],
+  server: {
+    watch: {
+      // Obsidian vault + licensed reference content — never imported by the app,
+      // and files mid-write there (EBUSY) can crash the watcher.
+      ignored: ['**/Extra/**', '**/reference/**'],
+    },
+  },
   // The legacy files are .jsx (JS + JSX). esbuild needs to treat their JSX,
   // which plugin-react handles. Keep the dep pre-bundle explicit.
   optimizeDeps: {

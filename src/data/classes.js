@@ -17,6 +17,7 @@ const DS_CLASSES = [
     quote: 'Demons and deathless fear you. Criminals run from the sight of your shadow.',
     deep: true,
     img: 'assets/classes/Censor.png',
+    cardImg: 'assets/classes/cards/censor.webp',
     starting: { stamina1: 21, staminaPer: 9, recoveries: 12 },
     fixedChars: { Might: 2, Presence: 2 },
     charArrays: [
@@ -160,6 +161,7 @@ const DS_CLASSES = [
     quote: 'The gods judge our actions, and our inaction. — Dazar',
     deep: true,
     img: 'assets/classes/Conduit.png',
+    cardImg: 'assets/classes/cards/conduit.webp',
     starting: { stamina1: 18, staminaPer: 6, recoveries: 8 },
     fixedChars: { Intuition: 2 },
     charArrays: [
@@ -322,6 +324,7 @@ const DS_CLASSES = [
     quote: 'DEATH! — Khorva',
     deep: true,
     img: 'assets/classes/Fury.png',
+    cardImg: 'assets/classes/cards/fury.webp',
     starting: { stamina1: 21, staminaPer: 9, recoveries: 10 },
     fixedChars: { Might: 2, Agility: 2 },
     charArrays: [
@@ -481,6 +484,7 @@ const DS_CLASSES = [
     quote: 'I have seen the building blocks of the timescape.',
     deep: true,
     img: 'assets/classes/Elementalist.png',
+    cardImg: 'assets/classes/cards/elementalist.webp',
     starting: { stamina1: 18, staminaPer: 6, recoveries: 8 },
     fixedChars: { Reason: 2 },
     charArrays: [
@@ -653,6 +657,7 @@ const DS_CLASSES = [
     quote: 'Stillness is the soldier\u2019s greatest weapon.',
     deep: true,
     img: 'assets/classes/Null.png',
+    cardImg: 'assets/classes/cards/null.webp',
     starting: { stamina1: 21, staminaPer: 9, recoveries: 8 },
     fixedChars: { Agility: 2, Intuition: 2 },
     charArrays: [
@@ -837,6 +842,7 @@ const DS_CLASSES = [
     quote: 'Whenever there is doubt, there is no doubt. — Motto of the College of Black Ash',
     deep: true,
     img: 'assets/classes/Shadow.png',
+    cardImg: 'assets/classes/cards/shadow.webp',
     starting: { stamina1: 18, staminaPer: 6, recoveries: 8 },
     fixedChars: { Agility: 2 },
     charArrays: [
@@ -1003,6 +1009,7 @@ const DS_CLASSES = [
     quote: 'A good plan is the difference between victory and a list of names on a tomb.',
     deep: true,
     img: 'assets/classes/Tactician.png',
+    cardImg: 'assets/classes/cards/tactician.webp',
     starting: { stamina1: 21, staminaPer: 9, recoveries: 10 },
     fixedChars: { Might: 2, Reason: 2 },
     charArrays: [
@@ -1144,6 +1151,7 @@ const DS_CLASSES = [
     quote: 'I\u2019ve seen what you can do! There is NO LIMIT to your power! All you have to do … is BELIEVE! — Khorva',
     deep: true,
     img: 'assets/classes/Talent.png',
+    cardImg: 'assets/classes/cards/talent.webp',
     starting: { stamina1: 18, staminaPer: 6, recoveries: 8 },
     fixedChars: { Reason: 2, Presence: 2 },
     charArrays: [
@@ -1345,6 +1353,7 @@ const DS_CLASSES = [
     quote: 'History is a tale. Each of us is just a story we tell ourselves. Change the story, and you change the world. — Jackson Bootblack',
     deep: true,
     img: 'assets/classes/Troubadour.png',
+    cardImg: 'assets/classes/cards/troubadour.webp',
     starting: { stamina1: 18, staminaPer: 6, recoveries: 8 },
     fixedChars: { Agility: 2, Presence: 2 },
     charArrays: [

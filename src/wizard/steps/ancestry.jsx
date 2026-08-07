@@ -120,16 +120,14 @@ function AncestryStep({ character, update }) {
       <H3>Choose your Ancestry</H3>
       <div className="grid-3">
         {DS_ANCESTRIES.map(a => (
-          <SelCard key={a.id} selected={sel === a.id} onClick={() => setAnc(a.id)}>
-            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap: 10}}>
-              <div style={{fontFamily:'var(--display)', fontSize: '1.0625rem', letterSpacing:'0.10em', color:'var(--ink)'}}>{a.name}</div>
-              <span className="c-stamp">{a.glyph}</span>
-            </div>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
-              SIZE {a.size} · SPD {a.speed} · {a.points} PTS
-            </div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:10, lineHeight:1.45}}>
-              {a.desc}
+          <SelCard key={a.id} className={`poster-card${sel && sel !== a.id ? ' dim' : ''}`} selected={sel === a.id} onClick={() => setAnc(a.id)}>
+            <div className="pc-art" style={{backgroundImage:`url(${a.img})`}} />
+            <div className="pc-scrim">
+              <div className="pc-name-row">
+                <div className="pc-name">{a.name}</div>
+                <span className="c-stamp">{a.glyph}</span>
+              </div>
+              <div className="pc-desc">{a.desc}</div>
             </div>
           </SelCard>
         ))}

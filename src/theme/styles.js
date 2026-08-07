@@ -920,27 +920,47 @@ body[data-theme="obsidian"] .app .bg-grain {
 }
 .ability-card .ac-effect b { color: var(--gold-2); }
 
-/* Class picker cards — the crest is fixed-width, so everything to its right has
-   to be able to shrink or the card sets a floor its grid track can't honour. */
-.class-card { padding-bottom: 14px; }
-.class-card .cc-row { display: flex; gap: 14px; align-items: flex-start; }
-.class-card .cc-body { flex: 1; min-width: 0; }
-.class-card .cc-name {
-  font-family: var(--display); font-size: 1.125rem; letter-spacing: 0.10em; color: var(--ink);
+/* Poster cards (ancestry + class pickers) — the artwork IS the card; name and
+   the full untruncated blurb sit on a bottom scrim (2:3 leaves room for the
+   longest blurb). Scrim text colors are fixed rather than --ink because the
+   scrim is dark in both themes. Once a pick exists the other cards dim; hover
+   restores them. */
+.poster-card { position: relative; padding: 0; overflow: hidden; aspect-ratio: 2 / 3; display: flex; align-items: flex-end; }
+.poster-card .pc-art {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center 18%;
+  transition: transform .35s ease, filter .3s ease;
 }
-.class-card .cc-meta {
-  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
-  letter-spacing: 0.18em; text-transform: uppercase; margin-top: 5px;
+.poster-card:hover .pc-art { transform: scale(1.04); }
+.poster-card.dim .pc-art { filter: grayscale(0.8) brightness(0.55); }
+.poster-card.dim:hover .pc-art { filter: none; }
+.poster-card .pc-scrim {
+  position: relative; width: 100%;
+  padding: 44px 16px 14px;
+  background: linear-gradient(180deg, transparent, rgba(5,5,8,0.7) 28%, rgba(5,5,8,0.94));
+  transition: opacity .3s ease;
 }
-/* The resource used to be a gold Tag in the header. Roles are two-part ("Controller ·
-   Striker"), so appending it inline wraps on 5 of the 9 cards and strands a separator
-   at the end of the line — give it its own line on every card instead, and keep it
-   gold so it stays distinct from the roles above it. */
-.class-card .cc-resource { display: block; color: var(--gold-2); margin-top: 2px; }
-.class-card .cc-blurb {
-  font-family: var(--serif); font-size: 0.8125rem; color: var(--ink-2);
-  margin-top: 10px; line-height: 1.45;
+.poster-card.dim .pc-scrim { opacity: 0.65; }
+.poster-card.dim:hover .pc-scrim { opacity: 1; }
+.poster-card .pc-name-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.poster-card .pc-name { font-family: var(--display); font-size: 1.0625rem; letter-spacing: 0.10em; color: #ece4d2; }
+.poster-card .pc-meta {
+  font-family: var(--mono); font-size: 0.5625rem; color: rgba(236,228,210,0.62);
+  letter-spacing: 0.18em; text-transform: uppercase; margin-top: 4px;
 }
+/* Roles are two-part ("Controller · Striker"), so appending the resource inline
+   wraps on 5 of the 9 class cards and strands a separator at the end of the
+   line — give it its own line on every card instead, and keep it gold. */
+.poster-card .pc-resource { display: block; color: var(--gold-2); margin-top: 2px; }
+.poster-card .pc-desc {
+  font-family: var(--serif); font-size: 0.8125rem; color: rgba(236,228,210,0.85);
+  margin-top: 8px; line-height: 1.45;
+}
+/* Stamps sit over artwork here — the glyph joins the name row instead of
+   floating top-right, and both get a shadow to stay legible on light art. */
+.poster-card .c-stamp { position: static; text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+.poster-card .c-stamp svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.9)); }
+.poster-card.selected::after { text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
 
 /* Kit cards — borrow the ability-card vocabulary so the info reads clearly */
 /* padding-right keeps the armor/order tag clear of the ✠ selection stamp. */

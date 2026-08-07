@@ -48,18 +48,19 @@ function ClassStep({ character, update }) {
       <H3>Choose your Class</H3>
       <div className="grid-3">
         {DS_CLASSES.map(c => (
-          <SelCard key={c.id} className="class-card" selected={sel === c.id} onClick={() => setCls(c.id)}>
-            <div className="cc-row">
-              <Crest glyph={c.glyph} />
-              <div className="cc-body">
-                <div className="cc-name">{c.name}</div>
-                <div className="cc-meta">
-                  {c.role}{!c.deep && ' · BASICS ONLY'}
-                  <span className="cc-resource">{c.resource.toUpperCase()}</span>
-                </div>
+          <SelCard key={c.id} className={`poster-card${sel && sel !== c.id ? ' dim' : ''}`} selected={sel === c.id} onClick={() => setCls(c.id)}>
+            <div className="pc-art" style={{backgroundImage:`url(${c.cardImg})`}} />
+            <div className="pc-scrim">
+              <div className="pc-name-row">
+                <div className="pc-name">{c.name}</div>
+                <span className="c-stamp">{renderGlyph(c.glyph)}</span>
               </div>
+              <div className="pc-meta">
+                {c.role}{!c.deep && ' · BASICS ONLY'}
+                <span className="pc-resource">{c.resource.toUpperCase()}</span>
+              </div>
+              <div className="pc-desc">{c.blurb}</div>
             </div>
-            <div className="cc-blurb">{c.blurb}</div>
           </SelCard>
         ))}
       </div>
