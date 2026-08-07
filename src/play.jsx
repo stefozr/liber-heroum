@@ -7,12 +7,23 @@ import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
 import { SheetStyles, AncestryTraitsList, KitDetails } from './theme/sheet.jsx';
+import { Tabs, TabPanel, TabsStyles } from './theme/tabs.jsx';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
+import { DS } from './backend.jsx';
 import { MQ } from './theme/breakpoints.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
 
 // Hooks used bare in this file (see note in wizard.jsx) — provide them under ES modules.
 const { useState, useEffect } = React;
+
+// Sheet tabs. The active tab is a per-device, per-hero UI preference, so it
+// lives in localStorage under the session prefix (same convention as LS_VIEW).
+const PLAY_TABS = [
+  { id: 'character', label: 'Character', glyph: '✠' },
+  { id: 'combat', label: 'Combat', glyph: '⚔' },
+  { id: 'progression', label: 'Progression', glyph: '▲' },
+];
+const tabKey = (heroId) => `${DS.K.session}/playTab/${heroId}`;
 
 // Phone-only overflow menu for the top bar, which cannot fit six buttons on a
 // narrow screen. CSS shows this and hides the .collapsible buttons below the
@@ -69,6 +80,16 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   const [editLevel, setEditLevel] = useState(null);
   const [bioOpen, setBioOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const v = localStorage.getItem(tabKey(character.id));
+      return PLAY_TABS.some(t => t.id === v) ? v : 'character';
+    } catch { return 'character'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(tabKey(character.id), activeTab); } catch {}
+  }, [activeTab, character.id]);
 
   // Initialise current stamina if undefined (skip for read-only viewers — not our sheet).
   useEffect(() => {
@@ -148,7 +169,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
     .filter(n => !isNaN(n))
     .sort((a, b) => a - b);
 
-  // Build a readable list of {label, value} for a stored level's picks.
+  // Build a readable list of {label, value, kind} for a stored level's picks.
   const summarizeLevelPicks = (lvl) => {
     const stored = levelChoiceMap[lvl];
     const dataForLvl = lvlData && lvlData[lvl];
@@ -160,7 +181,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       let value;
       if (p.chosen) value = `${p.chosen} (${typeof p.name === 'string' ? p.name.replace(/\s*(Perk|Skill)$/i, '') : p.chosen})`;
       else value = p.name || p.id || String(p);
-      out.push({ label: ch.label, value });
+      out.push({ label: ch.label, value, kind: ch.kind, text: p.chosenText || null });
     }
     return out;
   };
@@ -188,6 +209,30 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   // Class features gained through level-ups (shared collector — also feeds the export).
   const levelUpFeatures = collectLevelUpFeatures(character);
 
+  // Abilities panel groups, in Draw Steel reading order. Kit signatures skip
+  // boost() — their printed strings already carry the kit's distance bonus.
+  const abilityGroups = [
+    { label: 'Signature', items: signatures, kind: 'sig' },
+    kit && kitSig && { label: `Kit — ${kit.name}`, items: [kitSig], kind: 'sig', noBoost: true },
+    kit2 && kitSig2 && { label: `Kit — ${kit2.name}`, items: [kitSig2], kind: 'sig', noBoost: true },
+    { label: 'Heroic', items: heroic, kind: 'heroic' },
+    { label: 'Class & Subclass', items: benefits.classAbilities || [], kind: 'sig' },
+    { label: 'Ancestry', items: benefits.ancestryAbilities || [], kind: 'sig' },
+    { label: 'Domain', items: domainAbilities, kind: 'heroic' },
+    { label: 'Learned by Level-Up', items: levelAbilities, kind: 'heroic' },
+  ].filter(g => g && g.items.length > 0);
+
+  // One Progression-tab row per level, merging the pick log with the perks,
+  // features and abilities that level granted (each shown in full on its own
+  // tab — the timeline answers "what did I get at level N?" in one place).
+  // Picks of those kinds are filtered out so nothing is listed twice.
+  const timelineFor = (lvl) => ({
+    picks: summarizeLevelPicks(lvl).filter(s => !['perk', 'feature', 'ability'].includes(s.kind)),
+    perks: levelUpPerks.filter(p => p.level === lvl),
+    features: levelUpFeatures.filter(f => f.level === lvl),
+    abilities: ((character.cclass.levelAbilities || {})[lvl] || []).map(a => ({ name: a.name, text: a.flavor || a.effect || null })),
+  });
+
   // Single source of truth for the top-bar actions. `pinned` entries stay visible
   // on phones; the rest collapse into the ⋯ menu. Both renderers below map this
   // same array, so the handlers are shared by reference rather than duplicated.
@@ -207,6 +252,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       <PlayStyles />
       <SheetStyles />
       <LevelUpStyles />
+      <TabsStyles />
 
       {/* Top bar */}
       <TopBar
@@ -244,11 +290,12 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
         </>}
       />
 
-      {/* Body */}
-      <div className="play-body">
-        <div className="play-bg" style={cls ? { backgroundImage: `url(${cls.img})` } : {}}></div>
+      <div className="play-bg" style={cls ? { backgroundImage: `url(${cls.img})` } : {}}></div>
 
-        <div className="play-content">
+      {/* Pinned region — masthead, vitals and the tab strip stay visible while
+          the active tab's content scrolls beneath. */}
+      <div className="play-pinned">
+        <div className="play-pinned-inner">
           {/* Hero masthead (named to avoid ad-blocker cosmetic filters on "banner") */}
           <div className="hero-masthead">
             <div className={`hb-portrait ${character.portrait ? 'has-img' : ''}`}
@@ -276,7 +323,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
               value={character.play.stamina ?? derived.staminaMax}
               max={derived.staminaMax}
               winded={derived.winded}
-              accent="var(--gold)"
+              accent="var(--tier3-t)"
               onAdj={canEdit ? adjStamina : null}
               onSet={canEdit ? setStamina : null}
             />
@@ -294,6 +341,66 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
             <CounterBox label="Hero Tokens" value={character.play.heroTokens || 0} onPlus={canEdit ? () => adjHero(1) : null} onMinus={canEdit ? () => adjHero(-1) : null} />
           </div>
 
+          {/* Conditions — live session toggles like the vitals, so they stay
+              visible on every tab. Scrolls sideways when the row runs out. */}
+          <div className="cond-strip">
+            {['Bleeding','Dazed','Frightened','Grabbed','Prone','Restrained','Slowed','Taunted','Weakened'].map(cond => {
+              const on = !!character.play.conditions[cond];
+              return (
+                <button
+                  type="button"
+                  key={cond}
+                  className={`cond ${on ? 'on' : ''}`}
+                  aria-pressed={on}
+                  disabled={!canEdit}
+                  onClick={() => setPlay(p => ({ ...p, conditions: { ...p.conditions, [cond]: !p.conditions[cond] } }))}
+                >
+                  {cond}
+                </button>
+              );
+            })}
+          </div>
+
+          <Tabs tabs={PLAY_TABS} value={activeTab} onChange={setActiveTab} idBase="play" />
+        </div>
+      </div>
+
+      {/* Body — the active tab's content. Inactive panels stay mounted (hidden)
+          so panel collapse state survives tab switches. */}
+      <div className="play-body">
+        <div className="play-content">
+          <TabPanel id="combat" idBase="play" active={activeTab === 'combat'}>
+          <div className="play-grid">
+            {/* LEFT column */}
+            <div className="play-col-l">
+              {/* Abilities, grouped by where they come from */}
+              <Panel title="Abilities" collapsible>
+                {abilityGroups.map(g => (
+                  <div className="abil-group" key={g.label}>
+                    <div className="abil-group-head">{g.label}</div>
+                    <div className="stack-12">
+                      {g.items.map(a => (
+                        <AbilityCard key={a.name} ability={g.noBoost ? a : boost(a)} kind={g.kind} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {abilityGroups.length === 0 && (
+                  <div className="empty-note">No abilities yet — this class is in basics-only mode. Use Edit to add more.</div>
+                )}
+              </Panel>
+
+            </div>
+
+            {/* RIGHT column */}
+            <div className="play-col-r">
+              {/* Default maneuvers — available to every creature */}
+              <ManeuversPanel />
+            </div>
+          </div>
+          </TabPanel>
+
+          <TabPanel id="character" idBase="play" active={activeTab === 'character'}>
           <div className="play-grid">
             {/* LEFT column */}
             <div className="play-col-l">
@@ -312,79 +419,6 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                   <span>WEAK {derived.potency.weak}</span>
                   <span>AVERAGE {derived.potency.average}</span>
                   <span className="strong">STRONG {derived.potency.strong}</span>
-                </div>
-              </Panel>
-
-              {/* Vital tiles */}
-              <Panel title="Vitals" collapsible>
-                <div className="grid-3" style={{gap:8}}>
-                  <StatTile label="Recovery" value={derived.recoveryValue} />
-                  <StatTile label="Winded" value={derived.winded} />
-                  <StatTile label="Speed" value={derived.speed} />
-                  <StatTile label="Stability" value={derived.stability} />
-                  <StatTile label="Disengage" value={derived.disengage} />
-                  <StatTile label="Size" value={derived.size} />
-                  <StatTile label="Echelon" value={derived.echelon} />
-                </div>
-              </Panel>
-
-              {/* Abilities */}
-              <Panel title="Abilities" collapsible>
-                <div className="stack-12">
-                  {signatures.map(a => (
-                    <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
-                  ))}
-                  {(benefits.classAbilities || []).map(a => (
-                    <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
-                  ))}
-                  {(benefits.ancestryAbilities || []).map(a => (
-                    <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
-                  ))}
-                  {kitSig && (
-                    <AbilityCard ability={kitSig} kind="sig" />
-                  )}
-                  {kitSig2 && (
-                    <AbilityCard ability={kitSig2} kind="sig" />
-                  )}
-                  {heroic.map(a => (
-                    <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
-                  ))}
-                  {levelAbilities.map(a => (
-                    <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
-                  ))}
-                  {domainAbilities.map(a => (
-                    <AbilityCard key={a.name} ability={boost(a)} kind="heroic" />
-                  ))}
-                  {(signatures.length + heroic.length + levelAbilities.length + domainAbilities.length + (benefits.classAbilities || []).length + (benefits.ancestryAbilities || []).length) === 0 && (
-                    <div className="empty-note">No abilities yet — this class is in basics-only mode. Use Edit to add more.</div>
-                  )}
-                </div>
-              </Panel>
-
-              {/* Default maneuvers — available to every creature */}
-              <ManeuversPanel />
-            </div>
-
-            {/* RIGHT column */}
-            <div className="play-col-r">
-              {/* Conditions */}
-              <Panel title="Conditions" collapsible>
-                <div className="cond-grid">
-                  {['Bleeding','Dazed','Frightened','Grabbed','Prone','Restrained','Slowed','Taunted','Weakened'].map(cond => {
-                    const on = !!character.play.conditions[cond];
-                    return (
-                      <button
-                        type="button"
-                        key={cond}
-                        className={`cond ${on ? 'on' : ''}`}
-                        aria-pressed={on}
-                        disabled={!canEdit}
-                        onClick={() => setPlay(p => ({ ...p, conditions: { ...p.conditions, [cond]: !p.conditions[cond] } }))}
-                      >
-                        {cond}
-                      </button>
-                    );
-                  })}
                 </div>
               </Panel>
 
@@ -435,45 +469,6 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                 </Panel>
               )}
 
-              {/* Progression — review & edit past level-up selections */}
-              {progressionLevels.length > 0 && (
-                <Panel title="Progression" collapsible>
-                  <div className="prog-list">
-                    {progressionLevels.map(lvl => {
-                      const summary = summarizeLevelPicks(lvl);
-                      const editable = canEdit && !!(lvlData && lvlData[lvl]);
-                      return (
-                        <div className="prog-row" key={lvl}>
-                          <div className="prog-badge">Lv {lvl}</div>
-                          <div className="prog-detail">
-                            {summary.length > 0 ? summary.map((s, i) => (
-                              <div className="prog-pick" key={i}>
-                                <span className="prog-pick-k">{s.label}</span>
-                                <span className="prog-pick-v">{s.value}</span>
-                              </div>
-                            )) : (
-                              <div className="prog-pick"><span className="prog-pick-v" style={{color:'var(--ink-3)', fontStyle:'italic'}}>No tracked choices.</span></div>
-                            )}
-                          </div>
-                          {editable && (
-                            <button type="button" className="prog-edit" onClick={() => setEditLevel(lvl)} title={`Edit Level ${lvl} selections`}>
-                              EDIT
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Panel>
-              )}
-
-              {/* Traits */}
-              {anc && (
-                <Panel title="Ancestry Traits" collapsible>
-                  <AncestryTraitsList character={character} update={update} interactive={canEdit} />
-                </Panel>
-              )}
-
               {/* Class features */}
               {(benefits.features.length > 0 || levelUpFeatures.length > 0) && (
                 <Panel title="Class Features" collapsible>
@@ -489,6 +484,29 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                       {f.text && <div className="trait-text">{renderRich(f.text)}</div>}
                     </div>
                   ))}
+                </Panel>
+              )}
+            </div>
+
+            {/* RIGHT column */}
+            <div className="play-col-r">
+              {/* Derived stat tiles */}
+              <Panel title="Stats" collapsible>
+                <div className="grid-3" style={{gap:8}}>
+                  <StatTile label="Recovery" value={derived.recoveryValue} />
+                  <StatTile label="Winded" value={derived.winded} />
+                  <StatTile label="Speed" value={derived.speed} />
+                  <StatTile label="Stability" value={derived.stability} />
+                  <StatTile label="Disengage" value={derived.disengage} />
+                  <StatTile label="Size" value={derived.size} />
+                  <StatTile label="Echelon" value={derived.echelon} />
+                </div>
+              </Panel>
+
+              {/* Traits */}
+              {anc && (
+                <Panel title="Ancestry Traits" collapsible>
+                  <AncestryTraitsList character={character} update={update} interactive={canEdit} />
                 </Panel>
               )}
 
@@ -513,6 +531,70 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
               )}
             </div>
           </div>
+          </TabPanel>
+
+          {/* Progression — one row per level merging picks, perks, features and
+              learned abilities, so "what did I get at level N?" has one answer.
+              The full write-ups live on the Combat / Character tabs. */}
+          <TabPanel id="progression" idBase="play" active={activeTab === 'progression'}>
+          <div className="prog-timeline">
+            <Panel title="Level History" collapsible>
+              <div className="prog-list">
+                {/* Creation row — where the hero started. */}
+                <div className="prog-row">
+                  <div className="prog-badge">Lv 1</div>
+                  <div className="prog-detail">
+                    {[
+                      ['Ancestry', anc?.name],
+                      ['Class', [cls?.name, subclassName].filter(Boolean).join(' · ')],
+                      ['Career', car?.name],
+                      ['Kit', [kit?.name, kit2?.name].filter(Boolean).join(' · ')],
+                    ].filter(([, v]) => v).map(([k, v]) => (
+                      <div className="prog-pick" key={k}>
+                        <span className="prog-pick-k">{k}</span>
+                        <span className="prog-pick-v">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {progressionLevels.map(lvl => {
+                  const t = timelineFor(lvl);
+                  const editable = canEdit && !!(lvlData && lvlData[lvl]);
+                  const rows = [
+                    ...t.picks.map(s => [s.label, s.value, s.text]),
+                    ...t.features.map(f => ['Feature', f.name, f.text]),
+                    ...t.perks.map(p => ['Perk', p.group ? `${p.name} (${p.group})` : p.name, p.text]),
+                    ...t.abilities.map(a => ['Ability', a.name, a.text]),
+                  ];
+                  return (
+                    <div className="prog-row" key={lvl}>
+                      <div className="prog-badge">Lv {lvl}</div>
+                      <div className="prog-detail">
+                        {rows.length > 0 ? rows.map(([k, v, text], i) => (
+                          <div className="prog-pick" key={i}>
+                            <span className="prog-pick-k">{k}</span>
+                            <span className="prog-pick-v">{v}</span>
+                            {text && <span className="prog-pick-text">{renderRich(text)}</span>}
+                          </div>
+                        )) : (
+                          <div className="prog-pick"><span className="prog-pick-v" style={{color:'var(--ink-3)', fontStyle:'italic'}}>No tracked choices.</span></div>
+                        )}
+                      </div>
+                      {editable && (
+                        <button type="button" className="prog-edit" onClick={() => setEditLevel(lvl)} title={`Edit Level ${lvl} selections`}>
+                          EDIT
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {progressionLevels.length === 0 && (
+                  <div className="empty-note">No level-ups yet — LEVEL UP ▲ records each level's choices here.</div>
+                )}
+              </div>
+            </Panel>
+          </div>
+          </TabPanel>
 
           <div style={{padding:'20px 0 40px', textAlign:'center'}}>
             <GlyphRow>✠ · ❦ · ✠ · ❦ · ✠</GlyphRow>
@@ -559,7 +641,8 @@ function fmt(n) { return n == null ? '—' : (n > 0 ? '+' + n : n); }
 function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   // Red is an alarm, not a theme: the bar only turns rubric at or below the
-  // winded threshold (and while dying); a rested hero reads gold.
+  // winded threshold (and while dying); a healthy hero reads the accent (green
+  // for stamina, gold for the heroic resource).
   const hurt = winded != null && value <= winded;
   const barColor = hurt ? 'var(--rubric)' : accent;
   const [editing, setEditing] = React.useState(false);
@@ -724,7 +807,7 @@ function BiographyContent({ character, canEdit = false }) {
 const PLAY_CSS = `
 .play {
   position: relative; z-index: 2; width: 100%; height: 100%;
-  display: grid; grid-template-rows: auto 1fr; overflow: hidden;
+  display: grid; grid-template-rows: auto auto 1fr; overflow: hidden;
   /* Grid and flex children default to min-width:auto, so a wide row would push
      this past the viewport and get clipped rather than fitting. */
   min-width: 0;
@@ -732,11 +815,19 @@ const PLAY_CSS = `
 /* Bar geometry/type comes from the shared .topbar (theme/styles.js); only the
    play-specific rules (collapsible buttons, ⋯ menu, readonly tag) live here. */
 
+/* Pinned region — its own grid row, so scrolled tab content clips beneath it.
+   z-index lifts it above the fixed class-art background. min-width: 0 because,
+   unlike .play-body (a scroll container, automatic minimum size 0), this item
+   defaults to min-width auto — the unshrinkable vitals tiles would floor the
+   shared column track past the viewport and widen every row, top bar included. */
+.play-pinned { position: relative; z-index: 2; min-width: 0; }
+.play-pinned-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 0; }
+
 .hero-masthead {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
   border: 1px solid var(--gold-deep);
   background: var(--grad-masthead);
-  padding: 18px 24px; margin-bottom: 24px;
+  padding: 18px 24px; margin-bottom: 14px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 6px 30px rgba(0,0,0,0.45);
 }
 .hb-portrait {
@@ -775,13 +866,13 @@ const PLAY_CSS = `
 }
 .play-content {
   position: relative; z-index: 2;
-  max-width: 1320px; margin: 0 auto; padding: 28px 32px;
+  max-width: 1320px; margin: 0 auto; padding: 20px 32px 28px;
 }
 
 .vitals {
   /* The 2:2:1:1:1:1 ratio only holds with minmax(0, …); bare fr units floor each
      track at its content and the gauges stop being twice the width of a tile. */
-  display: grid; gap: 12px; margin-bottom: 24px;
+  display: grid; gap: 12px; margin-bottom: 14px;
   grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) repeat(4, minmax(0, 1fr));
 }
 /* Read-only viewer (not owner/director/admin): the session trackers are inert. The
@@ -905,7 +996,24 @@ const PLAY_CSS = `
 
 .empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: var(--fs-7); padding: 14px; text-align: center; }
 
-.cond-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+/* Source-group headers inside the Abilities panel */
+.abil-group + .abil-group { margin-top: 18px; }
+.abil-group-head {
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--gold-2);
+  padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-bottom: 10px;
+}
+
+/* Pinned conditions strip — one scrollable row beside the other live trackers,
+   with the same right-edge fade as the vitals and tab strips. */
+.cond-strip {
+  display: flex; gap: 6px; margin-bottom: 14px;
+  overflow-x: auto; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
+}
+.cond-strip::-webkit-scrollbar { display: none; }
+.cond-strip .cond { flex: 0 0 auto; }
 .cond {
   font-family: var(--mono); font-size: var(--fs-3); padding: 8px 6px;
   background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink-2);
@@ -930,7 +1038,7 @@ const PLAY_CSS = `
   padding: 2px 6px; line-height: 1;
 }
 
-/* Progression panel */
+/* Progression tab — full-width timeline; each level's entries flow into columns. */
 .prog-list { display: flex; flex-direction: column; gap: 12px; }
 .prog-row {
   display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start;
@@ -943,8 +1051,15 @@ const PLAY_CSS = `
   color: var(--gold-2); border: 1px solid var(--line-2); border-radius: 2px;
   padding: 4px 8px; white-space: nowrap; line-height: 1;
 }
-.prog-detail { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.prog-detail {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px 20px; align-items: start; min-width: 0;
+}
 .prog-pick { display: flex; flex-direction: column; gap: 1px; }
+.prog-pick-text {
+  font-family: var(--serif); font-size: var(--fs-5); color: var(--ink-2);
+  line-height: 1.5; margin-top: 3px; white-space: pre-line;
+}
 .prog-pick-k {
   font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--ink-3);
@@ -995,39 +1110,54 @@ ${MQ.rail} {
      vitals row and the 2-column grid collide labels with values. Same
      collapse as the tablet tier, one breakpoint earlier. */
   .play-grid { grid-template-columns: minmax(0, 1fr); }
-  .vitals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .play-pinned-inner { padding: 16px 20px 0; }
+  /* The vitals live in the pinned region now, so they must not wrap into a
+     second row: one horizontally scrollable strip, right-edge fade signalling
+     the rest (same pattern as the tab strip and the app-bar nav). */
+  .vitals {
+    display: flex; gap: 8px;
+    overflow-x: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
+  }
+  .vitals::-webkit-scrollbar { display: none; }
+  .vitals .vital { flex: 0 0 240px; }
+  .vitals .counter { flex: 0 0 104px; }
 }
 
 ${MQ.tab} {
   .play-grid { grid-template-columns: 1fr; }
-  .vitals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .hero-masthead { grid-template-columns: auto 1fr; gap: 16px; padding: 16px 18px; }
-  .hb-level { grid-column: 2; padding-left: 0; border-left: none; text-align: left; margin-top: 4px; }
-  .hb-name { font-size: 2rem; }
-  .hb-level-num { font-size: 2rem; }
-  .play-content { padding: 22px 20px; }
+  /* Compact in place rather than reflowing the level below the name — the
+     masthead is pinned, so extra rows cost scroll room on every tab. */
+  .hero-masthead { gap: 16px; padding: 12px 16px; }
+  .hb-portrait { width: 72px; height: 72px; }
+  .hb-name { font-size: 1.75rem; }
+  .hb-level-num { font-size: 1.75rem; }
+  .play-content { padding: 18px 20px 22px; }
 }
 
 ${MQ.phone} {
   /* The action buttons need the room more than the brand does. */
   .play-top .tb-text { display: none; }
 
-  .vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  /* The two gauges carry a bar and a control row; keep them full width. */
-  .vitals .vital { grid-column: 1 / -1; }
   .chars-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .cond-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cond { padding: 8px 8px; letter-spacing: 0.12em; }
   .prog-row { grid-template-columns: auto 1fr; }
   .prog-row .prog-edit { grid-column: 1 / -1; justify-self: start; margin-top: 8px; }
 
-  .hero-masthead { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-  .hb-portrait { width: 64px; height: 64px; }
-  .hb-portrait .hb-glyph { font-size: 1.875rem; }
-  .hb-name { font-size: 1.75rem; }
-  .hb-level { grid-column: auto; text-align: center; }
-  .hb-meta { letter-spacing: 0.1em; font-size: var(--fs-7); }
+  .hero-masthead { gap: 10px; padding: 8px 10px; margin-bottom: 10px; }
+  .hb-portrait { width: 44px; height: 44px; }
+  .hb-portrait .hb-glyph { font-size: 1.25rem; }
+  .hb-eyebrow { display: none; }
+  .hb-name { font-size: 1.25rem; }
+  .hb-meta { letter-spacing: 0.1em; font-size: var(--fs-3); margin-top: 4px; }
+  .hb-level { padding-left: 10px; }
+  .hb-level-num { font-size: 1.375rem; }
+  .vitals .vital { flex: 0 0 220px; }
+  .vitals .counter { flex: 0 0 96px; }
 
-  .play-content { padding: 16px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
+  .play-pinned-inner { padding: 10px max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right)); }
+  .play-content { padding: 14px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
   .panel-body { padding: 14px; }
 
   /* The most-tapped controls on the sheet; the desktop height is far under 44px. */

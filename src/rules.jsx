@@ -512,8 +512,8 @@ function RulesStyles() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Maneuvers panel (used on the play / character sheet view)
 // ─────────────────────────────────────────────────────────────────────────────
-function ManeuversPanel() {
-  const [collapsed, setCollapsed] = React.useState(false);
+function ManeuversPanel({ defaultCollapsed = false } = {}) {
+  const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
   return (
     <div className={`panel ${collapsed ? 'collapsed' : ''}`}>
       <RulesStyles />

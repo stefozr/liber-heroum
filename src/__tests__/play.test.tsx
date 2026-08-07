@@ -2,14 +2,25 @@
 // kit-bearing character and asserts it renders without throwing — the path that
 // surfaced "parseKitSig is not defined" (play.jsx used the helper without importing
 // it). The wizard/theme suites never render the play sheet, so this closes that gap.
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { PlayView } from '../play.jsx';
 import { newCharacter } from '../app.jsx';
 import { DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS } from '../data.jsx';
 
-afterEach(() => cleanup());
+// Node's experimental localStorage global is unavailable without
+// --localstorage-file (same situation as invite-gate.test.tsx), so back the
+// sheet's tab persistence with an in-memory stub.
+const lsStore = new Map<string, string>();
+vi.stubGlobal('localStorage', {
+  getItem: (k: string) => (lsStore.has(k) ? lsStore.get(k)! : null),
+  setItem: (k: string, v: string) => void lsStore.set(k, String(v)),
+  removeItem: (k: string) => void lsStore.delete(k),
+  clear: () => lsStore.clear(),
+});
+
+afterEach(() => { cleanup(); localStorage.clear(); });
 
 function completedCharacter() {
   const c: any = newCharacter('u-test', null);
@@ -116,5 +127,104 @@ describe('PlayView renders the character sheet', () => {
       <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
     );
     expect(container.textContent).toContain('1L');
+  });
+});
+
+describe('PlayView sheet tabs', () => {
+  it('renders three tabs and switches the visible panel', () => {
+    const { container, getAllByRole } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const tabs = getAllByRole('tab');
+    // textContent includes the aria-hidden glyph, so match on the label suffix.
+    expect(tabs.map(t => t.textContent)).toEqual(['✠Character', '⚔Combat', '▲Progression']);
+
+    const panel = (id: string) => container.querySelector(`#play-panel-${id}`) as HTMLElement;
+    expect(panel('character').hidden).toBe(false);
+    expect(panel('combat').hidden).toBe(true);
+    expect(panel('progression').hidden).toBe(true);
+
+    fireEvent.click(tabs[1]);
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+    expect(panel('character').hidden).toBe(true);
+    expect(panel('combat').hidden).toBe(false);
+  });
+
+  it('persists the active tab per hero and restores it on remount', () => {
+    const c = completedCharacter();
+    const first = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    fireEvent.click(first.getAllByRole('tab')[2]);
+    expect(localStorage.getItem(`draw-steel/v2/session/playTab/${c.id}`)).toBe('progression');
+    first.unmount();
+
+    const second = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const progTab = second.getAllByRole('tab')[2];
+    expect(progTab.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('arrow keys move selection along the tab strip', () => {
+    const { getAllByRole } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const tabs = getAllByRole('tab');
+    tabs[0].focus();
+    fireEvent.keyDown(tabs[0].parentElement!, { key: 'ArrowRight' });
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(tabs[1].parentElement!, { key: 'ArrowLeft' });
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('characteristics and stats live on the Character tab; conditions outside all tabs', () => {
+    const { container } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const charPanel = container.querySelector('#play-panel-character')!;
+    expect(charPanel.textContent).toContain('Might');
+    expect(charPanel.textContent).toContain('Echelon');
+    expect(container.querySelector('#play-panel-combat')!.textContent).not.toContain('Echelon');
+    // Conditions sit in the pinned strip, not inside any tab panel.
+    const strip = container.querySelector('.cond-strip')!;
+    expect(strip.querySelectorAll('.cond').length).toBe(9);
+    expect(strip.closest('[role="tabpanel"]')).toBeNull();
+  });
+
+  it('groups abilities under source headers', () => {
+    const c = completedCharacter();
+    c.ancestry.id = 'dragon-knight';
+    c.ancestry.traits = ['Dragon Breath'];  // grants an ancestry ability
+    const { container } = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const heads = Array.from(container.querySelectorAll('.abil-group-head')).map(h => h.textContent);
+    expect(heads.some(h => h!.startsWith('Kit —'))).toBe(true);
+    expect(heads).toContain('Ancestry');
+  });
+
+  it('progression tab consolidates a level-up into one editable row', () => {
+    const c = completedCharacter();
+    c.level = 2;
+    // Censor (DS_CLASSES[0]) level 2 has a 'perk' choice (kind: 'perk').
+    c.levelChoices = { 2: { picks: { perk: {
+      chosen: 'Friend Catapult', name: 'Lore Perk', id: 'lore',
+      chosenText: 'Launch a willing ally skyward.',
+    } } } };
+    const { container } = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const panel = container.querySelector('#play-panel-progression')!;
+    const rows = panel.querySelectorAll('.prog-row');
+    // Creation row (Lv 1) + the level-2 row.
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain(DS_ANCESTRIES[0].name);
+    expect(rows[1].textContent).toContain('Lv 2');
+    expect(rows[1].querySelector('.prog-edit')).not.toBeNull();
+    // Selections carry their descriptive text, not just names.
+    expect(rows[1].textContent).toContain('Launch a willing ally skyward.');
+    expect(rows[1].querySelectorAll('.prog-pick-text').length).toBeGreaterThan(0);
   });
 });
