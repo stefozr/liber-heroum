@@ -63,10 +63,15 @@ function IdentityStep({ character, update }) {
           )}
         </div>
 
-        <div className="stack-22" style={{justifyContent:'center'}}>
+        <div className="stack-22 id-fields" style={{justifyContent:'center'}}>
           <div className="input-row">
-            <label>Hero Name <span style={{color:'var(--rubric-2)'}}>*</span></label>
-            <input className="input-text" placeholder="e.g. Aelric of Greycloister" value={id.name || ''} onChange={(e) => setF('name', e.target.value)} />
+            <label htmlFor="hero-name">Hero Name <span style={{color:'var(--rubric-2)'}}>*</span></label>
+            <input id="hero-name" className="input-text" placeholder="e.g. Aelric of Greycloister" value={id.name || ''} onChange={(e) => setF('name', e.target.value)} />
+            {!(id.name || '').trim() && (
+              <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize:'0.8125rem', color:'var(--rubric-2)', marginTop:6}}>
+                A hero needs a name before the rites can continue.
+              </div>
+            )}
           </div>
 
           <div className="grid-3" style={{gap:18}}>

@@ -3,6 +3,7 @@ import { OrnDivider, GlyphRow, Pill, Button, H2, Modal } from './theme.jsx';
 import { heroName } from './campaigns.jsx';
 import { RulesGlossary, RulesButton } from './rules.jsx';
 import { classDef, ancestryDef } from './app.jsx';
+import { wizardProgress } from './wizard.jsx';
 // roster.jsx — Character roster (multi-character) screen.
 
 function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, onCreate, onDelete, onAssign }) {
@@ -26,7 +27,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           <div className="sub">A Chronicle of Heroes, Drawn from Steel</div>
           <div className="meta">A Draw Steel Character Manager · v 1.2</div>
           <div style={{marginTop: 22, display:'flex', justifyContent:'center'}}>
-            <RulesButton large onClick={() => setRulesOpen(true)}>Rules Glossary</RulesButton>
+            <RulesButton onClick={() => setRulesOpen(true)}>Rules Glossary</RulesButton>
           </div>
         </div>
 
@@ -38,11 +39,11 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
         </div>
 
         <div className="roster-grid">
-          <div className="hero-card hc-new" onClick={onCreate}>
+          <button type="button" className="card-btn hero-card hc-new" onClick={onCreate}>
             <div className="cross">✠</div>
             <div className="nm">Forge a New Hero</div>
-            <div className="sub">Begin the eight rites of creation</div>
-          </div>
+            <div className="sub">Begin the seven rites of creation</div>
+          </button>
 
           {characters.length === 0 && (
             <div className="roster-empty">
@@ -114,21 +115,30 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
   const cls = classDef(c);
   const anc = ancestryDef(c);
   const heroName = c.identity.name || c.name || 'Unnamed Hero';
-  const bg = c.portrait || (cls ? cls.img : (anc ? null : null));
+  // Portrait, else class art, else ancestry art — a hero with only chapter one
+  // done still gets a face on the shelf.
+  const bg = c.portrait || (cls && cls.img) || (anc && anc.img) || null;
   const meta = [
     anc && anc.name,
     cls && cls.name,
     c.cclass.subclass && cls && cls.subclasses && cls.subclasses.find(s => s.id === c.cclass.subclass || s.name === c.cclass.subclass)?.name,
   ].filter(Boolean).join(' · ') || 'Begin the rites';
   const status = c.status === 'complete' ? 'CHRONICLED' : 'IN PROGRESS';
-  const stepPct = cls ? Math.min(100, Math.round((c.wizardStep || 0) / 8 * 100)) : 0;
+  const progress = wizardProgress(c);
+  const stepPct = Math.round(progress.done / progress.total * 100);
 
   return (
-    <div className="hero-card" onClick={onOpen}>
+    <div className="hero-card">
+      {/* Stretched overlay: the card's "open" action as a real, focusable button.
+          A <button> card proper would be invalid HTML — the footer holds two
+          nested buttons — so those sit above this overlay at a higher z-index. */}
+      <button type="button" className="card-btn hc-open" onClick={onOpen} aria-label={`Open ${heroName}`} />
       <div className="hc-img" style={bg ? {backgroundImage: `url(${bg})`} : {background: 'linear-gradient(135deg, var(--bg-2), var(--bg-3))'}}>
+        {/* zIndex lifts the crest above the bottom scrim; the padding keeps it in
+            the scrim-free upper half so it reads instead of drowning. */}
         {!bg && <div style={{
-          position:'absolute', inset:0, display:'grid', placeItems:'center',
-          fontFamily:'var(--display)', fontSize: '3.75rem', color:'var(--gold)', opacity:0.25,
+          position:'absolute', inset:0, display:'grid', placeItems:'center', zIndex:1,
+          paddingBottom:30, fontFamily:'var(--display)', fontSize: '3.75rem', color:'var(--gold)', opacity:0.4,
         }}>✠</div>}
       </div>
       <div className="hc-lvl">LV {String(c.level).padStart(2,'0')}</div>
@@ -145,13 +155,13 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
         <div className="hc-meta">{meta}</div>
       </div>
       <div className="hc-bottom">
-        <span>{status}{c.status !== 'complete' ? ` · ${stepPct}%` : ''}</span>
+        <span title={c.status === 'complete' ? 'This hero is complete and ready for play' : 'Chapters of the creation wizard finished'}>{status}{c.status !== 'complete' ? ` · ${stepPct}%` : ''}</span>
         <div className="hc-actions">
           <button
             className="hc-camp"
             onClick={(e) => { e.stopPropagation(); onAssign && onAssign(); }}
             title={campaignName ? 'Move to another campaign' : 'Add to a campaign'}>
-            {campaignName ? '⚚ move' : '✦ add to campaign'}
+            {campaignName ? '⚚ move' : '✦ campaign'}
           </button>
           <button className="hc-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
             ✦ remove
@@ -195,7 +205,7 @@ function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign })
         <div style={{ border: '1px dashed var(--line-2)', padding: '28px 20px', textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--display)', fontSize: '1rem', letterSpacing: '0.1em', color: 'var(--gold-2)' }}>NO CAMPAIGNS YET</div>
           <div style={{ fontFamily: 'var(--hand)', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: '0.9375rem', marginTop: 8 }}>
-            Found or join a campaign from the Campaigns tab, then return here.
+            Start or join a campaign from the Campaigns tab, then return here.
           </div>
         </div>
       ) : (
@@ -203,9 +213,11 @@ function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign })
           {campaigns.map(camp => {
             const here = current === camp.id;
             return (
-              <div
+              <button
+                type="button"
                 key={camp.id}
-                className="assign-row"
+                disabled={here || undefined}
+                className="card-btn assign-row"
                 style={here ? { opacity: 0.5, cursor: 'default', borderStyle: 'dashed' } : {}}
                 onClick={() => { if (!here) onAssign(character.id, camp.id); }}>
                 <div className="crest small">✠</div>
@@ -216,7 +228,7 @@ function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign })
                 <span className="ar-where" style={here ? { color: 'var(--ink-3)' } : {}}>
                   {here ? 'Already here' : 'Add →'}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>

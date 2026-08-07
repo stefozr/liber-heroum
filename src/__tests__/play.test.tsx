@@ -93,6 +93,21 @@ describe('PlayView renders the character sheet', () => {
     expect(text).not.toContain('You slam an invisible force'); // Concussive Slam flavor
   });
 
+  it('read-only sheet disables the session trackers and names the owner', () => {
+    const { container } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop}
+        canEdit={false} owner={{ id: 'u-test', displayName: 'Mara Quill' }} />
+    );
+    // Every stepper/counter button is truly disabled, not just visually dimmed.
+    const trackerButtons = container.querySelectorAll('.vital-ctl button, .cnt-ctl button, .cond');
+    expect(trackerButtons.length).toBeGreaterThan(0);
+    trackerButtons.forEach(b => expect((b as HTMLButtonElement).disabled).toBe(true));
+    // The viewing tag says whose hero this is.
+    expect(container.textContent).toContain('kept by Mara Quill');
+    // No level-edit affordance for viewers.
+    expect(container.querySelector('.prog-edit')).toBeNull();
+  });
+
   it('revenant size tile uses the former life', () => {
     const c = completedCharacter();
     c.ancestry.id = 'revenant';

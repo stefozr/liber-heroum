@@ -1,11 +1,13 @@
 import React from 'react';
-import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES } from './data.jsx';
-import { ThemeStyles } from './theme.jsx';
+import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES, DS_STEPS } from './data.jsx';
+import { ThemeStyles, Pill, Button } from './theme.jsx';
 import { DS } from './backend.jsx';
-import { AccountStyles, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar } from './auth.jsx';
+import { AccountStyles, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, Masthead } from './auth.jsx';
 import { AdminScreen } from './admin.jsx';
 import { CampaignStyles, CampaignHub, CampaignDetail } from './campaigns.jsx';
-import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio } from './tweaks-panel.jsx';
+// Dev-only design-host tweaks panel (H16): lazy so the module — and its foreign
+// light-mode design system — is excluded from production bundles entirely.
+const TweaksHost = import.meta.env.DEV ? React.lazy(() => import('./tweaks-host.jsx')) : null;
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
@@ -21,6 +23,30 @@ const { useState, useEffect, useMemo, useReducer, useCallback } = React;
 // is text), so the wizard can create a hero locally and upsert it as-is.
 const LS_VIEW = `${DS.K.session}/view`;   // last view is a per-device UI preference
 const NOOP_UPDATE = () => {};             // read-only PlayView: mutations are no-ops
+
+// ── Hash router (deep links) ──
+// '#/hero/<id>' | '#/campaign/<id>' | '#/campaigns' | '#/admin' | '#/'.
+// Only '#/'-prefixed hashes are ours — the OAuth callback ('#access_token=…')
+// must pass through untouched for supabase-js to consume.
+function parseHash(h) {
+  if (!h || !h.startsWith('#/')) return null;
+  const [seg, id] = h.slice(2).replace(/\/+$/, '').split('/');
+  if (!seg) return { view: 'roster' };
+  if (seg === 'campaigns') return { view: 'campaigns' };
+  if (seg === 'admin') return { view: 'admin' };
+  if (seg === 'hero' && id) return { view: 'hero', id: decodeURIComponent(id) };
+  if (seg === 'campaign' && id) return { view: 'campaign', id: decodeURIComponent(id) };
+  return null;
+}
+// wizard and play both serialize to '#/hero/<id>' — the URL deliberately never
+// encodes editability; opening it re-derives wizard-vs-play via openCharacter.
+function navToHash({ view, activeId, activeCampaignId }) {
+  if ((view === 'wizard' || view === 'play') && activeId) return `#/hero/${encodeURIComponent(activeId)}`;
+  if (view === 'campaign' && activeCampaignId) return `#/campaign/${encodeURIComponent(activeCampaignId)}`;
+  if (view === 'campaigns') return '#/campaigns';
+  if (view === 'admin') return '#/admin';
+  return '#/';
+}
 
 // Pure editability rule (mirrors the characters_update RLS policy): a hero may be edited
 // by its owner, the director of its campaign, or a global admin. Everyone else may only
@@ -280,6 +306,23 @@ function computeDerived(c) {
   };
 }
 
+// ───────── Sync error banner ─────────
+// Fixed bottom-center alert for failed writes. Renders nothing unless a write
+// actually failed — the quiet path stays quiet. Autosave errors surface here on
+// chrome views only (wizard/play carry their own SavePill in the top bar);
+// op errors (delete/assign/campaign) surface everywhere.
+function SyncPill({ saveState, syncError, onRetry, onDismiss }) {
+  const autosaveFailed = saveState?.status === 'error';
+  if (!autosaveFailed && !syncError) return null;
+  return (
+    <div className="sync-pill" role="alert">
+      <Pill kind="rubric">⚠ {syncError ? syncError.msg : 'AUTOSAVE FAILED — CHANGES MAY BE LOST'}</Pill>
+      {autosaveFailed && !syncError && <Button small kind="ghost" onClick={onRetry}>RETRY</Button>}
+      {syncError && <Button small kind="ghost" onClick={onDismiss} title="Dismiss">✕</Button>}
+    </div>
+  );
+}
+
 // ───────── App ─────────
 function App() {
   // ── identity (Supabase Auth manages the single signed-in user) ──
@@ -292,10 +335,15 @@ function App() {
   const [campaigns, setCampaigns] = useState([]);
 
   // ── navigation ──
+  // A '#/'-hash captured at first render is a deep link: it outranks the
+  // remembered LS_VIEW and is resolved against loaded data once boot completes.
+  // Starting at 'roster' while one is pending keeps the boot guards inert.
+  const pendingNavRef = React.useRef(parseHash(window.location.hash));
   const [activeId, setActiveId] = useState(null);
   const [activeCampaignId, setActiveCampaignId] = useState(null);
   const [backView, setBackView] = useState({ view: 'roster' }); // where a hero editor returns to
-  const [view, setView] = useState(() => localStorage.getItem(LS_VIEW) || 'roster');
+  const [view, setView] = useState(() =>
+    pendingNavRef.current ? 'roster' : (localStorage.getItem(LS_VIEW) || 'roster'));
 
   useEffect(() => { localStorage.setItem(LS_VIEW, view); }, [view]);
 
@@ -367,17 +415,50 @@ function App() {
     return off;
   }, [booting, currentUser, canEditCharacter]);
 
+  // ── warm the wizard's opening art while the app idles ──
+  // The twelve ancestry posters and the chapter-one backdrop are static and
+  // shared by every hero, so fetch them once right after sign-in: the first
+  // wizard open then paints from browser cache instead of streaming ~1MB of
+  // art while the user watches the grid fill in.
+  useEffect(() => {
+    if (booting || !currentUser?.isAllowed) return;
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => {
+      for (const url of [DS_STEPS[0].bg, ...DS_ANCESTRIES.map(a => a.img)]) {
+        if (url) { const img = new Image(); img.src = url; }
+      }
+    });
+    return () => cancel(handle);
+  }, [booting, currentUser]);
+
   // ── debounced per-character save (replaces the old whole-array write-through) ──
   // saveState drives the wizard's save pill: 'pending' while an edit is debouncing
   // or in flight, 'saved' (+timestamp) once Supabase confirms, 'error' on failure.
   const saveTimer = React.useRef(null);
   const pendingSave = React.useRef(null);
   const [saveState, setSaveState] = useState({ status: 'saved', at: null });
+  // The character that most recently failed to save, kept for a user-driven retry.
+  const lastFailedSave = React.useRef(null);
   const runSave = useCallback((ch) => {
     DS.upsertCharacter(ch)
-      .then(() => setSaveState({ status: 'saved', at: Date.now() }))
-      .catch(e => { console.error('Save failed', e); setSaveState({ status: 'error', at: Date.now() }); });
+      .then(() => { lastFailedSave.current = null; setSaveState({ status: 'saved', at: Date.now() }); })
+      .catch(e => { console.error('Save failed', e); lastFailedSave.current = ch; setSaveState({ status: 'error', at: Date.now() }); });
   }, []);
+  const retrySave = useCallback(() => {
+    if (lastFailedSave.current) runSave(lastFailedSave.current);
+  }, [runSave]);
+
+  // One-slot error banner for the fire-and-forget writes (delete / assign /
+  // campaign edits). Character autosave keeps its own saveState — mixing them
+  // would make the wizard pill lie about the character when a campaign write fails.
+  const [syncError, setSyncError] = useState(null);   // { msg, at } | null
+  const reportSyncError = useCallback((msg) => setSyncError({ msg, at: Date.now() }), []);
+  useEffect(() => {
+    if (!syncError) return;
+    const t = setTimeout(() => setSyncError(null), 8000);
+    return () => clearTimeout(t);
+  }, [syncError]);
   const queueSave = useCallback((c) => {
     pendingSave.current = c;
     setSaveState(s => (s.status === 'pending' ? s : { status: 'pending', at: s.at }));
@@ -407,8 +488,8 @@ function App() {
       // If the page survives (tab switch rather than close), reflect the outcome
       // in the pill; if it's truly unloading these callbacks simply never run.
       DS.upsertCharacterKeepalive(ch)
-        .then(() => setSaveState({ status: 'saved', at: Date.now() }))
-        .catch(e => { console.error('Save failed', e); setSaveState({ status: 'error', at: Date.now() }); });
+        .then(() => { lastFailedSave.current = null; setSaveState({ status: 'saved', at: Date.now() }); })
+        .catch(e => { console.error('Save failed', e); lastFailedSave.current = ch; setSaveState({ status: 'error', at: Date.now() }); });
     };
     const onVisibility = () => { if (document.visibilityState === 'hidden') flushKeepalive(); };
     window.addEventListener('pagehide', flushKeepalive);
@@ -448,8 +529,10 @@ function App() {
     setActiveId(ch.id);
     setBackView(back);
     setView('wizard');
-    DS.upsertCharacter(ch).catch(e => console.error('Create failed', e));
-  }, [currentUser]);
+    // Through the pill machinery: a failed create shows SAVE FAILED in the
+    // wizard the user just landed in, and any subsequent edit re-upserts anyway.
+    runSave(ch);
+  }, [currentUser, runSave]);
 
   const openCharacter = useCallback((id, back = { view: 'roster' }) => {
     const ch = characters.find(c => c.id === id);
@@ -464,19 +547,28 @@ function App() {
 
   const deleteCharacter = useCallback((id) => {
     if (pendingSave.current && pendingSave.current.id === id) pendingSave.current = null;
-    setCharacters(prev => prev.filter(c => c.id !== id));
+    let removed = null;
+    setCharacters(prev => { removed = prev.find(c => c.id === id) || null; return prev.filter(c => c.id !== id); });
     if (activeId === id) { setActiveId(null); setView('roster'); }
-    DS.deleteCharacter(id).catch(e => console.error('Delete failed', e));
-  }, [activeId]);
+    DS.deleteCharacter(id).catch(e => {
+      console.error('Delete failed', e);
+      reportSyncError('ERASE FAILED — HERO RESTORED');
+      // Optimistic removal diverged from the server; put the hero back.
+      setCharacters(prev => (removed && !prev.some(c => c.id === id) ? [...prev, removed] : prev));
+    });
+  }, [activeId, reportSyncError]);
 
   const assignCharacter = useCallback((charId, campaignId) => {
-    setCharacters(prev => prev.map(c => {
-      if (c.id !== charId) return c;
-      const next = { ...c, campaignId, lastModified: Date.now() };
-      DS.upsertCharacter(next).catch(e => console.error('Assign failed', e));
-      return next;
-    }));
-  }, []);
+    const before = characters.find(c => c.id === charId);
+    if (!before) return;
+    const next = { ...before, campaignId, lastModified: Date.now() };
+    setCharacters(prev => prev.map(c => (c.id === charId ? next : c)));
+    DS.upsertCharacter(next).catch(e => {
+      console.error('Assign failed', e);
+      reportSyncError('COULD NOT MOVE HERO — CHANGE UNDONE');
+      setCharacters(prev => prev.map(c => (c.id === charId ? { ...c, campaignId: before.campaignId ?? null } : c)));
+    });
+  }, [characters, reportSyncError]);
 
   // ── navigation helpers ──
   const goBackFromHero = useCallback(() => {
@@ -498,6 +590,38 @@ function App() {
   }, [flushSave]);
 
   const openCampaign = useCallback((id) => { setActiveCampaignId(id); setView('campaign'); }, []);
+
+  // ── deep-link resolution ──
+  // Runs once, on the first render after boot completes — refreshStore() is
+  // awaited before setBooting(false), so characters/campaigns are loaded. Every
+  // branch sets view together with a valid id (or bounces with a notice), so the
+  // boot guards below never observe an inconsistent pair.
+  const resolvingNavRef = React.useRef(false); // suppresses one history-mirror write
+  useEffect(() => {
+    if (booting) return;
+    const nav = pendingNavRef.current;
+    if (!nav) return;
+    pendingNavRef.current = null;   // one-shot, even when the link can't be honored
+    if (!currentUser || !currentUser.isAllowed) return; // auth/invite screens win
+    if (nav.view === 'hero') {
+      const ch = characters.find(c => c.id === nav.id);
+      if (!ch) { reportSyncError("THAT HERO ISN'T IN YOUR CHRONICLE"); return; }
+      resolvingNavRef.current = true;
+      openCharacter(nav.id, ch.campaignId && campaigns.some(c => c.id === ch.campaignId)
+        ? { view: 'campaign', campaignId: ch.campaignId }
+        : { view: 'roster' });
+    } else if (nav.view === 'campaign') {
+      if (!campaigns.some(c => c.id === nav.id)) { reportSyncError("THAT CAMPAIGN ISN'T IN YOUR CHRONICLE"); setView('campaigns'); return; }
+      resolvingNavRef.current = true;
+      setActiveCampaignId(nav.id);
+      setView('campaign');
+    } else if (nav.view === 'admin') {
+      if (currentUser.isAdmin) { resolvingNavRef.current = true; setView('admin'); }
+    } else if (nav.view === 'campaigns') {
+      resolvingNavRef.current = true;
+      setView('campaigns');
+    } // 'roster' → already there
+  }, [booting, currentUser, characters, campaigns, openCharacter, reportSyncError]);
 
   // ── auth actions ──
   // These throw on failure; the auth surfaces catch and surface the message. Success
@@ -534,9 +658,14 @@ function App() {
   }, [currentUser]);
 
   const updateCampaign = useCallback((id, patch) => {
+    const before = campaigns.find(c => c.id === id);
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
-    DS.updateCampaign(id, patch).catch(e => console.error('Campaign update failed', e));
-  }, []);
+    DS.updateCampaign(id, patch).catch(e => {
+      console.error('Campaign update failed', e);
+      reportSyncError('CAMPAIGN UPDATE FAILED — CHANGE UNDONE');
+      if (before) setCampaigns(prev => prev.map(c => (c.id === id ? before : c)));
+    });
+  }, [campaigns, reportSyncError]);
 
   const regenSigil = useCallback(async (id) => {
     const code = await DS.regenInviteCode(id);
@@ -582,9 +711,11 @@ function App() {
   // ─── Browser history integration ───
   // In-app navigation is a pure function of (view, activeId, activeCampaignId), so we
   // mirror each change into a history entry — the browser/mouse Back button then steps
-  // through screens instead of leaving the app. We keep the URL unchanged (GitHub Pages
-  // has no SPA fallback, and the OAuth flow uses the hash), storing nav state only in
-  // history.state. poppingRef suppresses the echo when a popstate-driven setState
+  // through screens instead of leaving the app. Each entry also writes its '#/…' hash
+  // (hash, not path: GitHub Pages has no SPA fallback), which is what makes screens
+  // deep-linkable — popstate still reads history.state; the hash is only parsed on a
+  // cold load. Hand-editing the hash mid-session is ignored (a state-less entry), same
+  // as before. poppingRef suppresses the echo when a popstate-driven setState
   // re-triggers the sync effect; historyReadyRef makes the first authed screen a
   // replaceState baseline and pushes thereafter.
   const poppingRef = React.useRef(false);
@@ -605,26 +736,37 @@ function App() {
   }, [flushSave]);
 
   useEffect(() => {
-    if (booting || !currentUser) { historyReadyRef.current = false; return; }
+    if (booting || !currentUser) {
+      historyReadyRef.current = false;
+      // Signed out: a stale '#/hero/…' over the auth screen is noise — scrub it.
+      // The '#/' check guarantees an OAuth '#access_token' fragment is never touched.
+      if (!booting && window.location.hash.startsWith('#/')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+      return;
+    }
     if (poppingRef.current) { poppingRef.current = false; return; }  // came from Back/Forward
+    // A resolving deep link renders one roster-shaped commit before the resolved
+    // screen; writing the baseline for it would wedge a synthetic '#/' entry
+    // under every refreshed deep link. Skip exactly that commit.
+    if (resolvingNavRef.current) { resolvingNavRef.current = false; return; }
     const loc = { dsNav: { view, activeId, activeCampaignId } };
+    const hash = navToHash({ view, activeId, activeCampaignId });
     if (!historyReadyRef.current) {
-      window.history.replaceState(loc, '');   // baseline entry for this session
+      window.history.replaceState(loc, '', hash);   // baseline entry for this session
       historyReadyRef.current = true;
     } else {
-      window.history.pushState(loc, '');
+      window.history.pushState(loc, '', hash);
     }
   }, [view, activeId, activeCampaignId, booting, currentUser]);
 
-  // ─── Tweaks: theme + surface opacity ───
-  const [tw, setTweak] = useTweaks({
-    theme: 'obsidian',
-    surfaceAlpha: 0.85,
-  });
+  // ─── Surface opacity ───
+  // The :root default is 1; the app is designed at 0.85 and every --surface-*
+  // token multiplies through this. (data-theme is stamped by index.html; in dev
+  // the TweaksHost can override both live.)
   useEffect(() => {
-    document.body.dataset.theme = tw.theme;
-    document.body.style.setProperty('--surface-alpha', String(tw.surfaceAlpha));
-  }, [tw.theme, tw.surfaceAlpha]);
+    document.body.style.setProperty('--surface-alpha', '0.85');
+  }, []);
 
   // The roster / campaign views share the top app bar; the wizard & play views
   // own their full chrome and stand alone.
@@ -641,8 +783,7 @@ function App() {
 
         {booting ? (
           <div className="auth-wrap"><div className="auth-card">
-            <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
-            <div className="auth-sub" style={{ marginTop: 24 }}>Opening the Liber Heroum…</div>
+            <Masthead heading={false} sub="Opening the Liber Heroum…" />
           </div></div>
         ) : !currentUser ? (
           <AuthScreen onProvider={doProvider} />
@@ -739,30 +880,27 @@ function App() {
                 onExit={goBackFromHero}
                 onEdit={editable ? () => setView('wizard') : null}
                 canEdit={editable}
+                saveState={editable ? saveState : null}
+                owner={users.find(u => u.id === active.ownerId) || null}
+                onError={reportSyncError}
               />
             );
           })()
         ) : null}
 
-        {currentUser && (
-          <TweaksPanel>
-            <TweakSection label="Theme" />
-            <TweakRadio
-              label="Scheme"
-              value={tw.theme}
-              options={[
-                { value: 'obsidian',  label: 'Obsidian' },
-                { value: 'reliquary', label: 'Reliquary' },
-              ]}
-              onChange={(v) => setTweak('theme', v)}
-            />
-            <TweakSlider
-              label="Surface opacity"
-              value={tw.surfaceAlpha}
-              min={0.4} max={1} step={0.05}
-              onChange={(v) => setTweak('surfaceAlpha', v)}
-            />
-          </TweaksPanel>
+        {currentUser?.isAllowed && (
+          <SyncPill
+            saveState={view === 'wizard' || view === 'play' ? null : saveState}
+            syncError={syncError}
+            onRetry={retrySave}
+            onDismiss={() => setSyncError(null)}
+          />
+        )}
+
+        {TweaksHost && currentUser && (
+          <React.Suspense fallback={null}>
+            <TweaksHost />
+          </React.Suspense>
         )}
       </div>
     </>
@@ -891,7 +1029,8 @@ function summarizeBenefits(c) {
   // Languages — show actual picks if any, otherwise the +N text.
   const languages = [];
   languages.push({ source: 'Standard', text: 'Caelian' });
-  if (cu && cu.language) languages.push({ source: 'Culture', text: cu.language });
+  // Everyone knows Caelian, so a Caelian culture pick would render as a duplicate row.
+  if (cu && cu.language && cu.language !== 'Caelian') languages.push({ source: 'Culture', text: cu.language });
   if (car && car.languages > 0) {
     const picks = c.career?.languages || [];
     if (picks.length) languages.push({ source: car.name, text: picks.join(' \u00b7 ') });
@@ -1122,4 +1261,5 @@ export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
 export { canEditCharacterFor };
+export { parseHash, navToHash };
 export { App };

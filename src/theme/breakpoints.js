@@ -24,9 +24,8 @@ export const MQ = {
   rail:  `@media (max-width: ${BP.rail}px)`,
   tab:   `@media (max-width: ${BP.tab}px)`,
   phone: `@media (max-width: ${BP.phone}px)`,
-  // Capability queries, deliberately not width-based: `hover` guards styles that
-  // latch on touch, `touch` reveals affordances that are hover-only on desktop.
-  // These also catch touch laptops, which a width query would miss.
-  hover: '@media (hover: hover)',
+  // Capability query, deliberately not width-based: `touch` reveals affordances
+  // that are hover-only on desktop, and also catches touch laptops, which a
+  // width query would miss.
   touch: '@media (hover: none)',
 };

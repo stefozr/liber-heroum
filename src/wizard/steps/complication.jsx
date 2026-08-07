@@ -61,7 +61,7 @@ function ComplicationStep({ character, update }) {
           Roll the dice and let fate decide, or browse and choose the thread you'll carry.
         </div>
         <div style={{display:'flex', gap:10}}>
-          <Button kind={sel ? 'ghost' : 'primary'} small onClick={skip}>SKIP COMPLICATIONS</Button>
+          <Button kind="ghost" small onClick={skip}>SKIP COMPLICATIONS</Button>
           <Button kind="ghost" small onClick={roll}>⚄ ROLL d100</Button>
         </div>
       </div>
@@ -167,9 +167,9 @@ function ComplicationStep({ character, update }) {
             <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em', color:'var(--ink)', paddingRight:16}}>{c.name}</div>
             <div style={{marginTop: 10, display:'grid', gridTemplateColumns:'auto 1fr', gap: '4px 12px', alignItems:'start'}}>
               <Tag kind="gold">Benefit</Tag>
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.5}}>{c.benefit}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-7)', color:'var(--ink-2)', lineHeight:1.5}}>{c.benefit}</div>
               <Tag kind="rubric">Drawback</Tag>
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.5}}>{c.drawback}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-7)', color:'var(--ink-2)', lineHeight:1.5}}>{c.drawback}</div>
             </div>
           </SelCard>
         ))}

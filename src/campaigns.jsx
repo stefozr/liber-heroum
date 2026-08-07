@@ -20,10 +20,12 @@ const CAMPAIGN_CSS = `
 .cmp-page-head .titles .sub { font-family: var(--hand); font-style: italic; font-size: 1.125rem; color: var(--gold-2); margin-top: 10px; }
 .cmp-actions { display: flex; gap: 10px; }
 
-.cmp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; margin-top: 30px; }
+/* Capped track width + centering: with 1-2 campaigns, uncapped auto-fill left
+   the cards huddled hard-left in a 1180px void. */
+.cmp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 440px)); justify-content: center; gap: 18px; margin-top: 30px; }
 .cmp-card {
   border: 1px solid var(--line-2); background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-  padding: 0; cursor: pointer; transition: all .18s; position: relative; overflow: hidden;
+  padding: 0; cursor: pointer; transition: border-color .18s, transform .18s, box-shadow .18s; position: relative; overflow: hidden;
   display: flex; flex-direction: column; min-height: 188px;
 }
 .cmp-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 0 22px rgba(176,138,72,0.12); }
@@ -32,19 +34,19 @@ const CAMPAIGN_CSS = `
 }
 .cmp-card .cc-body { padding: 18px 20px 14px; flex: 1; }
 .cmp-card .cc-role {
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.2em; text-transform: uppercase;
   border: 1px solid var(--line-2); color: var(--ink-3); padding: 3px 9px; display: inline-block;
 }
 .cmp-card .cc-role.director { border-color: var(--gold); color: var(--gold-2); }
-.cmp-card .cc-name { font-family: var(--display); font-size: 1.5rem; letter-spacing: 0.04em; color: var(--ink); margin-top: 12px; line-height: 1.1; }
-.cmp-card .cc-desc { font-family: var(--serif); font-size: 0.875rem; color: var(--ink-2); line-height: 1.5; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cmp-card .cc-name { font-family: var(--display); font-size: 1.5rem; letter-spacing: 0.04em; color: var(--ink); margin-top: 12px; line-height: 1.1; font-variant-ligatures: none; }
+.cmp-card .cc-desc { font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.5; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cmp-card .cc-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 11px 20px; border-top: 1px solid var(--line);
-  font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase;
 }
 .cmp-card .cc-avatars { display: flex; }
-.cmp-card .cc-avatars .ds-avatar { margin-left: -7px; border-color: var(--bg-1); box-shadow: 0 0 0 1px var(--line-2); }
+.cmp-card .cc-avatars .ds-avatar { margin-left: -4px; border-color: var(--bg-1); box-shadow: 0 0 0 1px var(--line-2); }
 .cmp-card .cc-avatars .ds-avatar:first-child { margin-left: 0; }
 .cmp-card .cc-more { margin-left: 5px; }
 
@@ -53,12 +55,12 @@ const CAMPAIGN_CSS = `
 }
 .cmp-empty .e-glyph { font-family: var(--display); font-size: 2.5rem; color: var(--gold); opacity: 0.4; }
 .cmp-empty .e-title { font-family: var(--display); font-size: 1.25rem; letter-spacing: 0.12em; color: var(--gold-2); margin-top: 14px; }
-.cmp-empty .e-sub { font-family: var(--hand); font-style: italic; color: var(--ink-2); font-size: 1rem; margin-top: 8px; }
+.cmp-empty .e-sub { font-family: var(--hand); font-style: italic; color: var(--ink-2); font-size: var(--fs-9); margin-top: 8px; }
 
 /* Detail */
 .cmp-back {
   background: transparent; border: none; cursor: pointer; color: var(--ink-3);
-  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.2em; text-transform: uppercase;
   padding: 0; margin-bottom: 22px; display: inline-flex; gap: 8px; align-items: center;
 }
 .cmp-back:hover { color: var(--gold-2); }
@@ -68,22 +70,22 @@ const CAMPAIGN_CSS = `
   padding: 24px 26px; position: relative;
 }
 .cmp-detail-head .role-tag {
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.22em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.22em; text-transform: uppercase;
   border: 1px solid var(--line-2); color: var(--ink-3); padding: 4px 10px;
 }
 .cmp-detail-head .role-tag.director { border-color: var(--gold); color: var(--gold-2); }
 .cmp-detail-head h1 { font-family: var(--display); font-weight: 700; font-size: 2.25rem; letter-spacing: 0.05em; color: var(--ink); margin: 12px 0 0; line-height: 1.05; }
-.cmp-detail-head .desc { font-family: var(--serif); font-size: 0.9375rem; color: var(--ink-2); line-height: 1.6; margin-top: 12px; max-width: 720px; }
+.cmp-detail-head .desc { font-family: var(--serif); font-size: var(--fs-8); color: var(--ink-2); line-height: 1.6; margin-top: 12px; max-width: 720px; }
 .cmp-detail-head .head-tools { position: absolute; top: 22px; right: 24px; display: flex; gap: 8px; }
 
 .cmp-sigil {
   display: inline-flex; align-items: stretch; margin-top: 18px; border: 1px solid var(--gold-deep);
 }
-.cmp-sigil .sg-label { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); display: grid; place-items: center; padding: 0 12px; border-right: 1px solid var(--line); background: rgba(0,0,0,0.2); }
+.cmp-sigil .sg-label { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); display: grid; place-items: center; padding: 0 12px; border-right: 1px solid var(--line); background: rgba(0,0,0,0.2); }
 .cmp-sigil .sg-code { font-family: var(--display); font-size: 1.125rem; letter-spacing: 0.3em; color: var(--gold-2); padding: 9px 16px; }
 .cmp-sigil .sg-copy {
   background: transparent; border: none; border-left: 1px solid var(--line); cursor: pointer;
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.16em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--ink-3); padding: 0 14px;
 }
 .cmp-sigil .sg-copy:hover { color: var(--gold-2); background: rgba(176,138,72,0.06); }
@@ -95,62 +97,62 @@ const CAMPAIGN_CSS = `
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-2);
   background: rgba(255,255,255,0.012); padding: 8px 12px 8px 8px;
 }
-.member-chip .mc-name { font-family: var(--display-2); font-size: 0.8125rem; letter-spacing: 0.04em; color: var(--ink); }
-.member-chip .mc-tag { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+.member-chip .mc-name { font-family: var(--display-2); font-size: var(--fs-6); letter-spacing: 0.04em; color: var(--ink); }
+.member-chip .mc-tag { font-family: var(--mono); font-size: var(--fs-1); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
 .member-chip .mc-tag.director { color: var(--gold-2); }
-.member-chip .mc-kick { background: transparent; border: none; cursor: pointer; color: var(--ink-4); font-size: 0.875rem; padding: 0 2px 0 6px; }
+.member-chip .mc-kick { background: transparent; border: none; cursor: pointer; color: var(--ink-4); font-size: var(--fs-7); padding: 0 2px 0 6px; }
 .member-chip .mc-kick:hover { color: var(--rubric-2); }
 
 .party-group { margin-bottom: 26px; }
 .party-group .pg-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.party-group .pg-head .pg-name { font-family: var(--display-2); font-size: 0.8125rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); }
-.party-group .pg-head .pg-you { font-family: var(--mono); font-size: 0.53125rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--line-2); padding: 2px 7px; }
+.party-group .pg-head .pg-name { font-family: var(--display-2); font-size: var(--fs-6); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); }
+.party-group .pg-head .pg-you { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--line-2); padding: 2px 7px; }
 .party-group .pg-line { flex: 1; height: 1px; background: var(--line); }
 
 .party-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .ph-card {
   border: 1px solid var(--line-2); background: var(--bg-1); cursor: pointer; overflow: hidden;
-  display: flex; transition: all .16s; min-height: 92px;
+  display: flex; transition: border-color .16s, transform .16s, box-shadow .16s; min-height: 92px;
 }
 .ph-card:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
 .ph-card .ph-img { width: 84px; flex-shrink: 0; background-size: cover; background-position: center top; background-color: var(--bg-3); }
 .ph-card .ph-img.empty { display: grid; place-items: center; color: var(--gold); opacity: 0.4; font-family: var(--display); font-size: 1.625rem; }
 .ph-card .ph-body { padding: 11px 14px; flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 .ph-card .ph-name { font-family: var(--display); font-size: 1.0625rem; letter-spacing: 0.03em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ph-card .ph-meta { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ph-card .ph-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.ph-card .ph-lvl { font-family: var(--display); font-size: 0.625rem; letter-spacing: 0.16em; color: var(--gold); }
-.ph-card .ph-status { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; }
+.ph-card .ph-meta { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-card .ph-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ph-card .ph-lvl { font-family: var(--display-2); font-size: var(--fs-3); letter-spacing: 0.16em; color: var(--gold); white-space: nowrap; }
+.ph-card .ph-status { font-family: var(--mono); font-size: var(--fs-1); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; white-space: nowrap; }
 .ph-card .ph-status.wip { color: var(--rubric-2); }
-.ph-card .ph-edit { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); border: 1px solid var(--gold-deep); padding: 2px 6px; }
+.ph-card .ph-edit { font-family: var(--mono); font-size: var(--fs-1); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); border: 1px solid var(--gold-deep); padding: 2px 6px; }
 
 .add-hero-card {
   border: 1px dashed var(--line-2); background: transparent; cursor: pointer;
   display: grid; place-items: center; min-height: 92px; text-align: center; padding: 14px;
-  transition: all .16s;
+  transition: border-color .16s, background .16s;
 }
 .add-hero-card:hover { border-color: var(--gold); border-style: solid; background: rgba(176,138,72,0.04); }
 .add-hero-card .ah-glyph { font-family: var(--display); font-size: 1.375rem; color: var(--gold); }
-.add-hero-card .ah-text { font-family: var(--display-2); font-size: 0.6875rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); margin-top: 6px; }
+.add-hero-card .ah-text { font-family: var(--display-2); font-size: var(--fs-4); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); margin-top: 6px; }
 
 .assign-row {
   display: flex; align-items: center; gap: 12px; border: 1px solid var(--line-2);
   padding: 10px 12px; cursor: pointer; transition: border-color .14s, background .14s;
 }
 .assign-row:hover { border-color: var(--gold); background: rgba(176,138,72,0.05); }
-.assign-row .ar-name { font-family: var(--display-2); font-size: 0.875rem; color: var(--ink); }
-.assign-row .ar-meta { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
-.assign-row .ar-where { margin-left: auto; font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-2); }
+.assign-row .ar-name { font-family: var(--display-2); font-size: var(--fs-7); color: var(--ink); }
+.assign-row .ar-meta { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
+.assign-row .ar-where { margin-left: auto; font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-2); }
 
 /* Roster hero-card "add to campaign" control */
 .hc-camp {
   background: transparent; border: none; cursor: pointer; color: var(--ink-3);
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.12em; text-transform: uppercase;
   padding: 4px 0; transition: color .12s; white-space: nowrap;
   position: relative;
 }
 /* Touch target without changing the visual size (padding no longer supplies it). */
-.hc-camp::after { content: ''; position: absolute; inset: -9px; }
+.hc-camp::after { content: ''; position: absolute; inset: -9px -7px; }
 .hc-camp:hover { color: var(--gold-2); }
 
 /* ══════════════════════ Responsive ══════════════════════ */
@@ -160,13 +162,14 @@ ${MQ.tab} {
   .cmp-page-head .titles h1 { font-size: 2rem; }
   .cmp-detail-head h1 { font-size: 1.875rem; }
   .cmp-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-  .party-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  /* 300px min → two roomy tracks instead of three that crush hero names. */
+  .party-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
 ${MQ.phone} {
   .cmp-inner { padding: 24px max(16px, env(safe-area-inset-left)) 48px max(16px, env(safe-area-inset-right)); }
   .cmp-page-head .titles h1 { font-size: 1.75rem; }
-  .cmp-page-head .sub { font-size: 1rem; }
+  .cmp-page-head .sub { font-size: var(--fs-9); }
   .cmp-detail-head { padding: 18px 16px; }
   .cmp-detail-head h1 { font-size: 1.625rem; }
   /* Absolutely positioned, so on a narrow head it lands on top of the h1. */
@@ -203,23 +206,25 @@ function heroPortrait(c) {
 }
 
 // ───────── Compact party hero card ─────────
-function PartyHeroCard({ character, canEdit, onOpen }) {
+// editLabel names WHY you can edit ("Edit", "Edit · Director", "Edit · Admin") —
+// the same chip used to mean three different things across two screens.
+function PartyHeroCard({ character, canEdit, onOpen, editLabel = 'Edit' }) {
   const c = character;
   const bg = heroPortrait(c);
   const wip = c.status !== 'complete';
   return (
-    <div className="ph-card" onClick={onOpen}>
+    <button type="button" className="card-btn ph-card" onClick={onOpen}>
       <div className={`ph-img ${bg ? '' : 'empty'}`} style={bg ? { backgroundImage: `url(${bg})` } : {}}>{bg ? '' : '✠'}</div>
       <div className="ph-body">
         <div className="ph-name">{heroName(c)}</div>
         <div className="ph-meta">{heroSummary(c)}</div>
         <div className="ph-foot">
           <span className="ph-lvl">LVL {c.level || 1}</span>
-          {canEdit && <span className="ph-edit">{wip ? 'Resume' : 'Edit'}</span>}
-          <span className={`ph-status ${wip ? 'wip' : ''}`}>{wip ? 'In Progress' : 'Chronicled'}</span>
+          {canEdit && <span className="ph-edit">{wip ? 'Resume' : editLabel}</span>}
+          <span className={`ph-status ${wip ? 'wip' : ''}`} title={wip ? 'Chapters of the creation wizard remain' : 'This hero is complete and ready for play'}>{wip ? 'In Progress' : 'Chronicled'}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -253,10 +258,11 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
           <div className="titles">
             <h1>Campaigns</h1>
             <div className="sub">The companies you keep, and the tables you hold</div>
+            <div className="sub" style={{ marginTop: 4, color: 'var(--ink-3)' }}>A sigil is a short invite code — ask your Director for theirs.</div>
           </div>
           <div className="cmp-actions">
             <Button kind="ghost" onClick={() => { setError(''); setJoinOpen(true); }}>Join by Sigil</Button>
-            <Button kind="primary" onClick={() => { setError(''); setCreateOpen(true); }}>✦ Found a Campaign</Button>
+            <Button kind="primary" onClick={() => { setError(''); setCreateOpen(true); }}>✦ Start a Campaign</Button>
           </div>
         </div>
 
@@ -266,7 +272,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
           <div className="cmp-empty">
             <div className="e-glyph">✠</div>
             <div className="e-title">NO BANNERS RAISED</div>
-            <div className="e-sub">Found a campaign to lead as Director, or join a friend's table with its sigil.</div>
+            <div className="e-sub">Start a campaign to lead as Director, or join a friend's table with its sigil.</div>
           </div>
         ) : (
           <div className="cmp-grid">
@@ -276,7 +282,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
               const heroCount = chars.filter(ch => ch.campaignId === c.id).length;
               const shown = members.slice(0, 5);
               return (
-                <div key={c.id} className="cmp-card" onClick={() => onOpen(c.id)}>
+                <button type="button" key={c.id} className="card-btn cmp-card" onClick={() => onOpen(c.id)}>
                   <div className="cc-band"></div>
                   <div className="cc-body">
                     <span className={`cc-role ${isGM ? 'director' : ''}`}>{isGM ? '✦ Director' : 'Player'}</span>
@@ -290,7 +296,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
                     </div>
                     <span>{heroCount} {heroCount === 1 ? 'hero' : 'heroes'}</span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -301,13 +307,13 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
       <Modal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Found a Campaign"
+        title="Start a Campaign"
         width={520}
         footer={(
           <>
             <Button kind="ghost" onClick={() => setCreateOpen(false)}>◂ CANCEL</Button>
             <div style={{ flex: 1 }}></div>
-            <Button kind="primary" onClick={submitCreate}>RAISE THE BANNER ✦</Button>
+            <Button kind="primary" onClick={submitCreate}>RAISE THE BANNER ▸</Button>
           </>
         )}
       >
@@ -334,7 +340,7 @@ function CampaignHub({ user, campaigns, users, chars, onOpen, onCreate, onJoin }
           <>
             <Button kind="ghost" onClick={() => setJoinOpen(false)}>◂ CANCEL</Button>
             <div style={{ flex: 1 }}></div>
-            <Button kind="primary" onClick={submitJoin}>JOIN THE TABLE →</Button>
+            <Button kind="primary" onClick={submitJoin}>JOIN THE TABLE ▸</Button>
           </>
         )}
       >
@@ -400,13 +406,15 @@ function CampaignDetail({
         <button className="cmp-back" onClick={onBack}>◂ All Campaigns</button>
 
         <div className="cmp-detail-head">
+          <span className={`role-tag ${isGM ? 'director' : ''}`}>{isGM ? '✦ You are Director' : 'You are a Player'}</span>
+          <h1>{campaign.name}</h1>
+          {/* After the title in DOM order: desktop positions it absolutely (order-
+              independent); on phones it goes static and must flow BELOW the h1. */}
           {isGM && (
             <div className="head-tools">
               <Button kind="ghost" small onClick={() => setSettingsOpen(true)}>⚙ Manage</Button>
             </div>
           )}
-          <span className={`role-tag ${isGM ? 'director' : ''}`}>{isGM ? '✦ You are Director' : 'You are a Player'}</span>
-          <h1>{campaign.name}</h1>
           {campaign.description && <div className="desc">{campaign.description}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
@@ -415,7 +423,7 @@ function CampaignDetail({
               <span className="sg-code">{campaign.inviteCode}</span>
               <button className="sg-copy" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy'}</button>
             </div>
-            <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: '0.84375rem', color: 'var(--ink-3)' }}>
+            <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 'var(--fs-7)', color: 'var(--ink-3)' }}>
               Share this so players can join the table.
             </span>
           </div>
@@ -463,15 +471,15 @@ function CampaignDetail({
               </div>
               <div className="party-grid">
                 {g.heroes.map(c => (
-                  <PartyHeroCard key={c.id} character={c} canEdit={canEdit} onOpen={() => onOpenHero(c.id)} />
+                  <PartyHeroCard key={c.id} character={c} canEdit={canEdit} editLabel={isMe ? 'Edit' : 'Edit · Director'} onOpen={() => onOpenHero(c.id)} />
                 ))}
                 {isMe && (
-                  <div className="add-hero-card" onClick={() => (myUnassigned.length ? setAssignOpen(true) : onCreateHero(campaign.id))}>
+                  <button type="button" className="card-btn add-hero-card" onClick={() => (myUnassigned.length ? setAssignOpen(true) : onCreateHero(campaign.id))}>
                     <div>
                       <div className="ah-glyph">✠</div>
                       <div className="ah-text">{myUnassigned.length ? 'Add a Hero' : 'Forge a Hero'}</div>
                     </div>
-                  </div>
+                  </button>
                 )}
                 {g.heroes.length === 0 && !isMe && (
                   <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink-3)', fontSize: '0.875rem', alignSelf: 'center' }}>
@@ -498,7 +506,7 @@ function CampaignDetail({
           <>
             <Button kind="ghost" onClick={() => setAssignOpen(false)}>◂ CLOSE</Button>
             <div style={{ flex: 1 }}></div>
-            <Button kind="primary" onClick={() => { setAssignOpen(false); onCreateHero(campaign.id); }}>✠ Forge a New One</Button>
+            <Button kind="primary" onClick={() => { setAssignOpen(false); onCreateHero(campaign.id); }}>FORGE A NEW ONE ▸</Button>
           </>
         )}
       >
@@ -509,14 +517,14 @@ function CampaignDetail({
           {myUnassigned.map(c => {
             const inOther = c.campaignId && c.campaignId !== campaign.id;
             return (
-              <div key={c.id} className="assign-row" onClick={() => { onAssign(c.id, campaign.id); setAssignOpen(false); }}>
+              <button type="button" key={c.id} className="card-btn assign-row" onClick={() => { onAssign(c.id, campaign.id); setAssignOpen(false); }}>
                 <Avatar user={user} size={30} />
                 <div>
                   <div className="ar-name">{heroName(c)}</div>
                   <div className="ar-meta">{heroSummary(c)} · Lvl {c.level || 1}</div>
                 </div>
                 {inOther && <span className="ar-where">moves tables</span>}
-              </div>
+              </button>
             );
           })}
         </div>

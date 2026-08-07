@@ -114,7 +114,9 @@ function renderWizard(c: any) {
   let updated: any = null;
   const update = (fn: any) => { updated = fn(c); };
   const utils = render(<Wizard character={c} update={update} onExit={noop} onComplete={noop} />);
-  return { ...utils, latest: () => updated };
+  // resetUpdates drops the wizard's mount-time write (it records the opening
+  // chapter into wizardVisited) so "no update issued" assertions stay meaningful.
+  return { ...utils, latest: () => updated, resetUpdates: () => { updated = null; } };
 }
 
 describe('subclass picker', () => {
@@ -447,10 +449,11 @@ describe('language conflict between culture and career', () => {
     const c = atStep(cultureStep, { career: 'agent' }); // agent grants 2 languages
     expect(c.career.languages.length).toBe(2);
     const claimed = c.career.languages[0];
-    const { container, latest } = renderWizard(c);
+    const { container, latest, resetUpdates } = renderWizard(c);
     const card = Array.from(container.querySelectorAll('.card'))
       .find(el => el.textContent === claimed) as HTMLElement;
     expect(card.className).toContain('blocked');
+    resetUpdates();
     fireEvent.click(card);
     expect(latest()).toBeNull(); // click swallowed — no update issued
   });

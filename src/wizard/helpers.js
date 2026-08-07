@@ -356,6 +356,16 @@ function ancestryPoints(c) {
   return anc.points;
 }
 
+// Points already spent on purchased traits.
+function ancestrySpent(c) {
+  const anc = DS_ANCESTRIES.find(a => a.id === c?.ancestry?.id);
+  if (!anc) return 0;
+  return (c.ancestry.traits || []).reduce((sum, name) => {
+    const t = (anc.traits || []).find(x => x.name === name);
+    return sum + (t ? t.cost : 0);
+  }, 0);
+}
+
 // Every purchased ancestry trait, resolved to its full definition. The revenant's
 // 'Previous Life: Npt' entries expand into the trait borrowed from the former-life
 // ancestry ({ ...trait, borrowedFrom: <ancestry name> }); when no former life or no
@@ -395,4 +405,21 @@ function resolvedAncestryTraits(c) {
 
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
-export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints };
+// Scroll the wizard body to an anchored section — used after picking a class or
+// career so the configuration panels below the card grid come into view.
+// (Same math as the complication step's roll-to-card scroll.)
+function scrollWizardTo(id) {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const scroller = el.closest('.wiz-step');
+    if (!scroller) return;
+    const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    // Honour reduced-motion (matchMedia is absent under jsdom — treat as no preference).
+    const instant = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    scroller.scrollTo({ top: top - 80, behavior: instant ? 'auto' : 'smooth' });
+  });
+}
+
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent, scrollWizardTo };

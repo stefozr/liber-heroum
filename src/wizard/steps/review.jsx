@@ -10,7 +10,7 @@ import { StepHeader } from '../StepHeader.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-function ReviewStep({ character, update }) {
+function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
   const cls = classDef(character);
   const anc = ancestryDef(character);
   const kit = kitDef(character);
@@ -24,6 +24,9 @@ function ReviewStep({ character, update }) {
   // of Distance, …) — mirror the play sheet so both summaries show final values.
   const distBonuses = collectDistanceBonuses(character);
   const boost = (a) => applyDistanceBonuses(a, distBonuses);
+  // Per-chapter edit links on the summary cards (absent when the step is
+  // rendered standalone, e.g. in tests, where onGoToStep isn't provided).
+  const editStep = (id) => onGoToStep ? () => onGoToStep(DS_STEPS.findIndex(s => s.id === id)) : undefined;
 
   // Readable label for the chosen subclass / domains / order, used under the hero's name and on the Class card.
   const subLabel = (() => {
@@ -84,26 +87,28 @@ function ReviewStep({ character, update }) {
           {[anc && anc.name, cls && cls.name, car && car.name].filter(Boolean).join(' · ')}
         </div>
         {subLabel && (
-          <div style={{fontFamily:'var(--mono)', fontSize: '0.65625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginTop: 6}}>
+          <div style={{fontFamily:'var(--mono)', fontSize: 'var(--fs-4)', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginTop: 6}}>
             {(cls.subclassName || 'Subclass')}: <span style={{color:'var(--ink-2)'}}>{subLabel}</span>
           </div>
         )}
         <div style={{marginTop: 14}}><OrnDivider glyph="✠" size="small" /></div>
+        {/* Recoveries (how many) sits beside Recovery Value (how much each heals)
+            so the near-identical labels explain each other. */}
         <div className="grid-3" style={{gap: 10, marginTop: 16, maxWidth: 700, margin: '16px auto 0'}}>
           <StatTile label="Stamina" value={derived.staminaMax || '—'} gold />
           <StatTile label="Recoveries" value={derived.recoveries || '—'} />
-          <StatTile label="Speed" value={derived.speed || '—'} />
+          <StatTile label="Recovery Value" value={derived.recoveryValue || '—'} />
         </div>
         <div className="grid-4" style={{gap: 10, marginTop: 10, maxWidth: 700, margin: '10px auto 0'}}>
+          <StatTile label="Speed" value={derived.speed || '—'} />
           <StatTile label="Stability" value={derived.stability} />
           <StatTile label="Size" value={derived.size || '—'} />
           <StatTile label="Disengage" value={derived.disengage} />
-          <StatTile label="Recovery" value={derived.recoveryValue || '—'} />
         </div>
       </div>
 
       <div className="grid-2" style={{gap: 16}}>
-        <ReviewBlock title="Ancestry" body={anc ? (
+        <ReviewBlock title="Ancestry" onEdit={editStep('ancestry')} body={anc ? (
           <>
             <div style={{fontFamily:'var(--display)', fontSize: '1rem', color:'var(--ink)', letterSpacing:'0.10em'}}>{anc.name}</div>
             <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:6}}>SIG: {ancestrySignatures(anc).map(s => s.name).join(' · ').toUpperCase()}</div>
@@ -130,31 +135,38 @@ function ReviewStep({ character, update }) {
           </>
         ) : '—'} />
 
-        <ReviewBlock title="Culture" body={cu.environment ? (
+        <ReviewBlock title="Culture" onEdit={editStep('culture')} body={cu.environment ? (
           <>
-            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{cu.archetype || 'Custom'}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop: 6, textTransform:'uppercase'}}>
-              {[cu.environment, cu.organization, cu.upbringing].filter(Boolean).join(' · ')}
+            {/* A hand-built culture is titled by its own aspects, not "Custom". */}
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>
+              {cu.archetype || [
+                (DS_CULTURES.environments.find(x => x.id === cu.environment) || {}).name,
+                (DS_CULTURES.organizations.find(x => x.id === cu.organization) || {}).name,
+                (DS_CULTURES.upbringings.find(x => x.id === cu.upbringing) || {}).name,
+              ].filter(Boolean).join(' · ')}
             </div>
+            {cu.archetype && <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop: 6, textTransform:'uppercase'}}>
+              {[cu.environment, cu.organization, cu.upbringing].filter(Boolean).join(' · ')}
+            </div>}
             {cu.skills && Object.values(cu.skills).filter(Boolean).length > 0 && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8}}>
                 Skills: {Object.values(cu.skills).filter(Boolean).join(', ')}
               </div>
             )}
             <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>
-              Languages: Caelian + {cu.language}
+              Languages: {cu.language && cu.language !== 'Caelian' ? `Caelian + ${cu.language}` : 'Caelian'}
             </div>
           </>
         ) : '—'} />
 
-        <ReviewBlock title="Career" body={car ? (
+        <ReviewBlock title="Career" onEdit={editStep('career')} body={car ? (
           <>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{car.name}</div>
             {character.career.incident && (
               <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6}}>{character.career.incident}</div>
             )}
             {incident?.text && (
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{incident.text}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{incident.text}</div>
             )}
             {character.career.perk && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>Perk: {character.career.perk}</div>
@@ -165,7 +177,7 @@ function ReviewStep({ character, update }) {
           </>
         ) : '—'} />
 
-        <ReviewBlock title="Class" body={cls ? (
+        <ReviewBlock title="Class" onEdit={editStep('class')} body={cls ? (
           <>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{cls.name}</div>
             <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop: 6, textTransform:'uppercase'}}>
@@ -196,26 +208,26 @@ function ReviewStep({ character, update }) {
           </>
         ) : '—'} />
 
-        <ReviewBlock title="Kit" body={kit ? (
+        <ReviewBlock title="Kit" onEdit={editStep('class')} body={kit ? (
           <>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{kit.name}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>{kit.armor} · {kit.weapon}</div>
+            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>Armor: {kit.armor} · Weapon: {kit.weapon}</div>
             <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--gold-2)', marginTop:5}}>{parseKitSig(kit.sig).name}</div>
             {kit2 && (
               <>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, marginTop:8}}>{kit2.name}</div>
-                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>{kit2.armor} · {kit2.weapon}</div>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:6, textTransform:'uppercase'}}>Armor: {kit2.armor} · Weapon: {kit2.weapon}</div>
                 <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--gold-2)', marginTop:5}}>{parseKitSig(kit2.sig).name}</div>
               </>
             )}
           </>
         ) : '—'} />
 
-        <ReviewBlock title="Complication" body={comp ? (
+        <ReviewBlock title="Complication" onEdit={editStep('complication')} body={comp ? (
           <>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{comp.name}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>+ {comp.benefit}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>+ {comp.benefit}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>
             {character.complication.custom && (
               <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6, lineHeight:1.5}}>{character.complication.custom}</div>
             )}
@@ -255,7 +267,8 @@ function ReviewStep({ character, update }) {
                       : <><b style={{color:'var(--ink)'}}>{benefits.perk.group}</b> <span style={{color:'var(--ink-3)'}}> perk group</span></>}
                   </div>
                   {benefits.perk.chosen && benefits.perk.desc && (
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop: 5, whiteSpace:'pre-line'}}>{benefits.perk.desc}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', lineHeight:1.5, marginTop: 5, whiteSpace:'pre-line',
+                      display:'-webkit-box', WebkitLineClamp:4, WebkitBoxOrient:'vertical', overflow:'hidden'}} title={benefits.perk.desc}>{benefits.perk.desc}</div>
                   )}
                 </div>
               )}
@@ -342,19 +355,47 @@ function ReviewStep({ character, update }) {
 
       <div className="orn-frame" style={{padding: '20px 24px', textAlign:'center'}}>
         <GlyphRow>✠ · ❦ · ✠</GlyphRow>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: '1rem', marginTop: 10, maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
-          The rites are complete. Commit to the Liber Heroum, and your hero takes their first breath as a stalwart of Orden.
-        </div>
+        {incompleteSteps.length === 0 ? (
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: '1rem', marginTop: 10, maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
+            The rites are complete. Commit to the Liber Heroum, and your hero takes their first breath as a stalwart of Orden.
+          </div>
+        ) : (
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '1rem', marginTop: 10, maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
+            {incompleteSteps.length === 1 ? 'One chapter remains unfinished: ' : `${incompleteSteps.length} chapters remain unfinished: `}
+            {incompleteSteps.map(({ s, i }, idx) => (
+              <React.Fragment key={s.id}>
+                {idx > 0 && ', '}
+                {onGoToStep
+                  ? <button type="button" onClick={() => onGoToStep(i)}
+                      style={{background:'none', border:'none', padding:0, cursor:'pointer', font:'inherit', color:'var(--gold-2)', textDecoration:'underline', textUnderlineOffset:3}}>
+                      {s.name}
+                    </button>
+                  : s.name}
+              </React.Fragment>
+            ))}
+            {'. The hero may be kept as a draft, but cannot take the field until every rite is done.'}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 
-function ReviewBlock({ title, body }) {
+// onEdit is optional — the standalone ReviewStep (tests, previews) renders the
+// same card without the corner link.
+function ReviewBlock({ title, body, onEdit }) {
   return (
-    <div className="orn-frame" style={{padding:'16px 20px', minHeight: 120}}>
+    <div className="orn-frame" style={{padding:'16px 20px', minHeight: 120, position:'relative'}}>
       <H4Meta>{title}</H4Meta>
+      {onEdit && (
+        <button type="button" onClick={onEdit} title={`Return to the ${title} chapter`}
+          style={{position:'absolute', top:12, right:14, background:'none', border:'none', cursor:'pointer',
+            fontFamily:'var(--mono)', fontSize:'0.5625rem', letterSpacing:'0.16em', textTransform:'uppercase',
+            color:'var(--gold-2)', padding:'4px 0'}}>
+          edit ▸
+        </button>
+      )}
       <div>{body}</div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Modal } from './theme.jsx';
+import { Button, Modal, TopBar } from './theme.jsx';
 import { DS } from './backend.jsx';
 import { MQ } from './theme/breakpoints.js';
 // auth.jsx — identity surfaces: avatars, the login gate, the app bar, the account menu.
@@ -16,27 +16,13 @@ const ACCOUNT_CSS = `
 }
 .ds-avatar.square { border-radius: 0; }
 
-/* App bar — only on the logged-in roster / campaign chrome */
+/* App bar — only on the logged-in roster / campaign chrome. Bar geometry/type
+   comes from the shared .topbar (theme/styles.js); only the nav lives here. */
 .ds-shell { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .ds-shell-body { flex: 1; min-height: 0; position: relative; }
-.ds-appbar {
-  display: flex; align-items: center; gap: 18px;
-  padding: 12px 28px; border-bottom: 1px solid var(--line);
-  background: rgba(8,8,10,0.78); backdrop-filter: blur(8px);
-  position: relative; z-index: 40; flex-shrink: 0;
-}
-.ds-appbar .ab-brand {
-  font-family: var(--display); font-weight: 700; font-size: 0.9375rem;
-  letter-spacing: 0.26em; color: var(--gold-2); white-space: nowrap;
-}
-.ds-appbar .ab-mark {
-  width: 30px; height: 30px; display: grid; place-items: center;
-  border: 1px solid var(--gold); color: var(--gold); font-family: var(--display); font-size: 0.9375rem;
-  flex-shrink: 0;
-}
-.ds-nav { display: flex; gap: 4px; margin-left: 8px; }
+.ds-nav { display: flex; gap: 4px; }
 .ds-nav .ds-tab {
-  font-family: var(--display-2); font-size: 0.6875rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--display-2); font-size: var(--fs-4); letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--ink-3); background: transparent; border: none; cursor: pointer;
   padding: 9px 16px; border-bottom: 2px solid transparent; transition: color .14s, border-color .14s;
   display: inline-flex; align-items: center; gap: 8px;
@@ -44,8 +30,13 @@ const ACCOUNT_CSS = `
 .ds-nav .ds-tab:hover { color: var(--ink); }
 .ds-nav .ds-tab.on { color: var(--ink); border-bottom-color: var(--gold); }
 .ds-nav .ds-tab .ds-count {
-  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
-  border: 1px solid var(--line-2); padding: 1px 6px;
+  font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3);
+  border: 1px solid var(--line-2);
+  /* letter-spacing 0: the tab's 0.2em display tracking would otherwise inherit
+     and add trailing space after the last digit, shoving it off-center. */
+  letter-spacing: 0; line-height: 1;
+  display: inline-grid; place-items: center;
+  min-width: 1.6em; padding: 2px 5px;
 }
 
 /* Account button + dropdown */
@@ -56,8 +47,8 @@ const ACCOUNT_CSS = `
   color: var(--ink-2); transition: border-color .14s;
 }
 .ds-account-btn:hover { border-color: var(--gold-deep); }
-.ds-account-btn .nm { font-family: var(--display-2); font-size: 0.75rem; letter-spacing: 0.08em; color: var(--ink); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ds-account-btn .cv { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3); }
+.ds-account-btn .nm { font-family: var(--display-2); font-size: var(--fs-5); letter-spacing: 0.08em; color: var(--ink); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-account-btn .cv { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3); }
 .ds-menu {
   position: absolute; top: calc(100% + 8px); right: 0; width: 290px; z-index: 60;
   background: linear-gradient(180deg, var(--bg-2), var(--bg-0));
@@ -65,17 +56,17 @@ const ACCOUNT_CSS = `
   box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(176,138,72,0.2);
 }
 .ds-menu .m-head { padding: 16px 16px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; }
-.ds-menu .m-head .nm { font-family: var(--display-2); font-size: 0.875rem; letter-spacing: 0.06em; color: var(--ink); }
-.ds-menu .m-head .em { font-family: var(--mono); font-size: 0.59375rem; color: var(--ink-3); letter-spacing: 0.06em; margin-top: 3px; word-break: break-all; }
-.ds-menu .m-prov { font-family: var(--mono); font-size: 0.53125rem; color: var(--gold-2); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 5px; }
-.ds-menu .m-section { font-family: var(--mono); font-size: 0.53125rem; color: var(--ink-3); letter-spacing: 0.24em; text-transform: uppercase; padding: 12px 16px 6px; }
+.ds-menu .m-head .nm { font-family: var(--display-2); font-size: var(--fs-7); letter-spacing: 0.06em; color: var(--ink); }
+.ds-menu .m-head .em { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.06em; margin-top: 3px; word-break: break-all; }
+.ds-menu .m-prov { font-family: var(--mono); font-size: var(--fs-2); color: var(--gold-2); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 5px; }
+.ds-menu .m-section { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.24em; text-transform: uppercase; padding: 12px 16px 6px; }
 .ds-menu .m-item {
   display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; cursor: pointer;
   background: transparent; border: none; padding: 9px 16px; color: var(--ink-2);
-  font-family: var(--serif); font-size: 0.875rem; transition: background .12s, color .12s;
+  font-family: var(--serif); font-size: var(--fs-7); transition: background .12s, color .12s;
 }
 .ds-menu .m-item:hover { background: rgba(176,138,72,0.08); color: var(--ink); }
-.ds-menu .m-item .sub { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3); letter-spacing: 0.08em; margin-left: auto; text-transform: uppercase; }
+.ds-menu .m-item .sub { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.08em; margin-left: auto; text-transform: uppercase; }
 .ds-menu .m-item.danger { color: var(--rubric-2); }
 .ds-menu .m-item.danger:hover { background: rgba(138,58,48,0.10); }
 .ds-menu .m-foot { border-top: 1px solid var(--line); }
@@ -86,10 +77,11 @@ const ACCOUNT_CSS = `
   overflow: auto; display: grid; place-items: center; padding: 40px 20px;
 }
 .auth-card { width: 100%; max-width: 452px; text-align: center; }
-.auth-crown { font-family: var(--display); color: var(--gold); letter-spacing: 0.4em; font-size: 0.8125rem; opacity: 0.7; }
+.auth-crown { font-family: var(--display); color: var(--gold); letter-spacing: 0.4em; font-size: var(--fs-6); opacity: 0.7; }
 .auth-title {
   font-family: var(--display); font-weight: 700; font-size: 2.875rem; letter-spacing: 0.10em;
   color: var(--ink); margin: 14px 0 0; line-height: 1; text-shadow: 0 0 30px rgba(176,138,72,0.18);
+  font-variant-ligatures: none;
 }
 .auth-sub { font-family: var(--hand); font-style: italic; font-size: 1.1875rem; color: var(--gold-2); margin-top: 12px; }
 .auth-panel {
@@ -102,51 +94,59 @@ const ACCOUNT_CSS = `
 .auth-panel .bc-tr { top: -1px; right: -1px; border-top: 2px solid var(--gold-deep); border-right: 2px solid var(--gold-deep); }
 .auth-panel .bc-bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--gold-deep); border-left: 2px solid var(--gold-deep); }
 .auth-panel .bc-br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--gold-deep); border-right: 2px solid var(--gold-deep); }
-.auth-mode-label { font-family: var(--mono); font-size: 0.625rem; color: var(--gold); letter-spacing: 0.28em; text-transform: uppercase; text-align: center; }
+.auth-mode-label { font-family: var(--mono); font-size: var(--fs-3); color: var(--gold); letter-spacing: 0.28em; text-transform: uppercase; text-align: center; }
 .auth-providers { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
 .auth-provider {
   display: flex; align-items: center; gap: 13px; cursor: pointer;
   background: rgba(255,255,255,0.015); border: 1px solid var(--line-2);
   padding: 11px 15px; color: var(--ink); transition: border-color .14s, background .14s;
-  font-family: var(--display-2); font-size: 0.78125rem; letter-spacing: 0.12em;
+  font-family: var(--display-2); font-size: var(--fs-6); letter-spacing: 0.12em;
 }
 .auth-provider:hover { border-color: var(--gold); background: rgba(176,138,72,0.06); }
 .auth-provider .pm {
   width: 26px; height: 26px; display: grid; place-items: center; flex-shrink: 0;
-  border: 1px solid var(--line-strong); font-family: var(--display); font-size: 0.8125rem; color: var(--gold-2);
+  border: 1px solid var(--line-strong); font-family: var(--display); font-size: var(--fs-6); color: var(--gold-2);
 }
-.auth-provider .pgo { margin-left: auto; font-family: var(--mono); font-size: 0.875rem; color: var(--ink-3); }
+.auth-provider .pgo { margin-left: auto; font-family: var(--mono); font-size: var(--fs-7); color: var(--ink-3); }
 .auth-or { display: flex; align-items: center; gap: 12px; margin: 18px 0; }
 .auth-or .ln { flex: 1; height: 1px; background: var(--line-2); }
-.auth-or .tx { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3); letter-spacing: 0.24em; text-transform: uppercase; white-space: nowrap; }
+.auth-or .tx { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.24em; text-transform: uppercase; white-space: nowrap; }
 .auth-fields { display: flex; flex-direction: column; gap: 12px; }
 .auth-error {
-  font-family: var(--serif); font-size: 0.84375rem; color: var(--rubric-2); margin-top: 14px;
+  font-family: var(--serif); font-size: var(--fs-7); color: var(--rubric-2); margin-top: 14px;
   border-left: 2px solid var(--rubric); padding: 6px 0 6px 12px; background: rgba(138,58,48,0.06);
 }
-.auth-toggle { text-align: center; margin-top: 18px; font-family: var(--serif); font-size: 0.84375rem; color: var(--ink-3); }
+.auth-toggle { text-align: center; margin-top: 18px; font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-3); }
 .auth-toggle button {
   background: transparent; border: none; cursor: pointer; color: var(--gold-2);
-  font-family: var(--serif); font-size: 0.84375rem; text-decoration: underline; text-underline-offset: 3px;
+  font-family: var(--serif); font-size: var(--fs-7); text-decoration: underline; text-underline-offset: 3px;
 }
 .auth-toggle button:hover { color: var(--ink); }
-.auth-foot { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-4); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 26px; text-align: center; line-height: 1.7; }
+.auth-foot { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-4); letter-spacing: 0.18em; text-transform: uppercase; margin-top: 26px; text-align: center; line-height: 1.7; }
+.auth-invite-note {
+  font-family: var(--serif); font-style: italic; font-size: var(--fs-7); color: var(--ink-2);
+  margin-top: 16px; text-align: center;
+}
 
 /* ══════════════════════ Responsive ══════════════════════ */
 
 /* Without these the appbar's flex children refuse to shrink below their content
    and push the whole shell past the viewport, where .app clips it. */
-.ds-shell, .ds-shell-body, .ds-appbar, .ds-nav, .ds-account { min-width: 0; }
+.ds-shell, .ds-shell-body, .ds-nav, .ds-account { min-width: 0; }
 
 /* Measured, not a device tier: brand + three counted tabs + the account button
    need ~1030px, so the bar overflows from well above the tablet breakpoint. */
 ${MQ.rail} {
-  .ds-appbar { padding: 11px 16px; gap: 10px; }
-  .ds-appbar .ab-brand { display: none; }
-  /* Tabs scroll rather than pushing the account button off-screen. */
+  /* The three counted tabs need the room more than the brand does. */
+  .ds-appbar .tb-text { display: none; }
+  /* Tabs scroll rather than pushing the account button off-screen. The right-edge
+     fade is the only signal there are more tabs off-screen (scrollbar is hidden) —
+     same pattern as the wizard rail. */
   .ds-nav {
-    margin-left: 0; flex: 1 1 auto;
+    flex: 1 1 auto;
     overflow-x: auto; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
   }
   .ds-nav::-webkit-scrollbar { display: none; }
   .ds-nav .ds-tab { flex: 0 0 auto; padding: 9px 12px; letter-spacing: 0.14em; }
@@ -159,11 +159,7 @@ ${MQ.tab} {
 }
 
 ${MQ.phone} {
-  .ds-appbar {
-    padding: 10px 12px; gap: 8px;
-    padding-top: calc(10px + env(safe-area-inset-top));
-  }
-  .ds-nav .ds-tab { min-height: 44px; padding: 9px 10px; }
+  .ds-nav .ds-tab { min-height: 44px; padding: 9px 10px; letter-spacing: 0.1em; }
   /* The count chip is redundant once space is tight. */
   .ds-nav .ds-tab .ds-count { display: none; }
   .ds-account-btn { padding: 5px 8px 5px 5px; }
@@ -219,6 +215,17 @@ function AuthField({ label, type = 'text', value, onChange, placeholder, autoFoc
   );
 }
 
+// ───────── Brand masthead (auth gate, name prompt, invite wall, boot splash) ─────────
+function Masthead({ sub, heading = true }) {
+  return (
+    <>
+      <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
+      {heading && <h1 className="auth-title">LIBER HEROUM</h1>}
+      {sub && <div className="auth-sub" style={heading ? undefined : { marginTop: 24 }}>{sub}</div>}
+    </>
+  );
+}
+
 // ───────── The login gate ─────────
 // OAuth only (Discord / Google). onProvider throws on failure; we catch + surface.
 function AuthScreen({ onProvider }) {
@@ -234,9 +241,7 @@ function AuthScreen({ onProvider }) {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
-        <h1 className="auth-title">LIBER HEROUM</h1>
-        <div className="auth-sub">The keeping of heroes, bound across many hands</div>
+        <Masthead sub="The keeping of heroes, bound across many hands" />
 
         <div className="auth-panel">
           <span className="bc bc-tl"></span><span className="bc bc-tr"></span>
@@ -255,6 +260,10 @@ function AuthScreen({ onProvider }) {
           </div>
 
           {error && <div className="auth-error">{error}</div>}
+
+          <div className="auth-invite-note">
+            This chronicle is invite-only — sign in with an invited account.
+          </div>
         </div>
 
         <div className="auth-foot">
@@ -285,9 +294,7 @@ function DisplayNamePrompt({ defaultName, onConfirm }) {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
-        <h1 className="auth-title">LIBER HEROUM</h1>
-        <div className="auth-sub">By what name shall you be known?</div>
+        <Masthead sub="By what name shall you be known?" />
 
         <div className="auth-panel">
           <span className="bc bc-tl"></span><span className="bc bc-tr"></span>
@@ -318,12 +325,18 @@ function DisplayNamePrompt({ defaultName, onConfirm }) {
 // Shown between AuthScreen and the app when currentUser.isAllowed is false.
 // Server-side RLS already blocks all data for these accounts; this is the UX.
 function NotInvitedScreen({ user, onSignOut }) {
+  const [copied, setCopied] = useAuthState(false);
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(user.email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard unavailable — the address is visible above */ }
+  };
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="auth-crown">✠ · ❦ · ✦ · ❦ · ✠</div>
-        <h1 className="auth-title">LIBER HEROUM</h1>
-        <div className="auth-sub">This chronicle is bound by invitation</div>
+        <Masthead sub="This chronicle is bound by invitation" />
 
         <div className="auth-panel">
           <span className="bc bc-tl"></span><span className="bc bc-tr"></span>
@@ -334,11 +347,16 @@ function NotInvitedScreen({ user, onSignOut }) {
           <p style={{ fontFamily: 'var(--serif)', fontSize: '0.9375rem', color: 'var(--ink-2)', marginTop: 18, lineHeight: 1.6 }}>
             You are signed in as <strong>{user.displayName}</strong>
             {user.email ? <> ({user.email})</> : null}, but this account has not yet
-            been granted entry. Ask the keeper of this chronicle to add you.
+            been granted entry. Ask your Director to add you.
           </p>
 
-          <div style={{ marginTop: 20 }}>
-            <Button kind="primary" onClick={onSignOut} style={{ width: '100%', justifyContent: 'center' }}>
+          <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {user.email && (
+              <Button kind="primary" onClick={copyEmail} style={{ width: '100%', justifyContent: 'center' }}>
+                {copied ? '✓ Copied — send it to your Director' : 'Copy my email for the Director'}
+              </Button>
+            )}
+            <Button kind="ghost" onClick={onSignOut} style={{ width: '100%', justifyContent: 'center' }}>
               Sign out
             </Button>
           </div>
@@ -353,24 +371,27 @@ function NotInvitedScreen({ user, onSignOut }) {
 // ───────── App bar (top chrome for roster + campaign views) ─────────
 function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRename, isAdmin, allCount }) {
   return (
-    <div className="ds-appbar">
-      <div className="ab-mark">✠</div>
-      <div className="ab-brand">LIBER HEROUM</div>
-      <nav className="ds-nav">
-        <button className={`ds-tab ${view === 'roster' ? 'on' : ''}`} onClick={() => onNav('roster')}>
-          My Heroes <span className="ds-count">{heroCount}</span>
-        </button>
-        <button className={`ds-tab ${view === 'campaigns' || view === 'campaign' ? 'on' : ''}`} onClick={() => onNav('campaigns')}>
-          Campaigns <span className="ds-count">{campaignCount}</span>
-        </button>
-        {isAdmin && (
-          <button className={`ds-tab ${view === 'admin' ? 'on' : ''}`} onClick={() => onNav('admin')}>
-            All Heroes <span className="ds-count">{allCount}</span>
+    <TopBar
+      className="ds-appbar"
+      mark={<span className="tb-mark-box">✠</span>}
+      brand="LIBER HEROUM"
+      center={
+        <nav className="ds-nav">
+          <button className={`ds-tab ${view === 'roster' ? 'on' : ''}`} onClick={() => onNav('roster')}>
+            My Heroes <span className="ds-count">{heroCount}</span>
           </button>
-        )}
-      </nav>
-      <AccountMenu user={user} onSignOut={onSignOut} onRename={onRename} />
-    </div>
+          <button className={`ds-tab ${view === 'campaigns' || view === 'campaign' ? 'on' : ''}`} onClick={() => onNav('campaigns')}>
+            Campaigns <span className="ds-count">{campaignCount}</span>
+          </button>
+          {isAdmin && (
+            <button className={`ds-tab ${view === 'admin' ? 'on' : ''}`} onClick={() => onNav('admin')}>
+              All Heroes <span className="ds-count">{allCount}</span>
+            </button>
+          )}
+        </nav>
+      }
+      right={<AccountMenu user={user} onSignOut={onSignOut} onRename={onRename} />}
+    />
   );
 }
 
@@ -453,5 +474,5 @@ function AccountMenu({ user, onSignOut, onRename }) {
   );
 }
 
-Object.assign(window, { AccountStyles, Avatar, AuthField, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, AccountMenu });
-export { AccountStyles, Avatar, AuthField, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, AccountMenu };
+Object.assign(window, { AccountStyles, Avatar, AuthField, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, AccountMenu, Masthead });
+export { AccountStyles, Avatar, AuthField, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, AccountMenu, Masthead };

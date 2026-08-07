@@ -3,7 +3,7 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
+import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
 
@@ -12,7 +12,11 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 function ClassStep({ character, update }) {
   const sel = character.cclass.id;
   const cls = classDef(character);
-  const setCls = (id) => update(c => {
+  const setCls = (id) => {
+    // The aspect/skill/kit panels live below the poster grid — bring them into
+    // view on a fresh pick, or a first-timer never learns they exist.
+    if (id !== character.cclass.id) scrollWizardTo('class-config');
+    update(c => {
     if (c.cclass.id === id) return c; // re-selecting the same class changes nothing
     return {
     ...c,
@@ -41,7 +45,8 @@ function ClassStep({ character, update }) {
       conditions: {},
     },
   };
-  });
+    });
+  };
 
   return (
     <div className="stack-22">
@@ -67,6 +72,7 @@ function ClassStep({ character, update }) {
 
       {cls && (
         <>
+          <div id="class-config" />
           <OrnDivider glyph={`❦  ${cls.name.toUpperCase()}  ❦`} />
 
           {/* Class flavor banner */}
@@ -168,10 +174,10 @@ function PrayerWardPicker({ character, update, cls, feature }) {
         {options.map(o => {
           const on = current === o.name;
           return (
-            <div key={o.name} className={`pw-opt ${on ? 'selected' : ''}`} onClick={() => onPick(o.name)}>
+            <button type="button" key={o.name} className={`card-btn pw-opt ${on ? 'selected' : ''}`} aria-pressed={on} onClick={() => onPick(o.name)}>
               <div className="pw-name">{o.name}</div>
               <div className="pw-text">{o.text}</div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -255,9 +261,9 @@ function ClassSubclassPicker({ character, update }) {
             {cls.domains.map(d => {
               const on = chosenDomains.includes(d);
               return (
-                <div key={d} className={`card ${on ? 'selected' : ''}`} onClick={() => toggleDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
+                <SelCard key={d} selected={on} onClick={() => toggleDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
                   <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
-                </div>
+                </SelCard>
               );
             })}
           </div>
@@ -273,11 +279,11 @@ function ClassSubclassPicker({ character, update }) {
                 if (!f) return null;
                 const on = curFeature?.domain === d;
                 return (
-                  <div key={d} className={`card ${on ? 'selected' : ''}`} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
+                  <SelCard key={d} selected={on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
                     <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
                     <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{f.text}</div>
-                  </div>
+                  </SelCard>
                 );
               })}
             </div>
@@ -492,9 +498,9 @@ function CensorDomainPicker({ character, update }) {
           {cls.domains.map(d => {
             const on = chosen === d;
             return (
-              <div key={d} className={`card ${on ? 'selected' : ''}`} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
+              <SelCard key={d} selected={on} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
-              </div>
+              </SelCard>
             );
           })}
         </div>
@@ -743,7 +749,7 @@ function ClassKitPicker({ character, update }) {
         const isSel = dualSel ? order > 0 : selected === k.id;
         const sig = parseKitSig(k.sig);
         return (
-          <SelCard key={k.id} selected={isSel} onClick={() => !blocked && onPick(k.id)} style={blocked ? {opacity:0.32, cursor:'not-allowed'} : undefined}>
+          <SelCard key={k.id} selected={isSel} blocked={blocked} onClick={() => !blocked && onPick(k.id)}>
             <div className="kit-card">
               <div className="ac-row">
                 <span className="ac-name">{k.name}</span>

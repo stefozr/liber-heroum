@@ -18,9 +18,9 @@ exports[`game data tables > DS_CAREERS is present and unchanged 1`] = `
 
 exports[`game data tables > DS_CLASSES is present and unchanged 1`] = `
 {
-  "bytes": 125157,
+  "bytes": 125152,
   "count": 9,
-  "hash": "153fef22",
+  "hash": "c5d4d064",
 }
 `;
 
@@ -74,8 +74,8 @@ exports[`game data tables > DS_SKILL_GROUPS is present and unchanged 1`] = `
 
 exports[`game data tables > DS_STEPS is present and unchanged 1`] = `
 {
-  "bytes": 1874,
+  "bytes": 1881,
   "count": 7,
-  "hash": "358dec2a",
+  "hash": "9cf8acb3",
 }
 `;

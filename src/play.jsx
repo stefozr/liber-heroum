@@ -1,5 +1,5 @@
 import React from 'react';
-import { OrnDivider, GlyphRow, renderGlyph, Pill, Button, H3, H4Meta, StatTile, Modal, AbilityCard } from './theme.jsx';
+import { OrnDivider, GlyphRow, renderGlyph, renderRich, Pill, SavePill, Button, TopBar, H3, H4Meta, StatTile, Modal, AbilityCard } from './theme.jsx';
 import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures } from './levelup.jsx';
@@ -55,7 +55,7 @@ function TopBarMenu({ items }) {
   );
 }
 
-function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
+function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState = null, owner = null, onError = () => {} }) {
   const cls = classDef(character);
   const anc = ancestryDef(character);
   const kit = kitDef(character);
@@ -101,7 +101,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
       downloadJson(characterToFoundryHero(character, idx), `${file}-foundryvtt.json`);
     } catch (err) {
       console.error('[foundry-export]', err);
-      alert('Export failed: ' + (err?.message || err));
+      onError('EXPORT FAILED — NO FOUNDRY FILE WAS SAVED');
     }
   };
 
@@ -199,7 +199,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
     canEdit && onEdit && { id: 'edit', label: 'EDIT', onClick: onEdit },
     canEdit && { id: 'levelup', label: 'LEVEL UP ▲', kind: 'primary', pinned: true,
       onClick: () => setLevelUpOpen(true) },
-    { id: 'exit', label: '◂ LIBER', onClick: onExit },
+    { id: 'exit', label: '◂ ROSTER', onClick: onExit },
   ].filter(Boolean);
 
   return (
@@ -209,25 +209,26 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
       <LevelUpStyles />
 
       {/* Top bar */}
-      <div className="play-top">
-        <div className="left">
-          <div className="brand-mark">
-            <span className="brand-glyph">
-              <svg viewBox="0 0 100 100" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
-                <polygon points="50,4 91,28 91,72 50,96 9,72 9,28" />
-                <polygon points="50,4 73,40 50,60 27,40" />
-                <path d="M9,28 L27,40 M91,28 L73,40 M50,60 L50,96 M27,40 L9,72 M73,40 L91,72 M27,40 L50,96 M73,40 L50,96" />
-              </svg>
+      <TopBar
+        className="play-top"
+        mark={
+          <span className="tb-mark-box">
+            <svg viewBox="0 0 100 100" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
+              <polygon points="50,4 91,28 91,72 50,96 9,72 9,28" />
+              <polygon points="50,4 73,40 50,60 27,40" />
+              <path d="M9,28 L27,40 M91,28 L73,40 M50,60 L50,96 M27,40 L9,72 M73,40 L91,72 M27,40 L50,96 M73,40 L50,96" />
+            </svg>
+          </span>
+        }
+        brand="DRAW · STEEL"
+        sub="Character Sheet"
+        right={<>
+          <SavePill saveState={saveState} />
+          {!canEdit && (
+            <span className="play-readonly-tag" title="Only the owner or Director can edit this hero">
+              👁 Viewing{owner?.displayName ? ` · kept by ${owner.displayName}` : ''}
             </span>
-            <div className="brand-text">
-              <div className="brand-name">DRAW · STEEL</div>
-              <div className="brand-sub">Character Sheet</div>
-            </div>
-          </div>
-        </div>
-        <div className="center"></div>
-        <div className="right">
-          {!canEdit && <span className="play-readonly-tag" title="Only the owner or Director can edit this hero">👁 Viewing</span>}
+          )}
           {/* Rendered twice on purpose: as buttons for wide viewports and as menu
               items for narrow ones, with CSS choosing between them. That keeps the
               breakpoint in the stylesheet only, so it cannot drift from a JS copy.
@@ -240,8 +241,8 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
             </Button>
           ))}
           <TopBarMenu items={topActions.filter(a => !a.pinned)} />
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Body */}
       <div className="play-body">
@@ -275,22 +276,22 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
               value={character.play.stamina ?? derived.staminaMax}
               max={derived.staminaMax}
               winded={derived.winded}
-              accent="var(--rubric)"
-              onAdj={adjStamina}
-              onSet={setStamina}
+              accent="var(--gold)"
+              onAdj={canEdit ? adjStamina : null}
+              onSet={canEdit ? setStamina : null}
             />
             <VitalGauge
               label={cls?.resource || 'Resource'}
               value={character.play.resource || 0}
               max={12}
               accent="var(--gold)"
-              onAdj={adjResource}
-              onSet={setResource}
+              onAdj={canEdit ? adjResource : null}
+              onSet={canEdit ? setResource : null}
             />
-            <CounterBox label="Recoveries" value={(derived.recoveries || 0) - (character.play.recoveriesUsed || 0)} total={derived.recoveries} onPlus={() => setPlay(p => ({ ...p, recoveriesUsed: Math.max(0, (p.recoveriesUsed || 0) - 1) }))} onMinus={() => setPlay(p => ({ ...p, recoveriesUsed: Math.min(derived.recoveries, (p.recoveriesUsed || 0) + 1) }))} />
-            <CounterBox label="Surges" value={character.play.surges || 0} onPlus={() => adjSurges(1)} onMinus={() => adjSurges(-1)} />
-            <CounterBox label="Victories" value={character.play.victories || 0} onPlus={() => adjVictories(1)} onMinus={() => adjVictories(-1)} />
-            <CounterBox label="Hero Tokens" value={character.play.heroTokens || 0} onPlus={() => adjHero(1)} onMinus={() => adjHero(-1)} />
+            <CounterBox label="Recoveries" value={(derived.recoveries || 0) - (character.play.recoveriesUsed || 0)} total={derived.recoveries} onPlus={canEdit ? () => setPlay(p => ({ ...p, recoveriesUsed: Math.max(0, (p.recoveriesUsed || 0) - 1) })) : null} onMinus={canEdit ? () => setPlay(p => ({ ...p, recoveriesUsed: Math.min(derived.recoveries, (p.recoveriesUsed || 0) + 1) })) : null} />
+            <CounterBox label="Surges" value={character.play.surges || 0} onPlus={canEdit ? () => adjSurges(1) : null} onMinus={canEdit ? () => adjSurges(-1) : null} />
+            <CounterBox label="Victories" value={character.play.victories || 0} onPlus={canEdit ? () => adjVictories(1) : null} onMinus={canEdit ? () => adjVictories(-1) : null} />
+            <CounterBox label="Hero Tokens" value={character.play.heroTokens || 0} onPlus={canEdit ? () => adjHero(1) : null} onMinus={canEdit ? () => adjHero(-1) : null} />
           </div>
 
           <div className="play-grid">
@@ -306,10 +307,11 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                     </div>
                   ))}
                 </div>
-                <div className="potency-row">
-                  <Pill kind="muted">WEAK {derived.potency.weak}</Pill>
-                  <Pill kind="muted">AVERAGE {derived.potency.average}</Pill>
-                  <Pill kind="gold">STRONG {derived.potency.strong}</Pill>
+                <div className="potency-row"
+                  title={`Potency thresholds — an ability that reads "M < WEAK" compares the target's Might against your weak number (${derived.potency.weak}).`}>
+                  <span>WEAK {derived.potency.weak}</span>
+                  <span>AVERAGE {derived.potency.average}</span>
+                  <span className="strong">STRONG {derived.potency.strong}</span>
                 </div>
               </Panel>
 
@@ -375,6 +377,8 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                         type="button"
                         key={cond}
                         className={`cond ${on ? 'on' : ''}`}
+                        aria-pressed={on}
+                        disabled={!canEdit}
                         onClick={() => setPlay(p => ({ ...p, conditions: { ...p.conditions, [cond]: !p.conditions[cond] } }))}
                       >
                         {cond}
@@ -437,7 +441,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                   <div className="prog-list">
                     {progressionLevels.map(lvl => {
                       const summary = summarizeLevelPicks(lvl);
-                      const editable = !!(lvlData && lvlData[lvl]);
+                      const editable = canEdit && !!(lvlData && lvlData[lvl]);
                       return (
                         <div className="prog-row" key={lvl}>
                           <div className="prog-badge">Lv {lvl}</div>
@@ -466,7 +470,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
               {/* Traits */}
               {anc && (
                 <Panel title="Ancestry Traits" collapsible>
-                  <AncestryTraitsList character={character} update={update} interactive />
+                  <AncestryTraitsList character={character} update={update} interactive={canEdit} />
                 </Panel>
               )}
 
@@ -476,13 +480,13 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
                   {benefits.features.map(f => (
                     <div className="trait-block" key={f.name}>
                       <div className="trait-name">{f.name}</div>
-                      <div className="trait-text">{f.text}</div>
+                      <div className="trait-text">{renderRich(f.text)}</div>
                     </div>
                   ))}
                   {levelUpFeatures.map((f, i) => (
                     <div className="trait-block" key={`lu-${f.level}-${f.name}-${i}`}>
                       <div className="trait-name">{f.name} <span className="perk-lvl-tag">LV {f.level}</span></div>
-                      {f.text && <div className="trait-text">{f.text}</div>}
+                      {f.text && <div className="trait-text">{renderRich(f.text)}</div>}
                     </div>
                   ))}
                 </Panel>
@@ -517,9 +521,17 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true }) {
       </div>
 
       {/* Modals */}
-      <Modal open={bioOpen} onClose={() => setBioOpen(false)} title="Biography" width={620}
-        footer={<Button kind="primary" onClick={() => setBioOpen(false)}>CLOSE</Button>}>
-        <BiographyContent character={character} />
+      <Modal open={bioOpen} onClose={() => setBioOpen(false)} title={character.identity?.name || 'Biography'} width={620}
+        footer={(
+          <>
+            {canEdit && onEdit && (
+              <Button kind="ghost" onClick={() => { setBioOpen(false); onEdit(); }}>EDIT ▸</Button>
+            )}
+            <div style={{ flex: 1 }}></div>
+            <Button kind="primary" onClick={() => setBioOpen(false)}>CLOSE</Button>
+          </>
+        )}>
+        <BiographyContent character={character} canEdit={canEdit && !!onEdit} />
       </Modal>
 
       <LevelUpFlow
@@ -546,6 +558,10 @@ function fmt(n) { return n == null ? '—' : (n > 0 ? '+' + n : n); }
 
 function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  // Red is an alarm, not a theme: the bar only turns rubric at or below the
+  // winded threshold (and while dying); a rested hero reads gold.
+  const hurt = winded != null && value <= winded;
+  const barColor = hurt ? 'var(--rubric)' : accent;
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState('');
   const inputRef = React.useRef(null);
@@ -587,7 +603,7 @@ function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
           ) : (
             <span
               className={onSet ? 'vital-cur editable' : 'vital-cur'}
-              style={{color: accent, fontWeight: 700}}
+              style={{color: barColor, fontWeight: 700}}
               onClick={beginEdit}
               title={onSet ? 'Click to edit' : undefined}
             >{value}</span>
@@ -596,14 +612,14 @@ function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
         </div>
       </div>
       <div className="vital-bar">
-        <div className="vital-fill" style={{width: pct + '%', background: accent, boxShadow: `0 0 12px ${accent}`}}></div>
-        {winded && <div className="winded-mark" style={{left: `${(winded / max) * 100}%`}} title={`Winded at ${winded}`}></div>}
+        <div className="vital-fill" style={{width: pct + '%', background: barColor, boxShadow: `0 0 12px ${barColor}`}}></div>
+        {winded > 0 && max > 0 && <div className="winded-mark" style={{left: `${(winded / max) * 100}%`}} title={`Winded at ${winded}`}></div>}
       </div>
       <div className="vital-ctl">
-        <button onClick={() => onAdj(-5)}>−5</button>
-        <button onClick={() => onAdj(-1)}>−1</button>
-        <button onClick={() => onAdj(+1)}>+1</button>
-        <button onClick={() => onAdj(+5)}>+5</button>
+        <button disabled={!onAdj} onClick={() => onAdj && onAdj(-5)}>−5</button>
+        <button disabled={!onAdj} onClick={() => onAdj && onAdj(-1)}>−1</button>
+        <button disabled={!onAdj} onClick={() => onAdj && onAdj(+1)}>+1</button>
+        <button disabled={!onAdj} onClick={() => onAdj && onAdj(+5)}>+5</button>
       </div>
     </div>
   );
@@ -615,8 +631,8 @@ function CounterBox({ label, value, total, onPlus, onMinus }) {
       <div className="cnt-lbl">{label}</div>
       <div className="cnt-val">{value}{total != null && <span className="cnt-tot"> / {total}</span>}</div>
       <div className="cnt-ctl">
-        <button onClick={onMinus}>−</button>
-        <button onClick={onPlus}>+</button>
+        <button disabled={!onMinus} onClick={onMinus}>−</button>
+        <button disabled={!onPlus} onClick={onPlus}>+</button>
       </div>
     </div>
   );
@@ -651,34 +667,40 @@ function Panel({ title, children, collapsible, defaultCollapsed = false }) {
   );
 }
 
-function BiographyContent({ character }) {
+function BiographyContent({ character, canEdit = false }) {
   const id = character.identity || {};
   const car = careerDef(character);
+  // Empty fields render as muted prompts (for the hero's own keeper) instead of
+  // silently vanishing — an owner shouldn't wonder whether the app lost them.
+  const emptyNote = (what) => canEdit
+    ? <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem'}}>{what} not yet written — EDIT returns to the wizard.</div>
+    : null;
   return (
     <div className="stack-12">
-      <div style={{textAlign:'center'}}>
-        <div className="h2-display">{id.name || 'Unnamed'}</div>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.9375rem', marginTop:6}}>{id.pronouns}</div>
-      </div>
+      {id.pronouns && (
+        <div style={{textAlign:'center'}}>
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.9375rem'}}>{id.pronouns}</div>
+        </div>
+      )}
       <OrnDivider glyph="✠" size="small" />
       <div className="grid-3" style={{gap: 10}}>
-        {id.age && <StatTile label="Age" value={id.age} />}
-        {id.height && <StatTile label="Height" value={id.height} />}
-        {id.weight && <StatTile label="Weight" value={id.weight} />}
+        <StatTile label="Age" value={id.age || '—'} />
+        <StatTile label="Height" value={id.height || '—'} />
+        <StatTile label="Weight" value={id.weight || '—'} />
       </div>
       {id.deity && <Pill kind="gold">DEITY · {id.deity}</Pill>}
-      {id.appearance && (
+      {id.appearance ? (
         <div>
           <H4Meta>Appearance</H4Meta>
           <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55}}>{id.appearance}</div>
         </div>
-      )}
-      {id.backstory && (
+      ) : emptyNote('Appearance')}
+      {id.backstory ? (
         <div>
           <H4Meta>Backstory</H4Meta>
           <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, whiteSpace:'pre-wrap'}}>{id.backstory}</div>
         </div>
-      )}
+      ) : emptyNote('Backstory')}
       {car && character.career.incident && (
         <div>
           <H4Meta>Inciting Incident</H4Meta>
@@ -707,32 +729,13 @@ const PLAY_CSS = `
      this past the viewport and get clipped rather than fitting. */
   min-width: 0;
 }
-.play-top {
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; padding: 14px 28px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-top); backdrop-filter: blur(6px);
-  /* lift above .play-bg — fixed elements otherwise paint over the in-flow bar
-     (same arrangement as .wiz-topbar over .step-bg). */
-  position: relative; z-index: 10;
-}
-.play-top .left, .play-top .right { display: flex; align-items: center; gap: 12px; }
-.play-top .right { justify-content: flex-end; }
-.play-top .center { display: flex; justify-content: center; }
-
-.brand-mark { display: flex; align-items: center; gap: 11px; }
-.brand-mark .brand-glyph {
-  font-family: var(--display); font-size: 1.375rem; color: var(--gold);
-  width: 40px; height: 40px; display: grid; place-items: center;
-  border: 1px solid var(--gold-deep); background: var(--surface-vital, rgba(176,138,72,0.05));
-}
-.brand-mark .brand-name { font-family: var(--display); font-size: 1rem; letter-spacing: 0.24em; color: var(--gold-2); white-space: nowrap; }
-.brand-mark .brand-sub { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+/* Bar geometry/type comes from the shared .topbar (theme/styles.js); only the
+   play-specific rules (collapsible buttons, ⋯ menu, readonly tag) live here. */
 
 .hero-masthead {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
   border: 1px solid var(--gold-deep);
-  background: linear-gradient(100deg, var(--surface-fade-b), rgba(7,9,28,0.35));
+  background: var(--grad-masthead);
   padding: 18px 24px; margin-bottom: 24px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 6px 30px rgba(0,0,0,0.45);
 }
@@ -744,13 +747,13 @@ const PLAY_CSS = `
   box-shadow: 0 0 22px var(--gold-glow), inset 0 0 0 1px rgba(0,0,0,0.5);
 }
 .hb-portrait .hb-glyph { font-family: var(--display); font-size: 2.875rem; color: var(--gold); opacity: 0.45; }
-.hb-eyebrow { font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-2); margin-bottom: 6px; }
-.hb-name { font-family: var(--display); font-size: 2.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink); text-wrap: balance; }
-.hb-meta { font-family: var(--display-2); font-size: 0.9375rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); margin-top: 10px; }
+.hb-eyebrow { font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-2); margin-bottom: 6px; }
+.hb-name { font-family: var(--display); font-size: 2.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink); text-wrap: balance; font-variant-ligatures: none; }
+.hb-meta { font-family: var(--display-2); font-size: var(--fs-8); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); margin-top: 10px; }
 .hb-meta .hb-sub { color: var(--gold-2); }
 .hb-level { text-align: center; flex: none; padding-left: 22px; border-left: 1px solid var(--line-2); }
-.hb-level-num { font-family: var(--display); font-size: 2.875rem; line-height: 1; color: var(--gold-2); }
-.hb-level-lbl { font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.hb-level-num { font-family: var(--display-2); font-size: 2.875rem; line-height: 1; color: var(--gold-2); }
+.hb-level-lbl { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
 
 .play-body {
   position: relative; overflow-y: auto;
@@ -786,7 +789,7 @@ const PLAY_CSS = `
 .play-readonly .vitals button,
 .play-readonly .vitals input { pointer-events: none; opacity: 0.5; }
 .play-readonly-tag {
-  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.18em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 3px;
   padding: 4px 8px; margin-right: 6px; white-space: nowrap;
 }
@@ -799,19 +802,27 @@ const PLAY_CSS = `
   display: flex; flex-direction: column; justify-content: space-between;
 }
 .vital-head { display: flex; justify-content: space-between; align-items: baseline; }
-.vital-lbl { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
-.vital-num { font-family: var(--display); font-size: 1.375rem; color: var(--ink); }
+.vital-lbl { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
+/* Numerals render in plain Cinzel (--display-2): Cinzel Decorative's "1" reads
+   as a Roman numeral I at these sizes. Same for every numeric readout below. */
+.vital-num { font-family: var(--display-2); font-size: 1.375rem; color: var(--ink); }
 .vital-num .muted { color: var(--ink-3); font-weight: 400; }
 .vital-cur.editable { cursor: text; border-bottom: 1px dashed transparent; transition: border-color .15s; }
 .vital-cur.editable:hover { border-bottom-color: var(--gold-deep); }
 .vital-edit {
-  width: 2.6em; font-family: var(--display); font-size: 1.375rem; line-height: 1;
+  width: 2.6em; font-family: var(--display-2); font-size: 1.375rem; line-height: 1;
   color: var(--ink); background: rgba(0,0,0,0.45); border: 1px solid var(--gold-deep);
   text-align: right; padding: 0 2px; -moz-appearance: textfield;
 }
 .vital-edit:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 10px var(--gold-glow); }
 .vital-edit::-webkit-outer-spin-button, .vital-edit::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.vital-bar { height: 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--line); margin-top: 6px; position: relative; }
+/* The hatch keeps an empty gauge visible — a 0-width fill on a plain dark track
+   used to vanish into the panel. */
+.vital-bar {
+  height: 10px; margin-top: 6px; position: relative;
+  border: 1px solid var(--line-2);
+  background: repeating-linear-gradient(45deg, rgba(236,228,210,0.06) 0 4px, transparent 4px 8px) rgba(0,0,0,0.4);
+}
 .vital-fill { height: 100%; transition: width .3s; }
 .winded-mark { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--rubric); box-shadow: 0 0 6px var(--rubric); }
 .vital-ctl { display: flex; gap: 4px; margin-top: 8px; }
@@ -819,10 +830,11 @@ const PLAY_CSS = `
    read as a single line across the vitals strip. */
 .vital-ctl button {
   flex: 1; height: 1.5rem; padding: 0; background: var(--bg-2); border: 1px solid var(--line-2);
-  color: var(--ink-2); font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
+  color: var(--ink-2); font-family: var(--mono); font-size: var(--fs-4); font-weight: 600;
   cursor: pointer; letter-spacing: 0.06em;
 }
-.vital-ctl button:hover { border-color: var(--gold); color: var(--ink); }
+.vital-ctl button:hover:not(:disabled) { border-color: var(--gold); color: var(--ink); }
+.vital-ctl button:disabled, .cnt-ctl button:disabled { opacity: 0.4; cursor: default; }
 
 .counter {
   border: 1px solid var(--line-2);
@@ -830,17 +842,17 @@ const PLAY_CSS = `
   padding: 12px 14px; display: flex; flex-direction: column;
   align-items: center; text-align: center;
 }
-.cnt-lbl { font-family: var(--mono); font-size: 0.625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
+.cnt-lbl { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
 /* margin-top: auto bottom-anchors the number next to the controls, so a
    wrapping label (HERO TOKENS) can't push it out of line with its siblings. */
-.cnt-val { font-family: var(--display); font-size: 1.625rem; color: var(--gold-2); margin: 4px 0 6px; margin-top: auto; font-weight: 700; }
-.cnt-tot { font-size: 0.875rem; color: var(--ink-3); font-weight: 400; }
+.cnt-val { font-family: var(--display-2); font-size: 1.625rem; color: var(--gold-2); margin: 4px 0 6px; margin-top: auto; font-weight: 700; }
+.cnt-tot { font-size: var(--fs-7); color: var(--ink-3); font-weight: 400; }
 .cnt-ctl { display: flex; gap: 4px; width: 100%; }
 .cnt-ctl button {
   flex: 1; height: 1.5rem; padding: 0; background: var(--bg-2); border: 1px solid var(--line-2);
-  color: var(--ink-2); font-family: var(--mono); font-size: 0.8125rem; cursor: pointer;
+  color: var(--ink-2); font-family: var(--mono); font-size: var(--fs-6); cursor: pointer;
 }
-.cnt-ctl button:hover { border-color: var(--gold); color: var(--ink); }
+.cnt-ctl button:hover:not(:disabled) { border-color: var(--gold); color: var(--ink); }
 
 .play-grid {
   display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px;
@@ -856,8 +868,8 @@ const PLAY_CSS = `
   padding: 12px 18px; border-bottom: 1px solid var(--line);
   background: linear-gradient(90deg, var(--tint-accent), transparent);
 }
-.panel-title { font-family: var(--display-2); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.24em; color: var(--gold-2); text-transform: uppercase; }
-.panel-orn { font-family: var(--display); font-size: 0.875rem; color: var(--gold); opacity: 0.5; }
+.panel-title { font-family: var(--display-2); font-size: var(--fs-6); font-weight: 700; letter-spacing: 0.24em; color: var(--gold-2); text-transform: uppercase; }
+.panel-orn { font-family: var(--display); font-size: var(--fs-7); color: var(--gold); opacity: 0.5; }
 .panel-body { padding: 16px 18px; }
 .panel-head-btn {
   appearance: none; -webkit-appearance: none; background: linear-gradient(90deg, var(--tint-accent), transparent);
@@ -870,7 +882,7 @@ const PLAY_CSS = `
 .panel.collapsed { padding-bottom: 0; }
 .panel.collapsed .panel-head, .panel.collapsed .panel-head-btn { border-bottom: 0; }
 .panel-chevron {
-  font-family: var(--display); font-size: 0.875rem; color: var(--gold); opacity: 0.55;
+  font-family: var(--display); font-size: var(--fs-7); color: var(--gold); opacity: 0.55;
   transition: transform 180ms ease, opacity 180ms ease, color 180ms ease;
   line-height: 1;
 }
@@ -881,28 +893,39 @@ const PLAY_CSS = `
    1fr floors each track at "Intuition"/"Presence" and the five come out unequal. */
 .chars-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .char-box { border: 1px solid var(--line-2); background: var(--bg-2); padding: 10px 6px; text-align: center; }
-.ch-name { font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
-.ch-val { font-family: var(--display); font-size: 2rem; font-weight: 700; color: var(--ink); margin-top: 6px; }
-.potency-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.ch-name { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.22em; text-transform: uppercase; }
+.ch-val { font-family: var(--display-2); font-size: 2rem; font-weight: 700; color: var(--ink); margin-top: 6px; }
+/* A reference legend, not controls — plain text so it can't read as pressed buttons. */
+.potency-row {
+  display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3);
+  letter-spacing: 0.18em; text-transform: uppercase; cursor: help;
+}
+.potency-row .strong { color: var(--gold-2); }
 
-.empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: 0.875rem; padding: 14px; text-align: center; }
+.empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: var(--fs-7); padding: 14px; text-align: center; }
 
 .cond-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .cond {
-  font-family: var(--mono); font-size: 0.625rem; padding: 8px 6px;
+  font-family: var(--mono); font-size: var(--fs-3); padding: 8px 6px;
   background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink-2);
   cursor: pointer; letter-spacing: 0.18em; text-transform: uppercase;
-  transition: all .12s;
+  transition: border-color .12s, background .12s, color .12s, box-shadow .12s;
 }
+/* The ○/● telegraphs "toggle" — without it the off state is identical to the
+   app's inert pills and nobody discovers these are pressable. */
+.cond::before { content: '○ '; color: var(--ink-3); }
+.cond.on::before { content: '● '; color: #fff; }
 .cond:hover { border-color: var(--line-strong); }
 .cond.on { background: var(--rubric); border-color: var(--rubric); color: #fff; box-shadow: 0 0 10px var(--rubric-glow); }
+.cond:disabled { opacity: 0.5; cursor: default; }
 
 /* .trait-block / .trait-name / .sig-tag / .cost-tag / .trait-text / .sig-option-* /
    .kit-meta-line / .kv-row live in theme/sheet.jsx (SHEET_CSS) — shared with Review. */
 .perk-leveled { margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--line); }
 .perk-lvl-tag {
   display: inline-block; margin-left: 8px; vertical-align: middle;
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.16em;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.16em;
   color: var(--gold-2); border: 1px solid var(--line-2); border-radius: 2px;
   padding: 2px 6px; line-height: 1;
 }
@@ -916,19 +939,19 @@ const PLAY_CSS = `
 .prog-row:last-child { border-bottom: none; padding-bottom: 0; }
 .prog-row:first-child { padding-top: 0; }
 .prog-badge {
-  font-family: var(--display); font-size: 0.8125rem; letter-spacing: 0.06em;
+  font-family: var(--display-2); font-size: var(--fs-6); letter-spacing: 0.06em;
   color: var(--gold-2); border: 1px solid var(--line-2); border-radius: 2px;
   padding: 4px 8px; white-space: nowrap; line-height: 1;
 }
 .prog-detail { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .prog-pick { display: flex; flex-direction: column; gap: 1px; }
 .prog-pick-k {
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--ink-3);
 }
-.prog-pick-v { font-family: var(--serif); font-size: 0.8125rem; color: var(--ink); line-height: 1.4; }
+.prog-pick-v { font-family: var(--serif); font-size: var(--fs-6); color: var(--ink); line-height: 1.4; }
 .prog-edit {
-  font-family: var(--mono); font-size: 0.5625rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--ink-2); background: transparent; border: 1px solid var(--line-2);
   border-radius: 2px; padding: 5px 10px; cursor: pointer; white-space: nowrap;
   transition: border-color .12s, color .12s, box-shadow .12s;
@@ -954,7 +977,7 @@ const PLAY_CSS = `
 .pt-menu-item {
   background: transparent; border: none; cursor: pointer;
   text-align: left; padding: 13px 16px; min-height: 44px;
-  font-family: var(--display-2); font-size: 0.6875rem;
+  font-family: var(--display-2); font-size: var(--fs-4);
   letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2);
 }
 .pt-menu-item + .pt-menu-item { border-top: 1px solid var(--line); }
@@ -966,8 +989,13 @@ ${MQ.rail} {
      plus six buttons needs ~930px, so the bar overflows well above the tablet
      breakpoint. This is the only place the threshold is expressed — play.jsx
      renders both branches and lets CSS pick. */
-  .play-top .right > .btn.collapsible { display: none; }
+  .play-top .tb-right > .btn.collapsible { display: none; }
   .pt-menu-wrap { display: block; }
+  /* The desktop tracks also run out of room here: at 901-1024px the 6-card
+     vitals row and the 2-column grid collide labels with values. Same
+     collapse as the tablet tier, one breakpoint earlier. */
+  .play-grid { grid-template-columns: minmax(0, 1fr); }
+  .vitals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 ${MQ.tab} {
@@ -978,14 +1006,11 @@ ${MQ.tab} {
   .hb-name { font-size: 2rem; }
   .hb-level-num { font-size: 2rem; }
   .play-content { padding: 22px 20px; }
-  .play-top { padding: 12px 18px; }
 }
 
 ${MQ.phone} {
-  .play-top { grid-template-columns: 1fr auto; padding: 10px 12px; }
-  .play-top .center { display: none; }
-  .play-top .left, .play-top .right { gap: 8px; }
-  .brand-mark .brand-text { display: none; }
+  /* The action buttons need the room more than the brand does. */
+  .play-top .tb-text { display: none; }
 
   .vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   /* The two gauges carry a bar and a control row; keep them full width. */
@@ -1000,7 +1025,7 @@ ${MQ.phone} {
   .hb-portrait .hb-glyph { font-size: 1.875rem; }
   .hb-name { font-size: 1.75rem; }
   .hb-level { grid-column: auto; text-align: center; }
-  .hb-meta { letter-spacing: 0.1em; font-size: 0.875rem; }
+  .hb-meta { letter-spacing: 0.1em; font-size: var(--fs-7); }
 
   .play-content { padding: 16px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
   .panel-body { padding: 14px; }

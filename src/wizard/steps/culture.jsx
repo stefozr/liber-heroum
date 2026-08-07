@@ -16,7 +16,12 @@ function CultureStep({ character, update }) {
     const skillsCopy = { ...prevSkills };
     // Clear the picked skill for this aspect; the skill group set may have changed.
     delete skillsCopy[key];
-    return { ...c, culture: { ...c.culture, [key]: itemId, skills: skillsCopy } };
+    // If the manual pick diverges from the applied archetype, stop highlighting
+    // its chip as if it still described this culture.
+    const arche = DS_CULTURES.archetypes.find(a => a.name === c.culture.archetype);
+    const aField = { environment: 'env', organization: 'org', upbringing: 'upb' }[key];
+    const archetype = arche && arche[aField] === itemId ? c.culture.archetype : null;
+    return { ...c, culture: { ...c.culture, [key]: itemId, skills: skillsCopy, archetype } };
   });
   const setSkill = (key, skill) => update(c => ({
     ...c, culture: { ...c.culture, skills: { ...(c.culture.skills || {}), [key]: skill } },
@@ -44,12 +49,12 @@ function CultureStep({ character, update }) {
         <Deck>Pick an archetype to populate all three aspects at once, then customize.</Deck>
         <div className="grid-3" style={{marginTop:12, gap:8}}>
           {DS_CULTURES.archetypes.map(a => (
-            <div key={a.name} className={`card ${cu.archetype === a.name ? 'selected' : ''}`} onClick={() => apply(a)} style={{padding:'10px 14px'}}>
+            <SelCard key={a.name} selected={cu.archetype === a.name} onClick={() => apply(a)} style={{padding:'10px 14px'}}>
               <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.12em', color:'var(--ink)', fontWeight:600, paddingRight:16}}>{a.name}</div>
               <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', marginTop:3}}>
                 {a.env} · {a.org} · {a.upb}
               </div>
-            </div>
+            </SelCard>
           ))}
         </div>
       </div>
@@ -72,7 +77,7 @@ function CultureStep({ character, update }) {
                 <SelCard key={it.id} selected={cu[key] === it.id} onClick={() => setAspect(key, it.id, it)}>
                   <div style={{fontFamily:'var(--display)', fontSize: '0.9375rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{it.name}</div>
                   <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
-                    SKILL: {it.skillLabel || it.skillGroups.join(' / ')} · Quick: {it.quick}
+                    SKILL: {it.skillLabel || it.skillGroups.join(' / ')} · Quick build: {it.quick}
                   </div>
                   <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>
                     {it.desc}
@@ -126,15 +131,16 @@ function CultureStep({ character, update }) {
               const on = cu.language === L;
               const blocked = !on && takenElsewhere.has(L);
               return (
-                <div
+                <SelCard
                   key={L}
-                  className={`card ${on ? 'selected' : ''}${blocked ? ' blocked' : ''}`}
+                  selected={on}
+                  blocked={blocked}
                   onClick={() => !blocked && setField('language', L)}
                   title={blocked ? `Already chosen — ${takenElsewhere.get(L)}` : ''}
                   style={{padding:'10px 12px'}}
                 >
                   <div style={{fontFamily:'var(--display-2)', fontSize: '0.75rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, paddingRight:16}}>{L}</div>
-                </div>
+                </SelCard>
               );
             });
           })()}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { OrnDivider, GlyphRow, Button, H3, H4Meta, Modal, AbilityCard } from './theme.jsx';
+import { OrnDivider, GlyphRow, renderRich, Button, H3, H4Meta, Modal, AbilityCard } from './theme.jsx';
+import { MQ } from './theme/breakpoints.js';
 import { classDef, collectSkillPicks, collectPerkPicks, computeDerived } from './app.jsx';
 import {
   DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES,
@@ -866,7 +867,7 @@ const CENSOR_ORDER_ABILITIES_9 = {
       keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
       powerRoll: 'Might', tiers: [['\u226411','5 + M damage; P < WEAK, the target is banished (save ends)'],['12\u201316','8 + M; P<AVERAGE, banished (save)'],['17+','11 + M; P<STRONG, banished (save)']],
       effect: 'This ability gains an edge against demons, devils, undead, and creatures not native to your current world. If you know the target’s true name, this ability has a double edge. While , the target is sent to another manifold in the timescape and removed from the encounter map. A banished target can do nothing but make saving throws, and takes 10 holy damage each time they do so. If the target is reduced to 0 Stamina while banished, they are lost to the timescape.' }),
-    ab('Terror Manifest', { cost: 11, resource: 'Wrath', flavor: '“I know what you fear.”.',
+    ab('Terror Manifest', { cost: 11, resource: 'Wrath', flavor: 'I know what you fear.',
       keywords: ['Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
       powerRoll: 'Presence', tiers: [['\u226411','7 + P psychic damage; P < WEAK, frightened (save ends)'],['12\u201316','10 + P psychic damage; P < AVERAGE, frightened (save ends)'],['17+','13 + P psychic damage; P < STRONG, frightened (save ends)']],
       effect: 'While frightened this way, if a target who is a leader or solo creature is winded, they take an extra 25 psychic damage. If a target frightened this way is not a leader or solo creature and is winded, they are reduced to 0 Stamina.' }),
@@ -895,16 +896,16 @@ const CENSOR_ORDER_ABILITIES_9 = {
 const CENSOR_WRATH_7 = [
   ab('Edict of Disruptive Isolation', { cost: 7, resource: 'Wrath', flavor: 'The evil within your foes detonates with holy fire that burns only the guilty.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
-    effect: 'Until the end of the encounter or until you are dying, each target takes holy damage equal to your Presence score at the end of each of your turns. A target takes an extra 2d6 holy damage if they are judged by you or if they are adjacent to any enemy. 2d6+3*@P holy damage.' }),
+    effect: 'Until the end of the encounter or until you are dying, each target takes holy damage equal to your Presence score at the end of each of your turns. A target takes an extra 2d6 holy damage if they are judged by you or if they are adjacent to any enemy.' }),
   ab('Edict of Perfect Order', { cost: 7, resource: 'Wrath', flavor: 'Within the area of your divine presence, your enemies will regret using their fell abilities.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
-    effect: 'Until the end of the encounter or until you are dying, whenever a target uses an ability that costs **Malice**, they take holy damage equal to three times your Presence score. A target judged by you takes an extra 2d6 holy damage. 2d6+3*@P holy damage.' }),
+    effect: 'Until the end of the encounter or until you are dying, whenever a target uses an ability that costs **Malice**, they take holy damage equal to three times your Presence score. A target judged by you takes an extra 2d6 holy damage.' }),
   ab('Edict of Purifying Pacifism', { cost: 7, resource: 'Wrath', flavor: 'You shed a righteous energy that punishes enemies who would harm you or your allies.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
-    effect: 'Until the end of the encounter or until you are dying, whenever a target makes a strike, they take holy damage equal to twice your Presence score. A target judged by you takes an extra 2d6 holy damage. 2d6+2*@P holy damage.' }),
+    effect: 'Until the end of the encounter or until you are dying, whenever a target makes a strike, they take holy damage equal to twice your Presence score. A target judged by you takes an extra 2d6 holy damage.' }),
   ab('Edict of Stillness', { cost: 7, resource: 'Wrath', flavor: 'The holy aura you project makes it painful for evil-doers to leave your reach.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
-    effect: 'Until the end of the encounter or until you are dying, when ever a target moves or is force moved out of the area, they take holy damage equal to twice your Presence score. A target judged by you who moves willingly takes an extra 2d6 holy damage. 2d6+2*@P holy damage.' }),
+    effect: 'Until the end of the encounter or until you are dying, when ever a target moves or is force moved out of the area, they take holy damage equal to twice your Presence score. A target judged by you who moves willingly takes an extra 2d6 holy damage.' }),
 ];
 
 const CENSOR_WRATH_9 = [
@@ -1085,8 +1086,8 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
       footer={(
         <>
           <Button kind="ghost" onClick={isFirst ? onClose : back}>{isFirst ? (isEditing ? 'CANCEL' : 'NOT YET') : '\u25C2 BACK'}</Button>
-          <div style={{flex:1, textAlign:'center', fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
-            Step {stepIdx + 1} of {steps.length}
+          <div style={{flex:1, textAlign:'center', fontFamily:'var(--mono)', fontSize: '0.625rem', color: canAdvance ? 'var(--ink-3)' : 'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase'}}>
+            Step {stepIdx + 1} of {steps.length}{!canAdvance ? ' — choose an option to continue' : ''}
           </div>
           <Button kind="primary" disabled={!canAdvance} onClick={next}>
             {isLast ? (isEditing ? 'SAVE \u2713' : 'ASCEND \u25B2') : 'CONTINUE \u25B8'}
@@ -1215,11 +1216,11 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
         <div className="orn-frame" style={{padding:'14px 18px'}}>
           <H4Meta>Mechanical Gains</H4Meta>
           <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.5}}>
-            <div>· <b style={{color:'var(--gold-2)'}}>+{data.staminaGain}</b> maximum Stamina (→ {newStamina})</div>
+            <div><b style={{color:'var(--gold-2)'}}>+{data.staminaGain}</b> maximum Stamina (→ {newStamina})</div>
             {data.autoCharacteristicIncrease && Object.entries(data.autoCharacteristicIncrease).filter(([k]) => k !== 'max').map(([k, v]) => (
-              <div key={k}>· {k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
+              <div key={k}>{k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
             ))}
-            {data.autoCharIncreaseAll && <div>· All characteristics <b style={{color:'var(--gold-2)'}}>+{data.autoCharIncreaseAll.delta}</b> (max {data.autoCharIncreaseAll.max})</div>}
+            {data.autoCharIncreaseAll && <div>All characteristics <b style={{color:'var(--gold-2)'}}>+{data.autoCharIncreaseAll.delta}</b> (max {data.autoCharIncreaseAll.max})</div>}
           </div>
         </div>
 
@@ -1232,7 +1233,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
               {autoFeatures.map(f => (
                 <div key={f.name}>
                   <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{f.text}</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{renderRich(f.text)}</div>
                 </div>
               ))}
             </div>
@@ -1243,7 +1244,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
       {autoAbilities.length > 0 && (
         <div>
           <H4Meta>Abilities Granted</H4Meta>
-          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:4, marginBottom:10}}>
+          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: 'var(--fs-7)', color:'var(--ink-2)', lineHeight:1.55, marginTop:4, marginBottom:10}}>
             You receive both of the following abilities automatically.
           </div>
           <div className="grid-2" style={{gap:10}}>
@@ -1324,7 +1325,7 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
       {isTiered && pick && tierItems.length > 0 && (
         <div className="stack-12">
           <OrnDivider glyph={`${deriveGroupName(pick)} ${tierNoun}`} size="small" />
-          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: '0.84375rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:-4, textAlign:'center'}}>
+          <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: 'var(--fs-7)', color:'var(--ink-2)', lineHeight:1.55, marginTop:-4, textAlign:'center'}}>
             {tierPrompt}
           </div>
           <div className={isSkill ? 'skill-pick-grid' : 'grid-2'} style={isSkill ? undefined : {gap:10}}>
@@ -1332,16 +1333,19 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
               const selected = pick.chosen === p.name;
               const blocked = !selected && taken && taken.has(p.name);
               return (
-                <div
+                <button
+                  type="button"
                   key={p.name}
-                  className={`lvl-opt simple ${isSkill ? 'compact' : ''} ${selected ? 'selected' : ''} ${blocked ? 'blocked' : ''}`}
+                  disabled={blocked || undefined}
+                  aria-pressed={selected}
+                  className={`card-btn lvl-opt simple ${isSkill ? 'compact' : ''} ${selected ? 'selected' : ''} ${blocked ? 'blocked' : ''}`}
                   onClick={() => !blocked && onPick({ ...pick, chosen: p.name, chosenText: p.text })}
                   title={blocked ? `Already chosen — ${taken.get(p.name)}` : ''}
                 >
                   <div className="lvl-opt-name">{p.name}</div>
                   {blocked ? <div className="lvl-opt-body">Already chosen — {taken.get(p.name)}</div>
-                    : p.text ? <div className="lvl-opt-body">{p.text}</div> : null}
-                </div>
+                    : p.text ? <div className="lvl-opt-body">{renderRich(p.text)}</div> : null}
+                </button>
               );
             })}
           </div>
@@ -1374,16 +1378,16 @@ function OptionCard({ opt, kind, selected, onClick }) {
         }
       : opt;
     return (
-      <div className={`lvl-opt ${selected ? 'selected' : ''}`} onClick={onClick}>
+      <button type="button" aria-pressed={!!selected} className={`card-btn lvl-opt ${selected ? 'selected' : ''}`} onClick={onClick}>
         <AbilityCard ability={normalized} kind="heroic" />
-      </div>
+      </button>
     );
   }
   return (
-    <div className={`lvl-opt simple ${selected ? 'selected' : ''}`} onClick={onClick}>
+    <button type="button" aria-pressed={!!selected} className={`card-btn lvl-opt simple ${selected ? 'selected' : ''}`} onClick={onClick}>
       <div className="lvl-opt-name">{opt.name}</div>
-      {opt.body && <div className="lvl-opt-body">{opt.body}</div>}
-    </div>
+      {opt.body && <div className="lvl-opt-body">{renderRich(opt.body)}</div>}
+    </button>
   );
 }
 
@@ -1415,14 +1419,14 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
       <div className="orn-frame" style={{padding:'14px 18px'}}>
         <H4Meta>Mechanical Gains</H4Meta>
         <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.6}}>
-          <div>· <b style={{color:'var(--gold-2)'}}>+{data.staminaGain}</b> maximum Stamina (→ {newStamina})</div>
+          <div><b style={{color:'var(--gold-2)'}}>+{data.staminaGain}</b> maximum Stamina (→ {newStamina})</div>
           {charInc.map(([k, v]) => (
-            <div key={k}>· {k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
+            <div key={k}>{k} score raised to <b style={{color:'var(--gold-2)'}}>{v}</b></div>
           ))}
-          {data.autoCharIncreaseAll && <div>· All characteristics <b style={{color:'var(--gold-2)'}}>+{data.autoCharIncreaseAll.delta}</b> (max {data.autoCharIncreaseAll.max})</div>}
+          {data.autoCharIncreaseAll && <div>All characteristics <b style={{color:'var(--gold-2)'}}>+{data.autoCharIncreaseAll.delta}</b> (max {data.autoCharIncreaseAll.max})</div>}
           {otherPicks.filter(ch => ch.kind === 'char-bonus').map(ch => {
             const p = picks[ch.id];
-            return <div key={ch.id}>· +1 to <b style={{color:'var(--gold-2)'}}>{p.name || p.id || p}</b></div>;
+            return <div key={ch.id}>+1 to <b style={{color:'var(--gold-2)'}}>{p.name || p.id || p}</b></div>;
           })}
         </div>
       </div>
@@ -1457,7 +1461,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
                 </div>
                 {pick.chosen && pick.chosenText && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.chosenText}</div>}
                 {!pick.chosen && pick.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.body}</div>}
-                {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{pick.effect}</div>}
+                {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{pick.effect}</div>}
               </div>
             );
           })}
@@ -1505,20 +1509,20 @@ const LEVELUP_CSS = `
 }
 .lvl-opt.selected::after {
   content: '\u2720'; position: absolute; top: 6px; right: 10px;
-  font-family: var(--display); font-size: 0.875rem; color: var(--gold);
+  font-family: var(--display); font-size: var(--fs-7); color: var(--gold);
 }
 /* Compact skill chips are small + center-aligned; the corner diamond would sit over the
    label, so drop it (the gold border + glow already mark selection). */
 .lvl-opt.simple.compact.selected::after { display: none; }
 .lvl-opt-name {
-  font-family: var(--display-2); font-size: 0.875rem; font-weight: 700;
+  font-family: var(--display-2); font-size: var(--fs-7); font-weight: 700;
   letter-spacing: 0.16em; color: var(--ink); text-transform: uppercase;
 }
 /* Perk cards (non-compact): keep a right gutter so a long/wrapping name never runs under
    the selection diamond. */
 .lvl-opt.simple:not(.compact) .lvl-opt-name { padding-right: 20px; }
 .lvl-opt-body {
-  font-family: var(--serif); font-size: 0.8125rem; color: var(--ink-2);
+  font-family: var(--serif); font-size: var(--fs-6); color: var(--ink-2);
   line-height: 1.55; margin-top: 6px;
 }
 .skill-pick-grid {
@@ -1527,8 +1531,8 @@ const LEVELUP_CSS = `
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
 }
 .lvl-opt.simple.compact { padding: 10px 12px; text-align: center; }
-.lvl-opt.simple.compact .lvl-opt-name { font-size: 0.75rem; letter-spacing: 0.1em; }
-@media (max-width: 560px) { .skill-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.lvl-opt.simple.compact .lvl-opt-name { font-size: var(--fs-5); letter-spacing: 0.1em; }
+${MQ.phone} { .skill-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 `;
 function LevelUpStyles() { return <style>{LEVELUP_CSS}</style>; }
 

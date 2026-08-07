@@ -3,7 +3,7 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
+import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
 
@@ -11,11 +11,16 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 function CareerStep({ character, update }) {
   const sel = character.career.id;
-  const setCareer = (id) => update(c => {
-    const newCar = DS_CAREERS.find(x => x.id === id);
-    const parsed = newCar ? parseCareerSkills(newCar) : { auto: [], picks: [] };
-    return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, skillSwaps: {}, languages: [], perk: '' } };
-  });
+  const setCareer = (id) => {
+    // The incident/skills/perk panels live below the card grid — bring them
+    // into view on a fresh pick.
+    if (id !== character.career.id) scrollWizardTo('career-config');
+    update(c => {
+      const newCar = DS_CAREERS.find(x => x.id === id);
+      const parsed = newCar ? parseCareerSkills(newCar) : { auto: [], picks: [] };
+      return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, skillSwaps: {}, languages: [], perk: '' } };
+    });
+  };
   const setIncident = (v) => update(c => ({ ...c, career: { ...c.career, incident: v } }));
   const setTaken = (v) => update(c => ({ ...c, career: { ...c.career, taken: v } }));
   const setCarLangs = (arr) => update(c => ({ ...c, career: { ...c.career, languages: arr } }));
@@ -73,6 +78,11 @@ function CareerStep({ character, update }) {
   return (
     <div className="stack-22">
       <H3>Choose your Career</H3>
+      {!sel && (
+        <div style={{ fontFamily: 'var(--hand)', fontStyle: 'italic', color: 'var(--ink-3)', fontSize: '0.875rem', marginTop: -12 }}>
+          Picking a career reveals its skills, languages, and inciting incident below.
+        </div>
+      )}
       <div className="grid-3">
         {DS_CAREERS.map(ca => (
           <SelCard key={ca.id} selected={sel === ca.id} onClick={() => setCareer(ca.id)}>
@@ -93,6 +103,7 @@ function CareerStep({ character, update }) {
 
       {car && parsed && (
         <>
+          <div id="career-config" />
           <OrnDivider glyph={`❦  ${car.name.toUpperCase()}  ❦`} />
 
           <div className="grid-2" style={{gap: 16}}>
@@ -125,10 +136,10 @@ function CareerStep({ character, update }) {
                   const incName = typeof inc === 'string' ? inc : inc.name;
                   const incText = typeof inc === 'string' ? null : inc.text;
                   return (
-                    <div key={incName} className={`card ${character.career.incident === incName ? 'selected' : ''}`} onClick={() => setIncident(incName)} style={{padding:'10px 14px'}}>
+                    <SelCard key={incName} selected={character.career.incident === incName} onClick={() => setIncident(incName)} style={{padding:'10px 14px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.75rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, textTransform:'uppercase'}}>{incName}</div>
-                      {incText && <div style={{fontFamily:'var(--serif)', fontSize: '0.78125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:5}}>{incText}</div>}
-                    </div>
+                      {incText && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', lineHeight:1.5, marginTop:5}}>{incText}</div>}
+                    </SelCard>
                   );
                 })}
                 <Button kind="ghost" small onClick={() => {
@@ -247,9 +258,9 @@ function CareerStep({ character, update }) {
               {(PERKS[car.perk] || []).map(p => {
                 const isQuick = car.quickPerk === p.name;
                 return (
-                <div
+                <SelCard
                   key={p.name}
-                  className={`card ${character.career.perk === p.name ? 'selected' : ''}`}
+                  selected={character.career.perk === p.name}
                   onClick={() => setPerkName(p.name)}
                   style={{padding: '12px 16px'}}
                 >
@@ -258,7 +269,7 @@ function CareerStep({ character, update }) {
                     {isQuick && <Tag kind="gold">Suggested</Tag>}
                   </div>
                   <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:6, whiteSpace:'pre-line'}}>{p.text}</div>
-                </div>
+                </SelCard>
                 );
               })}
             </div>
@@ -291,7 +302,7 @@ function KV({ k, v }) {
   return (
     <div className="wiz-kv" style={{padding:'4px 0', borderBottom: '1px dashed var(--line)'}}>
       <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase'}}>{k}</div>
-      <div style={{fontFamily:'var(--serif)', fontSize: '0.84375rem', color:'var(--ink)'}}>{v}</div>
+      <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-7)', color:'var(--ink)'}}>{v}</div>
     </div>
   );
 }

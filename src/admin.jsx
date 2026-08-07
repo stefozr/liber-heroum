@@ -15,11 +15,13 @@ const ADMIN_CSS = `
 .adm-head { text-align: center; margin-bottom: 8px; }
 .adm-head h2 { margin-bottom: 0; }
 .adm-card-wrap { position: relative; }
+/* Reserve the top-right corner: without this a long hero name runs under the ✕. */
+.adm-card-wrap .ph-card .ph-body { padding-right: 42px; }
 .adm-del {
   position: absolute; top: 8px; right: 8px; z-index: 5;
   width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer;
   background: rgba(8,8,10,0.72); border: 1px solid var(--line-2); color: var(--rubric-2);
-  font-family: var(--mono); font-size: 0.75rem; transition: border-color .14s, background .14s;
+  font-family: var(--mono); font-size: var(--fs-5); transition: border-color .14s, background .14s;
 }
 .adm-del:hover { border-color: var(--rubric); background: rgba(138,58,48,0.18); }
 /* Keeps its 26px look — growing it to 44 would cover the card art — but gains a
@@ -42,7 +44,7 @@ function AdminScreen({ characters, users, onOpen, onDelete }) {
     for (const c of characters) (by[c.ownerId] ||= []).push(c);
     return Object.entries(by)
       .map(([ownerId, heroes]) => ({
-        owner: userById[ownerId] || { id: ownerId, displayName: 'Unknown keeper' },
+        owner: userById[ownerId] || { id: ownerId, displayName: 'Unknown owner' },
         heroes,
       }))
       .sort((a, b) => String(a.owner.displayName).localeCompare(String(b.owner.displayName)));
@@ -55,8 +57,11 @@ function AdminScreen({ characters, users, onOpen, onDelete }) {
         <div className="adm-head">
           <GlyphRow>✠ · ❦ · ✦ · ❦ · ✠</GlyphRow>
           <H2>All Heroes</H2>
+          <div className="sub" style={{ fontFamily: 'var(--hand)', fontStyle: 'italic', color: 'var(--ink-3)', fontSize: '0.875rem', marginTop: 6 }}>
+            Every hero in the chronicle — visible to admins only
+          </div>
           <div style={{ marginTop: 8 }}>
-            <Pill kind="muted">{characters.length} {characters.length === 1 ? 'HERO' : 'HEROES'} · {groups.length} {groups.length === 1 ? 'KEEPER' : 'KEEPERS'}</Pill>
+            <Pill kind="muted">{characters.length} {characters.length === 1 ? 'HERO' : 'HEROES'} · {groups.length} {groups.length === 1 ? 'OWNER' : 'OWNERS'}</Pill>
           </div>
         </div>
 
@@ -78,7 +83,7 @@ function AdminScreen({ characters, users, onOpen, onDelete }) {
               {g.heroes.map(c => (
                 <div key={c.id} className="adm-card-wrap">
                   <button className="adm-del" type="button" title="Delete hero" aria-label="Delete hero" onClick={(e) => { e.stopPropagation(); setPendingDelete(c); }}>✕</button>
-                  <PartyHeroCard character={c} canEdit onOpen={() => onOpen(c.id)} />
+                  <PartyHeroCard character={c} canEdit editLabel="Edit · Admin" onOpen={() => onOpen(c.id)} />
                 </div>
               ))}
             </div>

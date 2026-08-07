@@ -3,20 +3,19 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySignatures } from '../helpers.js';
+import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 function AncestryStep({ character, update }) {
   const sel = character.ancestry.id;
-  const setAnc = (id) => update(c => ({ ...c, ancestry: { ...c.ancestry, id, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} } }));
+  // Re-clicking the already-selected ancestry must not wipe the trait picks.
+  const setAnc = (id) => update(c => c.ancestry.id === id ? c
+    : ({ ...c, ancestry: { ...c.ancestry, id, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} } }));
 
   const anc = ancestryDef(character);
-  const spent = (character.ancestry.traits || []).reduce((sum, name) => {
-    const t = anc && anc.traits.find(t => t.name === name);
-    return sum + (t ? t.cost : 0);
-  }, 0);
+  const spent = ancestrySpent(character);
   const budget = anc ? ancestryPoints(character) : 0;
   const remaining = budget - spent;
 
@@ -118,6 +117,11 @@ function AncestryStep({ character, update }) {
   return (
     <div className="stack-22">
       <H3>Choose your Ancestry</H3>
+      {!anc && (
+        <div style={{ fontFamily: 'var(--hand)', fontStyle: 'italic', color: 'var(--ink-3)', fontSize: '0.875rem', marginTop: -12 }}>
+          Each ancestry grants points to spend on traits — you'll pick those below once you choose.
+        </div>
+      )}
       <div className="grid-3">
         {DS_ANCESTRIES.map(a => (
           <SelCard key={a.id} className={`poster-card${sel && sel !== a.id ? ' dim' : ''}`} selected={sel === a.id} onClick={() => setAnc(a.id)}>
@@ -198,8 +202,8 @@ function AncestryStep({ character, update }) {
               <H3>Purchased Traits</H3>
               <div style={{display:'flex', alignItems:'center', gap:10}}>
                 {anc.quick && anc.quick.length > 0 && <Pill kind="gold">QUICK BUILD · {anc.quick.join(' + ').toUpperCase()}</Pill>}
-                <Pill kind={remaining === 0 ? 'gold' : ''}>
-                  {remaining} / {budget} PTS REMAINING
+                <Pill kind={remaining === 0 ? 'gold' : 'rubric'}>
+                  {remaining} / {budget} PTS REMAINING{remaining > 0 ? ' · SPEND ALL TO COMPLETE' : ''}
                 </Pill>
               </div>
             </div>
@@ -209,11 +213,11 @@ function AncestryStep({ character, update }) {
                 const overBudget = !isOn && t.cost > remaining;
                 const isQuick = (anc.quick || []).includes(t.name);
                 return (
-                  <div
+                  <SelCard
                     key={t.name}
-                    className={`card ${isOn ? 'selected' : ''}`}
+                    selected={isOn}
+                    blocked={overBudget}
                     onClick={() => toggleTrait(t.name)}
-                    style={{ opacity: overBudget ? 0.5 : 1, cursor: overBudget ? 'not-allowed' : 'pointer' }}
                   >
                     <div style={{display:'flex', justifyContent:'space-between', gap:10, alignItems:'baseline'}}>
                       <div style={{display:'flex', alignItems:'baseline', gap:8}}>
@@ -223,7 +227,7 @@ function AncestryStep({ character, update }) {
                       <Tag kind="gold">{t.cost} PT</Tag>
                     </div>
                     <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
-                  </div>
+                  </SelCard>
                 );
               })}
             </div>
@@ -253,18 +257,17 @@ function AncestryStep({ character, update }) {
                       {pool.map(t => {
                         const on = chosen === t.name;
                         return (
-                          <div
+                          <SelCard
                             key={t.name}
-                            className={`card ${on ? 'selected' : ''}`}
+                            selected={on}
                             onClick={() => setPrevLifeTrait(cost, t.name)}
-                            style={{cursor:'pointer'}}
                           >
                             <div style={{display:'flex', justifyContent:'space-between', gap:10, alignItems:'baseline'}}>
                               <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
                               <Tag kind="gold">{t.cost} PT</Tag>
                             </div>
                             <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
-                          </div>
+                          </SelCard>
                         );
                       })}
                     </div>
@@ -365,15 +368,15 @@ function OptionChoicePicker({ choice, options, picked, toggle }) {
             const on = picked.includes(o.name);
             const blocked = !on && count > 1 && picked.length >= count;
             return (
-              <div
+              <SelCard
                 key={o.name}
-                className={`card ${on ? 'selected' : ''}`}
+                selected={on}
+                blocked={blocked}
                 onClick={() => !blocked && toggle(o.name)}
-                style={{ opacity: blocked ? 0.5 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
               >
                 <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{o.name}</div>
                 {o.text && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{o.text}</div>}
-              </div>
+              </SelCard>
             );
           })}
         </div>

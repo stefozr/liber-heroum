@@ -90,8 +90,20 @@ function Pill({ children, kind = '' }) {
   return <span className={`pill ${kind}`}>{children}</span>;
 }
 
-function Tag({ children, kind = '' }) {
-  return <span className={`tag ${kind}`}>{children}</span>;
+// Autosave status pill (wizard + play top bars). Renders nothing without a state,
+// so screens that don't receive one (read-only sheets, tests) are unaffected.
+function SavePill({ saveState }) {
+  if (!saveState) return null;
+  if (saveState.status === 'error') return <Pill kind="rubric">SAVE FAILED</Pill>;
+  if (saveState.status === 'pending') return <Pill kind="muted">SAVING…</Pill>;
+  const at = saveState.at
+    ? ` · ${new Date(saveState.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`
+    : '';
+  return <Pill kind="live">SAVED{at}</Pill>;
+}
+
+function Tag({ children, kind = '', title }) {
+  return <span className={`tag ${kind}`} title={title}>{children}</span>;
 }
 
 function Button({ children, onClick, kind = '', disabled, small, style, className, title }) {
@@ -113,6 +125,26 @@ function IconButton({ children, onClick, title }) {
   return (
     <button type="button" className="icon-btn" onClick={onClick} title={title}>{children}</button>);
 
+}
+
+// Shared chrome bar (roster/campaign appbar, wizard, play sheet). Pure layout
+// shell: `mark` is a free node (✠ box, Crest, svg …) — wrap plain glyphs in
+// .tb-mark-box for the standard bordered square. Screen-specific rules hang off
+// the passthrough className (.ds-appbar / .wiz-topbar / .play-top).
+function TopBar({ mark, brand, sub, center, right, className = '' }) {
+  return (
+    <div className={`topbar${className ? ' ' + className : ''}`}>
+      <div className="tb-left">
+        {mark && <div className="tb-mark">{mark}</div>}
+        <div className="tb-text">
+          <div className="tb-brand">{brand}</div>
+          {sub && <div className="tb-sub">{sub}</div>}
+        </div>
+      </div>
+      <div className="tb-center">{center}</div>
+      <div className="tb-right">{right}</div>
+    </div>
+  );
 }
 
 function H1({ children }) {return <h1 className="h1-display">{children}</h1>;}
@@ -140,17 +172,23 @@ function StatTile({ label, value, sub, gold }) {
 
 }
 
-// Selectable card (used in grids)
-function SelCard({ selected, onClick, children, style, id, className }) {
+// Selectable card (used in grids). A real <button> so every choice in the app
+// is keyboard-operable; .card-btn resets the UA button chrome and the .card
+// classes paint over it.
+function SelCard({ selected, onClick, children, style, id, className, blocked, title }) {
   return (
-    <div
+    <button
+      type="button"
       id={id}
-      className={`card ${selected ? 'selected' : ''}${className ? ' ' + className : ''}`}
+      title={title}
+      disabled={blocked || undefined}
+      aria-pressed={!!selected}
+      className={`card-btn card ${selected ? 'selected' : ''}${blocked ? ' blocked' : ''}${className ? ' ' + className : ''}`}
       onClick={onClick}
       style={style}>
 
       {children}
-    </div>);
+    </button>);
 
 }
 
@@ -173,6 +211,15 @@ function Modal({ open, onClose, title, children, footer, width }) {
       </div>
     </div>);
 
+}
+
+// Official rules text carries **bold** spans (e.g. "**Strained:**", "**Persistent 1:**").
+// Render them as real <b> runs instead of leaking the asterisks; everything else
+// passes through as plain text (no other markup is ever interpreted).
+function renderRich(text) {
+  if (typeof text !== 'string' || !text.includes('**')) return text;
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return parts.map((part, i) => (i % 2 === 1 ? <b key={i}>{part}</b> : part));
 }
 
 // Power-roll table renderer for ability cards
@@ -208,8 +255,12 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
     style.outline = `1px solid ${kind === 'heroic' ? 'var(--rubric)' : 'var(--gold)'}`;
     style.outlineOffset = '2px';
   }
+  // Clickable ability cards (class-step ability pickers) become real buttons;
+  // display-only ones (play sheet, inside level-up's own .lvl-opt button) stay divs.
+  const Root = onClick ? 'button' : 'div';
   return (
-    <div className={`ability-card ${kind}`} onClick={onClick} style={style}>
+    <Root {...(onClick ? { type: 'button', 'aria-pressed': !!selected } : {})}
+      className={`${onClick ? 'card-btn ' : ''}ability-card ${kind}`} onClick={onClick} style={style}>
       <div className="ac-row">
         <span className="ac-name">{a.name}</span>
         <span className="ac-tags">
@@ -217,7 +268,7 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
           {a.cost ? <span className="ac-cost">{a.cost} {a.resource || ''}</span>
             : a.badge ? <Tag kind="gold">{a.badge}</Tag>
             : a.noBadge ? null
-            : <Tag kind="gold">SIG</Tag>}
+            : <Tag kind="gold" title="Signature ability — usable at will, no cost">SIG</Tag>}
         </span>
       </div>
       <div className="ac-keywords">{(a.keywords || []).join(' · ')}</div>
@@ -233,13 +284,13 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
           <PowerRoll rows={a.tiers} />
         </>
       }
-      {a.effect && <div className="ac-effect"><b>Effect.</b> {a.effect}</div>}
-      {a.spend && <div className="ac-effect"><b>Spend {a.spendCost || 1} {a.resource || ''}.</b> {a.spend}</div>}
-      {a.orderBenefit && <div className="ac-effect"><b>Order Benefit.</b> {a.orderBenefit}</div>}
-    </div>);
+      {a.effect && <div className="ac-effect"><b>Effect.</b> {renderRich(a.effect)}</div>}
+      {a.spend && <div className="ac-effect"><b>Spend {a.spendCost || 1} {a.resource || ''}.</b> {renderRich(a.spend)}</div>}
+      {a.orderBenefit && <div className="ac-effect"><b>Order Benefit.</b> {renderRich(a.orderBenefit)}</div>}
+    </Root>);
 
 }
 
 // Expose to window so other files can use these in shared scope
 
-export { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard };
+export { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard };

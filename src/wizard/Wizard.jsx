@@ -1,7 +1,7 @@
 // wizard/Wizard.jsx — the orchestrator: main Wizard + CharacterPreview + isStepValid + the step map.
 import React from 'react';
-import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
-import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures } from './helpers.js';
+import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
+import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
 import { CultureStep } from './steps/culture.jsx';
@@ -20,8 +20,39 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
 
   const setStep = (i) => {
     const clamped = Math.max(0, Math.min(DS_STEPS.length - 1, i));
-    update(c => ({ ...c, wizardStep: clamped }));
+    update(c => ({
+      ...c,
+      wizardStep: clamped,
+      wizardVisited: (c.wizardVisited || []).includes(clamped)
+        ? c.wizardVisited
+        : [...(c.wizardVisited || []), clamped].sort((a, b) => a - b),
+    }));
   };
+
+  // Steps the user has actually been shown, persisted on the character so the
+  // history survives closing and reopening a draft. A ✓ in the rail means "seen
+  // and complete" — a fresh hero must not open with checkmarks on chapters it
+  // has never visited, and going back to chapter one must not strip the marks
+  // from chapters already worked through. Drafts saved before wizardVisited
+  // existed are seeded with everything up to their saved chapter.
+  const visitedRef = useRef(null);
+  if (visitedRef.current === null) {
+    visitedRef.current = new Set(
+      character.wizardVisited || Array.from({ length: stepIndex + 1 }, (_, i) => i)
+    );
+  }
+  visitedRef.current.add(stepIndex);
+  const seenStep = (i) => visitedRef.current.has(i);
+
+  // Write the seed (legacy drafts) and the opening chapter back to the character
+  // once per mount, so the very first visit is also remembered.
+  useEffect(() => {
+    const saved = character.wizardVisited || [];
+    if (visitedRef.current.size !== saved.length) {
+      const merged = [...new Set([...saved, ...visitedRef.current])].sort((a, b) => a - b);
+      update(c => ({ ...c, wizardVisited: merged }));
+    }
+  }, []);
 
   const stepValid = useMemo(() => isStepValid(character, stepIndex), [character, stepIndex]);
   const incompleteSteps = useMemo(
@@ -65,53 +96,64 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
     activeStepRef.current?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
   }, [stepIndex]);
 
+  // Warm the next chapter's backdrop so CONTINUE doesn't flash a bare gradient
+  // while a fresh background streams in — and, one chapter ahead of Class, its
+  // nine poster cards, the only other image grid that pops in. (Inert under jsdom.)
+  useEffect(() => {
+    const next = DS_STEPS[stepIndex + 1];
+    if (next?.bg) { const img = new Image(); img.src = next.bg; }
+    if (next?.id === 'class') {
+      for (const cls of DS_CLASSES) {
+        if (cls.cardImg) { const img = new Image(); img.src = cls.cardImg; }
+      }
+    }
+  }, [stepIndex]);
+
   return (
     <div className="wiz">
       {/* Top bar */}
-      <div className="wiz-topbar wiz-topbar-2">
-        <div className="left">
-          <Crest glyph="✠" portrait={character.portrait || undefined} />
-          <div>
-            <div className="brand-text">DRAW · STEEL</div>
-            <div className="hero-name" style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
-              {character.identity.name || character.name || 'NEW HERO'}
-            </div>
-          </div>
-        </div>
-        <div className="right">
-          {saveState?.status === 'error' ? (
-            <Pill kind="rubric">SAVE FAILED</Pill>
-          ) : saveState?.status === 'pending' ? (
-            <Pill kind="muted">SAVING…</Pill>
-          ) : (
-            <Pill kind="live">SAVED{saveState?.at ? ` · ${timeString(saveState.at)}` : ''}</Pill>
+      <TopBar
+        className="wiz-topbar"
+        mark={<Crest glyph="✠" portrait={character.portrait || undefined} />}
+        brand="DRAW · STEEL"
+        sub={<>
+          {character.identity.name || character.name || 'NEW HERO'}
+          {stepSummary(character, step.id) && (
+            <span style={{color:'var(--gold-2)'}}> ✦ {stepSummary(character, step.id)}</span>
           )}
+        </>}
+        right={<>
+          <SavePill saveState={saveState || { status: 'saved', at: null }} />
           <Button small kind="ghost" onClick={onExit}>◂ ROSTER</Button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Rail */}
       <div className="wiz-rail">
         {DS_STEPS.map((s, i) => {
           const valid = isStepValid(character, i);
-          const visited = i < stepIndex;
+          const seen = seenStep(i);
           const isActive = i === stepIndex;
-          // "done" only when the step is fully complete (all picks satisfied).
-          // "visited" = user has moved past it but it's incomplete.
+          // "done" only when the step was seen AND is fully complete — optional or
+          // vacuously-valid chapters keep their number until the user opens them.
+          // "visited" = user has been there but it's incomplete.
+          const done = valid && seen && !isActive;
           const cls = ['rstep'];
-          if (valid && !isActive) cls.push('done');
-          if (visited && !valid && !isActive) cls.push('visited');
+          if (done) cls.push('done');
+          if (seen && !valid && !isActive) cls.push('visited');
           if (isActive) cls.push('active');
           return (
-            <div
+            <button
+              type="button"
               key={s.id}
-              className={cls.join(' ')}
+              className={'card-btn ' + cls.join(' ')}
+              aria-current={isActive ? 'step' : undefined}
               ref={isActive ? activeStepRef : null}
               onClick={() => setStep(i)}
             >
-              <div className="rnum">{valid && !isActive ? '✓' : String(i+1).padStart(2,'0')}</div>
-              <div className="rname">{s.name}</div>
-            </div>
+              <div className="rnum">{done ? '✓' : String(i+1).padStart(2,'0')}</div>
+              <div className="rname">{s.name}{s.id === 'complication' ? <span className="ropt"> · optional</span> : null}</div>
+            </button>
           );
         })}
       </div>
@@ -137,17 +179,28 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
         <div className="col-main">
           <StepHeader step={step} />
           <div style={{height: 8}}></div>
-          <Step character={character} update={update} />
+          <Step character={character} update={update}
+            {...(step.id === 'review' ? { incompleteSteps, onGoToStep: setStep } : {})} />
           <div style={{height: 60}}></div>
         </div>
       </div>
 
       {/* Footer */}
       <div className="wiz-footer">
-        <Button kind="ghost" onClick={onBack}>◂ {stepIndex === 0 ? 'ROSTER' : DS_STEPS[stepIndex - 1].name.toUpperCase()}</Button>
-        <div className="meta">Chapter {stepIndex + 1} of {DS_STEPS.length} · {step.name}</div>
-        <Button kind="primary" onClick={onContinue} disabled={nameMissing}>
-          {isLast ? 'COMMIT TO THE LIBER ▸' : 'CONTINUE ▸'}
+        {/* On chapter one the back button would duplicate the topbar's ◂ ROSTER —
+            an invisible stand-in keeps the space-between footer from shifting. */}
+        {stepIndex === 0
+          ? <div aria-hidden="true" style={{ visibility: 'hidden' }}><Button kind="ghost">◂ ROSTER</Button></div>
+          : <Button kind="ghost" onClick={onBack}>◂ {DS_STEPS[stepIndex - 1].name.toUpperCase()}</Button>}
+        <div className="meta">
+          Chapter {stepIndex + 1} of {DS_STEPS.length} · {step.name}
+          {!stepValid && !isLast && <span style={{color:'var(--gold-2)'}}> · choices remain ▾</span>}
+        </div>
+        <Button kind="primary" onClick={onContinue} disabled={nameMissing}
+          title={nameMissing ? 'Name your hero to continue' : undefined}>
+          {isLast ? 'COMMIT TO THE LIBER ▸'
+            : step.id === 'complication' && !character.complication?.id ? 'CONTINUE · NO COMPLICATION ▸'
+            : 'CONTINUE ▸'}
         </Button>
       </div>
 
@@ -171,17 +224,16 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
           <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>Still to finish</div>
           <div className="stack-12">
             {incompleteSteps.map(({ s, i }) => (
-              <div
+              <SelCard
                 key={s.id}
                 onClick={() => { setCommitWarn(false); setStep(i); }}
-                className="card"
-                style={{padding:'10px 14px', display:'flex', alignItems:'center', gap: 12, cursor:'pointer'}}
+                style={{padding:'10px 14px', display:'flex', alignItems:'center', gap: 12}}
               >
                 <div style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--rubric-2)', letterSpacing:'0.18em'}}>{String(i+1).padStart(2,'0')}</div>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)'}}>{s.name}</div>
                 <div style={{flex:1}}></div>
                 <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em'}}>FIX ▸</div>
-              </div>
+              </SelCard>
             ))}
           </div>
         </div>
@@ -240,6 +292,14 @@ function isStepValid(c, idx) {
           const pool = t.optionChoice.options || (t.abilities || []).map(a => a.name);
           if (pool.length >= t.optionChoice.count && (t.chosen || []).length < t.optionChoice.count) return false;
         }
+      }
+      // Every ancestry point must be spent. The step only stays incomplete while
+      // an affordable unpurchased trait actually exists, so odd budgets (1 point
+      // left, only 2-point traits remaining) can't dead-end the chapter.
+      const remaining = ancestryPoints(c) - ancestrySpent(c);
+      if (remaining > 0) {
+        const owned = new Set(c.ancestry.traits || []);
+        if ((anc.traits || []).some(t => !owned.has(t.name) && t.cost <= remaining)) return false;
       }
       return true;
     }
@@ -328,6 +388,38 @@ function isStepValid(c, idx) {
       return true;
     default:
       return false;
+  }
+}
+
+// Chapters fully complete out of the total — drives the % on roster hero cards.
+function wizardProgress(character) {
+  const done = DS_STEPS.filter((_, i) => isStepValid(character, i)).length;
+  return { done, total: DS_STEPS.length };
+}
+
+// The current chapter's headline pick, shown in the top bar so a returning user
+// sees "you already chose Human here" without scrolling to the selected card.
+function stepSummary(c, stepId) {
+  switch (stepId) {
+    case 'ancestry': return ancestryDef(c)?.name || null;
+    case 'culture': {
+      const cul = DS_CULTURES;
+      const names = [
+        cul.environments.find(x => x.id === c.culture.environment)?.name,
+        cul.organizations.find(x => x.id === c.culture.organization)?.name,
+        cul.upbringings.find(x => x.id === c.culture.upbringing)?.name,
+      ].filter(Boolean);
+      return names.length ? names.join(' · ') : null;
+    }
+    case 'career': return careerDef(c)?.name || null;
+    case 'class': {
+      const cls = classDef(c);
+      if (!cls) return null;
+      const sub = cls.subclasses && cls.subclasses.find(s => (s.id || s.name) === c.cclass.subclass);
+      return sub ? `${cls.name} · ${sub.name}` : cls.name;
+    }
+    case 'complication': return complicationDef(c)?.name || null;
+    default: return null;
   }
 }
 
@@ -442,4 +534,4 @@ const STEP_COMPONENTS = {
 };
 
 
-export { Wizard, isStepValid };
+export { Wizard, isStepValid, wizardProgress };

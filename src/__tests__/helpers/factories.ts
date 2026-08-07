@@ -8,7 +8,7 @@ import {
 import {
   parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, defaultFlexValues, PERKS,
   groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions,
-  resolvedAncestryTraits, ancestrySignatures,
+  resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent,
 } from '../../wizard/helpers.js';
 import {
   LEVELUP_DATA, makeContext, levelChoicesFor, applyLevelUp, deriveGroupName,
@@ -101,6 +101,18 @@ export function buildValidCharacter(spec: any = {}) {
   c.ancestry.id = anc.id;
   if (anc.id === 'revenant') c.ancestry.formerLife = spec.formerLife || DS_ANCESTRIES.find((a: any) => a.id !== 'revenant')!.id;
   if (spec.traits) c.ancestry.traits = [...spec.traits];
+  // The ancestry gate requires the full point budget spent — top up with the
+  // first affordable traits (mirrors what a player must do to finish the step).
+  {
+    let remaining = ancestryPoints(c) - ancestrySpent(c);
+    for (const t of anc.traits || []) {
+      if (remaining <= 0) break;
+      if (!(c.ancestry.traits || []).includes(t.name) && t.cost <= remaining) {
+        c.ancestry.traits = [...(c.ancestry.traits || []), t.name];
+        remaining -= t.cost;
+      }
+    }
+  }
   // Each purchased 'Previous Life: Npt' trait needs its borrowed former-life trait
   // chosen (mirrors setPrevLifeTrait in the ancestry step).
   if (anc.id === 'revenant') {

@@ -12,29 +12,29 @@ const SHEET_CSS = `
 .trait-block:last-child { border-bottom: none; padding-bottom: 0; }
 .trait-block:first-child { padding-top: 0; }
 .trait-name {
-  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.14em;
+  font-family: var(--display-2); font-size: var(--fs-6); font-weight: 700; letter-spacing: 0.14em;
   color: var(--ink); display: flex; align-items: center; gap: 8px; text-transform: uppercase;
 }
 .sig-tag, .cost-tag {
-  font-family: var(--mono); font-size: 0.5625rem; padding: 2px 6px;
+  font-family: var(--mono); font-size: var(--fs-2); padding: 2px 6px;
   border: 1px solid var(--gold); color: var(--gold-2); letter-spacing: 0.18em;
   text-transform: uppercase; font-weight: 500;
 }
 .cost-tag { border-color: var(--line-2); color: var(--ink-3); }
-.trait-text { font-family: var(--serif); font-size: 0.84375rem; color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
+.trait-text { font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
 .sig-option-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.sig-option-label { font-family: var(--mono); font-size: 0.59375rem; color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
+.sig-option-label { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
 .sig-option-select {
-  font-family: var(--display-2); font-size: 0.78125rem; font-weight: 700; letter-spacing: 0.08em;
+  font-family: var(--display-2); font-size: var(--fs-6); font-weight: 700; letter-spacing: 0.08em;
   color: var(--gold-2); background: var(--panel, transparent); border: 1px solid var(--gold);
   padding: 5px 10px; cursor: pointer; text-transform: uppercase;
 }
 .sig-option-select:focus { outline: none; border-color: var(--gold-2); }
-.kit-meta-line { font-family: var(--mono); font-size: 0.59375rem; color: var(--gold-2); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 5px; }
-.kv-row { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 4px 12px; align-items: baseline; font-family: var(--mono); font-size: 0.6875rem; }
+.kit-meta-line { font-family: var(--mono); font-size: var(--fs-3); color: var(--gold-2); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 5px; }
+.kv-row { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 4px 12px; align-items: baseline; font-family: var(--mono); font-size: var(--fs-4); }
 /* Two-column variant used for kit source rows. */
 .kv-row.kv-src { grid-template-columns: 110px 1fr; }
-.kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: 0.625rem; text-transform: uppercase; }
+.kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: var(--fs-3); text-transform: uppercase; }
 .kv-row .v { color: var(--ink); }
 
 ${MQ.rail} {

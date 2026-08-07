@@ -291,37 +291,37 @@ const RULES_CSS = `
   gap: 10px; margin-bottom: 4px;
 }
 .mnv-name {
-  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 600;
+  font-family: var(--display-2); font-size: var(--fs-6); font-weight: 600;
   letter-spacing: 0.16em; color: var(--ink); text-transform: uppercase;
 }
 .mnv-kw {
-  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
+  font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3);
   letter-spacing: 0.2em; text-transform: uppercase;
 }
 .mnv-blurb {
-  font-family: var(--serif); font-size: 0.8125rem; color: var(--ink-2);
+  font-family: var(--serif); font-size: var(--fs-6); color: var(--ink-2);
   line-height: 1.5;
 }
 .mnv-roll {
   display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 12px;
-  font-family: var(--mono); font-size: 0.625rem;
+  font-family: var(--mono); font-size: var(--fs-3);
   margin: 6px 0 8px;
 }
-.mnv-roll .k { color: var(--ink-3); letter-spacing: 0.2em; text-transform: uppercase; font-size: 0.5625rem; }
-.mnv-roll .v { color: var(--ink); font-family: var(--serif); font-size: 0.75rem; }
+.mnv-roll .k { color: var(--ink-3); letter-spacing: 0.2em; text-transform: uppercase; font-size: var(--fs-2); }
+.mnv-roll .v { color: var(--ink); font-family: var(--serif); font-size: var(--fs-5); }
 .mnv-tier {
   display: grid; grid-template-columns: 24px 1fr; gap: 8px;
-  font-family: var(--serif); font-size: 0.75rem; color: var(--ink-2);
+  font-family: var(--serif); font-size: var(--fs-5); color: var(--ink-2);
   line-height: 1.45; padding: 3px 0;
 }
 .mnv-tier .tg {
-  font-family: var(--display); font-size: 0.875rem; color: var(--gold);
+  font-family: var(--display); font-size: var(--fs-7); color: var(--gold);
   text-align: center; line-height: 1;
 }
 .mnv-tier.t1 .tg { opacity: 0.55; }
 .mnv-tier.t3 .tg { color: var(--gold-2); }
 .mnv-effect {
-  font-family: var(--serif); font-size: 0.75rem; color: var(--ink-3);
+  font-family: var(--serif); font-size: var(--fs-5); color: var(--ink-3);
   font-style: italic; line-height: 1.5;
   border-top: 1px dashed var(--line-2); padding-top: 6px; margin-top: 6px;
 }
@@ -340,12 +340,13 @@ const RULES_CSS = `
   box-shadow: 0 0 0 1px rgba(176,138,72,0.15), 0 30px 80px rgba(0,0,0,0.6);
   position: relative; overflow: hidden;
 }
+/* 16px/±9px — matches the shared .modal ornaments (they were 12px here, a drift). */
 .rg-modal::before, .rg-modal::after {
-  content: ''; position: absolute; width: 12px; height: 12px;
+  content: ''; position: absolute; width: 16px; height: 16px;
   border: 1px solid var(--gold); transform: rotate(45deg); background: var(--bg-1);
 }
-.rg-modal::before { top: -7px; left: 50%; margin-left: -6px; }
-.rg-modal::after  { bottom: -7px; left: 50%; margin-left: -6px; }
+.rg-modal::before { top: -9px; left: 50%; margin-left: -8px; }
+.rg-modal::after  { bottom: -9px; left: 50%; margin-left: -8px; }
 
 .rg-nav {
   border-right: 1px solid var(--line);
@@ -366,15 +367,27 @@ const RULES_CSS = `
   color: var(--ink); text-align: center;
 }
 .rg-nav-head .sub {
-  font-family: var(--mono); font-size: 0.5625rem; color: var(--ink-3);
+  font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3);
   letter-spacing: 0.28em; text-transform: uppercase;
   text-align: center; margin-top: 5px;
+}
+.rg-filter {
+  display: block; width: calc(100% - 32px); margin: 0 16px 10px;
+  background: rgba(0,0,0,0.35); border: 1px solid var(--line-2);
+  color: var(--ink); font-family: var(--mono); font-size: var(--fs-4);
+  letter-spacing: 0.08em; padding: 8px 10px;
+}
+.rg-filter:focus { outline: none; border-color: var(--gold-deep); }
+.rg-filter::placeholder { color: var(--ink-3); }
+.rg-filter-empty {
+  padding: 12px 22px; font-family: var(--hand); font-style: italic;
+  color: var(--ink-3); font-size: var(--fs-6);
 }
 .rg-nav-item {
   display: block; width: 100%; text-align: left;
   background: transparent; border: 0; border-left: 2px solid transparent;
   color: var(--ink-2); padding: 9px 22px;
-  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.22em;
+  font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.22em;
   text-transform: uppercase; cursor: pointer;
   transition: color .12s, border-color .12s, background .12s;
 }
@@ -387,6 +400,10 @@ const RULES_CSS = `
 .rg-body {
   overflow-y: auto; padding: 26px 32px 32px;
   position: relative;
+  /* Edge fades: the clipped corner diamonds sit over this scroll area, so prose
+     dissolves before it can strike through them (top collision / 390px bottom). */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(180deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent);
 }
 /* A direct child of .rg-modal, not .rg-body — .rg-body's top-right corner is the
    modal's, so the desktop position is unchanged, but it no longer scrolls away. */
@@ -395,7 +412,7 @@ const RULES_CSS = `
   width: 32px; height: 32px;
   background: rgba(8,8,10,0.72); border: 1px solid var(--line-2);
   color: var(--ink-2); cursor: pointer;
-  font-family: var(--display); font-size: 1rem;
+  font-family: var(--display); font-size: var(--fs-9);
 }
 /* Phone-only drawer trigger for the section nav. */
 .rg-nav-toggle {
@@ -403,21 +420,21 @@ const RULES_CSS = `
   min-height: 52px; padding: 0 56px 0 16px; width: 100%;
   background: rgba(8,8,10,0.5); border: 0; border-bottom: 1px solid var(--line);
   color: var(--gold-2); cursor: pointer; text-align: left;
-  font-family: var(--display-2); font-size: 0.75rem;
+  font-family: var(--display-2); font-size: var(--fs-5);
   letter-spacing: 0.16em; text-transform: uppercase;
 }
-.rg-nav-toggle .rg-burger { font-size: 0.9375rem; color: var(--ink-2); }
+.rg-nav-toggle .rg-burger { font-size: var(--fs-8); color: var(--ink-2); }
 .rg-close:hover { border-color: var(--rubric-2); color: var(--rubric-2); }
 .rg-section-title {
   font-family: var(--display); font-size: 1.75rem; letter-spacing: 0.1em;
   color: var(--ink); margin: 0 0 4px;
 }
 .rg-section-eyebrow {
-  font-family: var(--mono); font-size: 0.5625rem; color: var(--gold);
+  font-family: var(--mono); font-size: var(--fs-2); color: var(--gold);
   letter-spacing: 0.32em; text-transform: uppercase; margin-bottom: 4px;
 }
 .rg-section-intro {
-  font-family: var(--serif); font-style: italic; font-size: 0.875rem;
+  font-family: var(--serif); font-style: italic; font-size: var(--fs-7);
   color: var(--ink-2); line-height: 1.55; margin: 14px 0 22px;
   border-left: 2px solid var(--gold-deep); padding-left: 14px;
   max-width: 640px;
@@ -426,16 +443,16 @@ const RULES_CSS = `
   margin: 14px 0 18px; max-width: 720px;
 }
 .rg-entry-name {
-  font-family: var(--display-2); font-size: 0.8125rem; font-weight: 600;
+  font-family: var(--display-2); font-size: var(--fs-6); font-weight: 600;
   letter-spacing: 0.18em; color: var(--gold-2); text-transform: uppercase;
   margin-bottom: 6px;
   display: flex; align-items: baseline; gap: 10px;
 }
 .rg-entry-name::before {
-  content: '\u2756'; color: var(--gold); font-size: 0.5625rem; opacity: 0.7;
+  content: '\u2756'; color: var(--gold); font-size: var(--fs-2); opacity: 0.7;
 }
 .rg-entry-text {
-  font-family: var(--serif); font-size: 0.875rem; color: var(--ink);
+  font-family: var(--serif); font-size: var(--fs-7); color: var(--ink);
   line-height: 1.6;
 }
 .rg-entry-text p { margin: 0 0 7px; }
@@ -447,29 +464,13 @@ const RULES_CSS = `
   background: transparent; border: 1px solid var(--line-2);
   color: var(--ink-2); cursor: pointer;
   padding: 8px 14px;
-  font-family: var(--mono); font-size: 0.625rem; letter-spacing: 0.22em; text-transform: uppercase;
+  font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.22em; text-transform: uppercase;
   transition: color .12s, border-color .12s, background .12s;
 }
 .rules-launcher::before {
   content: '\u2720'; color: var(--gold); font-family: var(--display);
 }
 .rules-launcher:hover { border-color: var(--gold); color: var(--ink); background: rgba(176,138,72,0.06); }
-.rules-launcher.large {
-  padding: 15px 30px; font-size: 0.75rem; letter-spacing: 0.26em;
-  font-family: var(--display-2); font-weight: 700;
-  background: linear-gradient(180deg, var(--gold-2), var(--gold-deep));
-  border: 1px solid var(--gold-2);
-  color: #1a120a;
-  box-shadow: 0 0 22px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.25);
-}
-.rules-launcher.large::before { font-size: 1.0625rem; color: #2a1c08; }
-.rules-launcher.large:hover {
-  background: linear-gradient(180deg, #f0d480, #b8932f);
-  border-color: var(--gold-2); color: #0b0e1f;
-  box-shadow: 0 0 30px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.3);
-}
-.rules-launcher.large:hover::before { color: #2a1c08; }
-.rules-launcher.large:active { transform: translateY(1px); }
 
 /* ══════════════════════ Responsive ══════════════════════ */
 
@@ -501,7 +502,6 @@ ${MQ.phone} {
   .rg-section-title { font-size: 1.5rem; letter-spacing: 0.06em; }
   .rg-close { width: 44px; height: 44px; top: 4px; right: 6px; }
   .mnv-roll { grid-template-columns: auto 1fr; }
-  .rules-launcher.large { padding: 13px 18px; letter-spacing: 0.16em; }
 }
 `;
 
@@ -567,7 +567,18 @@ function RulesGlossary({ open, onClose }) {
   // and 13 sections is too many for a tab strip, so it becomes an overlay instead.
   // Inert on desktop, where .rg-nav-toggle is display:none.
   const [navOpen, setNavOpen] = React.useState(false);
+  // Section filter: matches a section when its title or any entry name/text does.
+  const [query, setQuery] = React.useState('');
   const bodyRef = React.useRef(null);
+  const q = query.trim().toLowerCase();
+  const sectionMatches = (s) => {
+    if (!q) return true;
+    if (s.title.toLowerCase().includes(q)) return true;
+    return (s.entries || []).some(e =>
+      e.name.toLowerCase().includes(q)
+      || (Array.isArray(e.text) ? e.text.join(' ') : String(e.text || '')).toLowerCase().includes(q));
+  };
+  const visibleSections = DS_RULES.filter(sectionMatches);
 
   // Reset scroll position when switching sections
   React.useEffect(() => {
@@ -615,7 +626,17 @@ function RulesGlossary({ open, onClose }) {
             <div className="title">Rules</div>
             <div className="sub">Liber Heroum</div>
           </div>
-          {DS_RULES.map(s => (
+          {/* Its own element, not inside .rg-nav-head \u2014 the head is display:none
+              on phones, where the drawer still needs the filter. */}
+          <input
+            type="search"
+            className="rg-filter"
+            placeholder="Filter sections\u2026"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Filter rules sections"
+          />
+          {visibleSections.map(s => (
             <button
               key={s.id}
               type="button"
@@ -625,6 +646,9 @@ function RulesGlossary({ open, onClose }) {
               {s.title}
             </button>
           ))}
+          {visibleSections.length === 0 && (
+            <div className="rg-filter-empty">No chapter mentions "{query.trim()}".</div>
+          )}
         </div>
 
         <div className="rg-body" ref={bodyRef}>
@@ -650,11 +674,11 @@ function RulesGlossary({ open, onClose }) {
 }
 
 // Convenience launcher button
-function RulesButton({ large, onClick, children }) {
+function RulesButton({ onClick, children }) {
   return (
     <>
       <RulesStyles />
-      <button type="button" className={`rules-launcher${large ? ' large' : ''}`} onClick={onClick}>
+      <button type="button" className="rules-launcher" onClick={onClick}>
         {children || 'Rules Glossary'}
       </button>
     </>

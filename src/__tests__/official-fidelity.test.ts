@@ -729,3 +729,38 @@ describe('official fidelity — ancestry ability mechanics and badge', () => {
     });
   }
 });
+
+// ─── flavor-text hygiene ───
+// AbilityCard (theme/primitives.jsx) wraps every flavor string in quotation marks at
+// render time, so a flavor string that ships its own quote marks renders doubled on the
+// card ("“…”"). The data must stay bare; the renderer owns the quoting.
+describe('data hygiene — flavor text carries no quote marks of its own', () => {
+  const QUOTED = /^["“”']|["“”']$/;
+  const noteInto = (offenders: string[]) => (owner: string, node: any) => {
+    const flavor = typeof node?.flavor === 'string' ? node.flavor.trim() : '';
+    if (flavor && QUOTED.test(flavor)) offenders.push(`${owner} · ${node.name}: ${flavor}`);
+  };
+
+  it('class, level-up, and domain abilities', () => {
+    const offenders: string[] = [];
+    const note = noteInto(offenders);
+    for (const cls of DS_CLASSES as any[]) {
+      for (const [, { ability }] of abilitiesOf(cls)) note(cls.name, ability);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('ancestry and complication abilities', () => {
+    const offenders: string[] = [];
+    const note = noteInto(offenders);
+    const walk = (owner: string, node: any) => {
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node)) return node.forEach(n => walk(owner, n));
+      note(owner, node);
+      Object.values(node).forEach(n => walk(owner, n));
+    };
+    for (const anc of DS_ANCESTRIES as any[]) walk(anc.name, anc);
+    for (const comp of DS_COMPLICATIONS as any[]) walk(comp.name, comp);
+    expect(offenders).toEqual([]);
+  });
+});
