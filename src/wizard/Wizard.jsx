@@ -3,6 +3,7 @@ import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
 import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
+import { UnfinishedChapters } from './UnfinishedChapters.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
 import { CultureStep } from './steps/culture.jsx';
 import { CareerStep } from './steps/career.jsx';
@@ -56,7 +57,7 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
 
   const stepValid = useMemo(() => isStepValid(character, stepIndex), [character, stepIndex]);
   const incompleteSteps = useMemo(
-    () => DS_STEPS.map((s, i) => ({ s, i })).filter(({ i }) => !isStepValid(character, i)),
+    () => DS_STEPS.map((s, i) => ({ s, i, issues: stepIssues(character, i) })).filter(({ issues }) => issues.length > 0),
     [character]
   );
   const allValid = incompleteSteps.length === 0;
@@ -222,20 +223,8 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
         </div>
         <div style={{marginTop: 16}}>
           <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>Still to finish</div>
-          <div className="stack-12">
-            {incompleteSteps.map(({ s, i }) => (
-              <SelCard
-                key={s.id}
-                onClick={() => { setCommitWarn(false); setStep(i); }}
-                style={{padding:'10px 14px', display:'flex', alignItems:'center', gap: 12}}
-              >
-                <div style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--rubric-2)', letterSpacing:'0.18em'}}>{String(i+1).padStart(2,'0')}</div>
-                <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)'}}>{s.name}</div>
-                <div style={{flex:1}}></div>
-                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em'}}>FIX ▸</div>
-              </SelCard>
-            ))}
-          </div>
+          <UnfinishedChapters incompleteSteps={incompleteSteps}
+            onGoToStep={(i) => { setCommitWarn(false); setStep(i); }} />
         </div>
       </Modal>
     </div>
@@ -245,52 +234,77 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
 
 // Every duplicate-grant collision must carry a valid swap: a distinct same-group skill
 // that isn't held by any other slot or by this step's own grants/choices.
-function swapsResolved(c, collisions, swaps, ownKey, ownNames) {
-  if (!collisions.length) return true;
+// Returns the colliding skill names still lacking a valid swap.
+function unresolvedSwaps(c, collisions, swaps, ownKey, ownNames) {
+  if (!collisions.length) return [];
   const taken = skillsTakenExcept(c, ownKey);
   const used = [];
+  const unresolved = [];
   for (const { skill } of collisions) {
     const swap = (swaps || {})[skill];
-    if (!swap || swap === skill) return false;
     const pool = groupsOfSkill(skill).flatMap(g => DS_SKILL_GROUPS[g] || []);
-    if (!pool.includes(swap)) return false;
-    if (taken.has(swap) || ownNames.includes(swap) || used.includes(swap)) return false;
+    if (!swap || swap === skill || !pool.includes(swap)
+        || taken.has(swap) || ownNames.includes(swap) || used.includes(swap)) {
+      unresolved.push(skill);
+      continue;
+    }
     used.push(swap);
   }
-  return true;
+  return unresolved;
 }
 
-function isStepValid(c, idx) {
+function swapsResolved(c, collisions, swaps, ownKey, ownNames) {
+  return unresolvedSwaps(c, collisions, swaps, ownKey, ownNames).length === 0;
+}
+
+// Everything still missing from a chapter, as short human-readable lines.
+// Empty array ⇔ the step is valid — isStepValid is defined as exactly that.
+function stepIssues(c, idx) {
   const id = DS_STEPS[idx].id;
+  const swapIssues = (...args) => unresolvedSwaps(c, ...args).map(skill => `Duplicate skill: swap for ${skill} not chosen`);
   switch (id) {
     case 'ancestry': {
-      if (!c.ancestry.id) return false;
+      if (!c.ancestry.id) return ['Ancestry not chosen'];
+      const issues = [];
       const anc = DS_ANCESTRIES.find(a => a.id === c.ancestry.id);
       // Every signature-level choice must be fully picked (Silver Tongue skill,
       // Wyrmplate immunity, Runic Carving rune).
       for (const sig of ancestrySignatures(anc)) {
-        if (sig.skillChoice && ((c.ancestry.sigSkills || {})[sig.name] || []).filter(Boolean).length < sig.skillChoice.count) return false;
-        if (sig.optionChoice && ((c.ancestry.sigOptions || {})[sig.name] || []).filter(Boolean).length < sig.optionChoice.count) return false;
+        if (sig.skillChoice) {
+          const got = ((c.ancestry.sigSkills || {})[sig.name] || []).filter(Boolean).length;
+          const count = sig.skillChoice.count;
+          if (got < count) issues.push(count === 1 ? `${sig.name}: skill not picked` : `${sig.name}: ${got} of ${count} skills picked`);
+        }
+        if (sig.optionChoice) {
+          const got = ((c.ancestry.sigOptions || {})[sig.name] || []).filter(Boolean).length;
+          const count = sig.optionChoice.count;
+          if (got < count) issues.push(count === 1 ? `${sig.name}: choice not made` : `${sig.name}: ${got} of ${count} choices made`);
+        }
       }
       if (c.ancestry.id === 'revenant') {
         // A revenant needs a former life, and each purchased 'Previous Life' trait
         // needs its borrowed trait chosen (when the former ancestry offers one).
         const former = DS_ANCESTRIES.find(a => a.id === c.ancestry.formerLife);
-        if (!former) return false;
-        const pl = c.ancestry.prevLifeTraits || {};
-        for (const [name, cost] of [['Previous Life: 1pt', 1], ['Previous Life: 2pt', 2]]) {
-          if ((c.ancestry.traits || []).includes(name)
-              && (former.traits || []).some(t => t.cost === cost)
-              && !pl[`${cost}pt`]) return false;
+        if (!former) issues.push('Former life not chosen');
+        else {
+          const pl = c.ancestry.prevLifeTraits || {};
+          for (const [name, cost] of [['Previous Life: 1pt', 1], ['Previous Life: 2pt', 2]]) {
+            if ((c.ancestry.traits || []).includes(name)
+                && (former.traits || []).some(t => t.cost === cost)
+                && !pl[`${cost}pt`]) issues.push(`Previous Life (${cost}pt): borrowed trait not chosen`);
+          }
         }
       }
       // Every purchased (or borrowed) choice-bearing trait must be fully picked.
       for (const t of resolvedAncestryTraits(c)) {
         if (t.placeholder) continue; // unpicked Previous Life — the revenant gate owns it
-        if (t.skillChoice && (t.chosen || []).length < t.skillChoice.count) return false;
+        if (t.skillChoice && (t.chosen || []).length < t.skillChoice.count) {
+          const got = (t.chosen || []).length, count = t.skillChoice.count;
+          issues.push(count === 1 ? `${t.name}: skill not picked` : `${t.name}: ${got} of ${count} skills picked`);
+        }
         if (t.optionChoice) {
           const pool = t.optionChoice.options || (t.abilities || []).map(a => a.name);
-          if (pool.length >= t.optionChoice.count && (t.chosen || []).length < t.optionChoice.count) return false;
+          if (pool.length >= t.optionChoice.count && (t.chosen || []).length < t.optionChoice.count) issues.push(`${t.name}: choice not made`);
         }
       }
       // Every ancestry point must be spent. The step only stays incomplete while
@@ -299,96 +313,127 @@ function isStepValid(c, idx) {
       const remaining = ancestryPoints(c) - ancestrySpent(c);
       if (remaining > 0) {
         const owned = new Set(c.ancestry.traits || []);
-        if ((anc.traits || []).some(t => !owned.has(t.name) && t.cost <= remaining)) return false;
+        if ((anc.traits || []).some(t => !owned.has(t.name) && t.cost <= remaining)) {
+          issues.push(`${remaining} ancestry ${remaining === 1 ? 'point' : 'points'} unspent`);
+        }
       }
-      return true;
+      return issues;
     }
-    case 'culture':
-      return !!c.culture.environment && !!c.culture.organization && !!c.culture.upbringing && !!c.culture.language
-        && !!(c.culture.skills?.environment) && !!(c.culture.skills?.organization) && !!(c.culture.skills?.upbringing);
+    case 'culture': {
+      const issues = [];
+      if (!c.culture.environment) issues.push('Environment not chosen');
+      if (!c.culture.organization) issues.push('Organization not chosen');
+      if (!c.culture.upbringing) issues.push('Upbringing not chosen');
+      if (!c.culture.language) issues.push('Language not chosen');
+      if (!(c.culture.skills?.environment)) issues.push('Environment skill not picked');
+      if (!(c.culture.skills?.organization)) issues.push('Organization skill not picked');
+      if (!(c.culture.skills?.upbringing)) issues.push('Upbringing skill not picked');
+      return issues;
+    }
     case 'career': {
-      if (!c.career.id) return false;
+      if (!c.career.id) return ['Career not chosen'];
       const car = careerDef(c);
-      if (!car) return false;
+      if (!car) return ['Career not chosen'];
+      const issues = [];
       const parsed = parseCareerSkills(car);
       const skillCount = (c.career.skills || []).length;
       const requiredCount = parsed.auto.length + parsed.picks.reduce((s, p) => s + p.count, 0);
-      if (skillCount < requiredCount) return false;
-      if ((car.languages || 0) > 0 && (c.career.languages || []).length < car.languages) return false;
-      if (!c.career.perk) return false;
+      if (skillCount < requiredCount) issues.push(`Skills: ${skillCount} of ${requiredCount} picked`);
+      if ((car.languages || 0) > 0 && (c.career.languages || []).length < car.languages) {
+        const got = (c.career.languages || []).length;
+        issues.push(car.languages === 1 ? 'Language not chosen' : `Languages: ${got} of ${car.languages} picked`);
+      }
+      if (!c.career.perk) issues.push('Perk not chosen');
       // Auto-granted duplicates need their "choose another instead" swap.
-      if (!swapsResolved(c, careerAutoCollisions(c), c.career.skillSwaps, 'career', c.career.skills || [])) return false;
-      return true;
+      issues.push(...swapIssues(careerAutoCollisions(c), c.career.skillSwaps, 'career', c.career.skills || []));
+      return issues;
     }
     case 'class': {
       const cls = classDef(c);
-      if (!cls) return false;
-      if (cls.subclasses && !c.cclass.subclass) return false;
-      if (cls.pickTwoDomains && (c.cclass.domains || []).length < 2) return false;
+      if (!cls) return ['Class not chosen'];
+      const issues = [];
+      if (cls.subclasses && !c.cclass.subclass) issues.push('Subclass not chosen');
+      if (cls.pickTwoDomains && (c.cclass.domains || []).length < 2) issues.push(`Domains: ${(c.cclass.domains || []).length} of 2 chosen`);
       // Conduit-style classes also choose a 1st-level domain feature + a domain ability.
-      if (cls.pickTwoDomains && !c.cclass.domainFeature) return false;
+      if (cls.pickTwoDomains && !c.cclass.domainFeature) issues.push('Domain feature not chosen');
       // The chosen domain feature grants a skill from its group.
-      if (cls.pickTwoDomains && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) return false;
-      if (cls.pickTwoDomains && !c.cclass.domainAbility) return false;
+      if (cls.pickTwoDomains && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) issues.push('Domain skill not picked');
+      if (cls.pickTwoDomains && !c.cclass.domainAbility) issues.push('Domain ability not chosen');
       // Censor: choose one domain → its 1st-level feature (auto) + a skill from the indicated group.
-      if (cls.pickOneDomain && (c.cclass.domains || []).length < 1) return false;
-      if (cls.pickOneDomain && !c.cclass.domainFeature) return false;
-      if (cls.pickOneDomain && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) return false;
+      if (cls.pickOneDomain && (c.cclass.domains || []).length < 1) issues.push('Domain not chosen');
+      if (cls.pickOneDomain && !c.cclass.domainFeature) issues.push('Domain feature not chosen');
+      if (cls.pickOneDomain && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) issues.push('Domain skill not picked');
       const sigsRequired = cls.sigCount ?? 1;
-      if ((c.cclass.signatures || []).length < sigsRequired) return false;
-      if (cls.deep && !c.cclass.heroic3) return false;
-      if (cls.deep && !c.cclass.heroic5) return false;
+      const sigsGot = (c.cclass.signatures || []).length;
+      if (sigsGot < sigsRequired) {
+        issues.push(sigsRequired === 1 ? 'Signature ability not chosen' : `Signature abilities: ${sigsGot} of ${sigsRequired} picked`);
+      }
+      if (cls.deep && !c.cclass.heroic3) issues.push(`3-${cls.resource} heroic ability not chosen`);
+      if (cls.deep && !c.cclass.heroic5) issues.push(`5-${cls.resource} heroic ability not chosen`);
       // Kit picks must come from the pool the chosen subclass allows
       // (Fury's Stormwight is limited to stormwight kits).
       const kitPool = kitPoolFor(cls, c.cclass.subclass);
       const inKitPool = (id) => kitPool.some(k => k.id === id);
-      if (cls.kitRequired && !(c.kit.id && inKitPool(c.kit.id))) return false;
-      if (cls.kit2Required && !(c.kit2?.id && inKitPool(c.kit2.id))) return false;
+      if (cls.kitRequired && !(c.kit.id && inKitPool(c.kit.id))) issues.push(c.kit.id ? 'Kit not in the allowed pool' : 'Kit not chosen');
+      if (cls.kit2Required && !(c.kit2?.id && inKitPool(c.kit2.id))) issues.push(c.kit2?.id ? 'Second kit not in the allowed pool' : 'Second kit not chosen');
       // Prayer/Ward (Conduit) and Enchantment/Ward (Elementalist) feature choices.
-      if (cls.prayers && !c.cclass.prayer) return false;
-      if (cls.enchantments && !c.cclass.enchantment) return false;
-      if (cls.wards && !c.cclass.ward) return false;
+      if (cls.prayers && !c.cclass.prayer) issues.push('Prayer not chosen');
+      if (cls.enchantments && !c.cclass.enchantment) issues.push('Enchantment not chosen');
+      if (cls.wards && !c.cclass.ward) issues.push('Ward not chosen');
       // Class skill picks (plus the subclass's skill-group pick, e.g. Tactician doctrines).
       {
         const sub = (cls.subclasses || []).find(s => (s.id || s.name) === c.cclass.subclass);
         const needSkills = classSkillPicks(cls, sub).reduce((s, p) => s + p.count, 0);
-        if ((c.cclass.skills || []).length < needSkills) return false;
+        const gotSkills = (c.cclass.skills || []).length;
+        if (gotSkills < needSkills) issues.push(`Class skills: ${gotSkills} of ${needSkills} picked`);
         // Grant duplicates need their "choose another instead" swap.
         const ownNames = [...classGrantedSkills(cls, sub), ...(c.cclass.skills || [])];
-        if (!swapsResolved(c, classGrantCollisions(c), c.cclass.skillSwaps, 'class', ownNames)) return false;
+        issues.push(...swapIssues(classGrantCollisions(c), c.cclass.skillSwaps, 'class', ownNames));
       }
       // Point-buy: flex stats spend the full budget, each within range — OR match one of
       // the official arrays exactly (some official arrays total less than the budget).
       if (cls.flexCharOrder) {
         const chars = c.cclass.characteristics || {};
         const vals = cls.flexCharOrder.map(k => chars[k]);
-        if (vals.some(v => typeof v !== 'number' || v < -1 || v > 2)) return false;
-        const budget = Math.max(...(cls.charArrays || [[0]]).map(arr => arr.reduce((s, v) => s + v, 0)));
-        if (vals.reduce((s, v) => s + v, 0) !== budget && !matchesCharArray(cls, vals)) return false;
+        if (vals.some(v => typeof v !== 'number' || v < -1 || v > 2)) issues.push('Characteristics out of range');
+        else {
+          const budget = Math.max(...(cls.charArrays || [[0]]).map(arr => arr.reduce((s, v) => s + v, 0)));
+          if (vals.reduce((s, v) => s + v, 0) !== budget && !matchesCharArray(cls, vals)) issues.push('Characteristic points not fully spent');
+        }
       }
-      return true;
+      return issues;
     }
     case 'complication': {
       // Skipping is always valid, but a chosen complication must have its picks filled.
-      if (!c.complication.id) return true;
+      if (!c.complication.id) return [];
       const comp = complicationDef(c);
-      if (!comp) return true;
+      if (!comp) return [];
+      const issues = [];
       for (let i = 0; i < (comp.skillChoices || []).length; i++) {
-        if ((((c.complication.skills) || {})[i] || []).length < comp.skillChoices[i].count) return false;
+        const got = (((c.complication.skills) || {})[i] || []).length;
+        const count = comp.skillChoices[i].count;
+        if (got < count) issues.push(count === 1 ? 'Skill not picked' : `Skills: ${got} of ${count} picked`);
       }
-      if (comp.languageChoice && ((c.complication.languages || []).length < comp.languageChoice.count)) return false;
+      if (comp.languageChoice && ((c.complication.languages || []).length < comp.languageChoice.count)) {
+        const got = (c.complication.languages || []).length;
+        issues.push(comp.languageChoice.count === 1 ? 'Language not chosen' : `Languages: ${got} of ${comp.languageChoice.count} picked`);
+      }
       // Fixed grants colliding with an earlier slot must carry a same-group swap.
       const ownNames = [...(comp.skills || []), ...Object.values(c.complication.skills || {}).flat()];
-      if (!swapsResolved(c, complicationGrantCollisions(c), c.complication.skillSwaps, 'comp:fixed', ownNames)) return false;
-      return true;
+      issues.push(...swapIssues(complicationGrantCollisions(c), c.complication.skillSwaps, 'comp:fixed', ownNames));
+      return issues;
     }
     case 'identity':
-      return (c.identity.name || '').trim().length > 0;
+      return (c.identity.name || '').trim().length > 0 ? [] : ['Hero not yet named'];
     case 'review':
-      return true;
+      return [];
     default:
-      return false;
+      return ['Unknown chapter'];
   }
+}
+
+function isStepValid(c, idx) {
+  return stepIssues(c, idx).length === 0;
 }
 
 // Chapters fully complete out of the total — drives the % on roster hero cards.
@@ -534,4 +579,4 @@ const STEP_COMPONENTS = {
 };
 
 
-export { Wizard, isStepValid, wizardProgress };
+export { Wizard, isStepValid, stepIssues, wizardProgress };

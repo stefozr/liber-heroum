@@ -7,6 +7,7 @@ import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, d
 import { DOMAIN_2_ABILITIES } from '../../data/conduit-domains.js';
 import { SheetStyles, AncestryTraitsList, KitDetails } from '../../theme/sheet.jsx';
 import { StepHeader } from '../StepHeader.jsx';
+import { UnfinishedChapters } from '../UnfinishedChapters.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -360,21 +361,17 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
             The rites are complete. Commit to the Liber Heroum, and your hero takes their first breath as a stalwart of Orden.
           </div>
         ) : (
-          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '1rem', marginTop: 10, maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
-            {incompleteSteps.length === 1 ? 'One chapter remains unfinished: ' : `${incompleteSteps.length} chapters remain unfinished: `}
-            {incompleteSteps.map(({ s, i }, idx) => (
-              <React.Fragment key={s.id}>
-                {idx > 0 && ', '}
-                {onGoToStep
-                  ? <button type="button" onClick={() => onGoToStep(i)}
-                      style={{background:'none', border:'none', padding:0, cursor:'pointer', font:'inherit', color:'var(--gold-2)', textDecoration:'underline', textUnderlineOffset:3}}>
-                      {s.name}
-                    </button>
-                  : s.name}
-              </React.Fragment>
-            ))}
-            {'. The hero may be kept as a draft, but cannot take the field until every rite is done.'}
-          </div>
+          <>
+            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '1rem', maxWidth: 600, margin: '10px auto 0', lineHeight: 1.55}}>
+              {incompleteSteps.length === 1 ? 'One chapter remains unfinished.' : `${incompleteSteps.length} chapters remain unfinished.`}
+            </div>
+            <div style={{maxWidth: 600, margin: '14px auto 0', textAlign:'left'}}>
+              <UnfinishedChapters incompleteSteps={incompleteSteps} onGoToStep={onGoToStep} />
+            </div>
+            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-2)', fontSize: '0.875rem', maxWidth: 600, margin: '14px auto 0', lineHeight: 1.55}}>
+              The hero may be kept as a draft, but cannot take the field until every rite is done.
+            </div>
+          </>
         )}
       </div>
     </div>

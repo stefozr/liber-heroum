@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import React from 'react';
-import { Wizard, isStepValid } from '../wizard.jsx';
+import { Wizard, isStepValid, stepIssues } from '../wizard.jsx';
 import { newCharacter, collectSkillPicks } from '../app.jsx';
 import { DS_STEPS, DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS, DS_CULTURES, DS_SKILL_GROUPS, DS_LANGUAGES, kitPoolFor } from '../data.jsx';
 import { PERKS, pickPool } from '../wizard/helpers.js';
@@ -534,5 +534,97 @@ describe('complication grant pickers', () => {
     fireEvent.click(getAllByText('Exile')[0]);
     expect(latest().complication.id).toBe('exile');
     expect(latest().complication.skills).toEqual({});
+  });
+});
+
+// stepIssues — the itemized "what's still missing" behind isStepValid and the
+// commit modal's per-section detail lines.
+describe('stepIssues', () => {
+  const REVIEW_STEP = DS_STEPS.findIndex((s: any) => /review/i.test(s.id));
+  const ANCESTRY_STEP = DS_STEPS.findIndex((s: any) => /ancestry/i.test(s.id));
+  const CULTURE_STEP = DS_STEPS.findIndex((s: any) => /culture/i.test(s.id));
+  const IDENTITY_STEP = DS_STEPS.findIndex((s: any) => /identity/i.test(s.id));
+  const COMP_STEP = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
+
+  it('a wizard-complete character has no issues on any step, and empty ⇔ valid', () => {
+    const c = buildValidCharacter();
+    DS_STEPS.forEach((_: any, i: number) => {
+      expect(stepIssues(c, i)).toEqual([]);
+      expect(isStepValid(c, i)).toBe(true);
+    });
+    // The invariant holds for broken characters too.
+    const broken = buildValidCharacter();
+    broken.cclass.subclass = null;
+    broken.culture.language = null;
+    broken.identity.name = '';
+    DS_STEPS.forEach((_: any, i: number) => {
+      expect(stepIssues(broken, i).length === 0).toBe(isStepValid(broken, i));
+    });
+  });
+
+  it('names the missing class picks', () => {
+    const c = buildValidCharacter({ cls: 'fury' });
+    c.cclass.subclass = null;
+    expect(stepIssues(c, CLASS_STEP)).toContain('Subclass not chosen');
+    const c2 = buildValidCharacter({ cls: 'fury' });
+    c2.kit.id = null;
+    expect(stepIssues(c2, CLASS_STEP)).toContain('Kit not chosen');
+    // Signature count shortfall reports picked-of-required (or the singular form).
+    const c3 = buildValidCharacter({ cls: 'fury' });
+    const cls: any = (DS_CLASSES as any[]).find(x => x.id === 'fury');
+    const req = cls.sigCount ?? 1;
+    c3.cclass.signatures = c3.cclass.signatures.slice(0, req - 1);
+    expect(stepIssues(c3, CLASS_STEP)).toContain(
+      req === 1 ? 'Signature ability not chosen' : `Signature abilities: ${req - 1} of ${req} picked`);
+  });
+
+  it('names the missing culture and identity picks', () => {
+    const c = buildValidCharacter();
+    c.culture.language = null;
+    c.culture.skills = { ...c.culture.skills, upbringing: undefined };
+    const issues = stepIssues(c, CULTURE_STEP);
+    expect(issues).toContain('Language not chosen');
+    expect(issues).toContain('Upbringing skill not picked');
+    c.identity.name = '   ';
+    expect(stepIssues(c, IDENTITY_STEP)).toEqual(['Hero not yet named']);
+  });
+
+  it('a revenant without a former life reports it; a skipped complication reports nothing', () => {
+    const c = buildValidCharacter({ ancestry: 'revenant' });
+    c.ancestry.formerLife = null;
+    expect(stepIssues(c, ANCESTRY_STEP)).toContain('Former life not chosen');
+    const skipped = buildValidCharacter();
+    expect(skipped.complication.id).toBeFalsy();
+    expect(stepIssues(skipped, COMP_STEP)).toEqual([]);
+  });
+
+  it('an unresolved duplicate-grant collision names the colliding skill', () => {
+    const c = buildValidCharacter({ cls: 'shadow', subclass: 'caustic-alchemy', career: 'agent' });
+    c.cclass.skillSwaps = {};
+    expect(stepIssues(c, CLASS_STEP)).toContain('Duplicate skill: swap for Sneak not chosen');
+  });
+
+  it('the commit modal itemizes each unfinished chapter and its rows still navigate', () => {
+    const c = buildValidCharacter({ cls: 'fury' });
+    c.wizardStep = REVIEW_STEP;
+    // Break more than four class picks — every one must render, with no "+ N more" cap.
+    c.cclass.subclass = null;
+    c.cclass.signatures = [];
+    c.kit.id = null;
+    c.cclass.skills = [];
+    c.cclass.characteristics = {};
+    const issues = stepIssues(c, CLASS_STEP);
+    expect(issues.length).toBeGreaterThan(4);
+    const { container, getByText, latest } = renderWizard(c);
+    // The review step lists every missing item as chapter cards — no overflow cap.
+    for (const issue of issues) expect(container.textContent).toContain(issue);
+    expect(container.textContent).not.toMatch(/\+\s*\d+ more/);
+    fireEvent.click(getByText('COMMIT TO THE LIBER ▸'));
+    const modal = container.querySelector('.modal')!;
+    expect(modal.textContent).toContain("This Hero Isn't Finished");
+    for (const issue of issues) expect(modal.textContent).toContain(issue);
+    expect(modal.textContent).not.toMatch(/\+\s*\d+ more/);
+    fireEvent.click(modal.querySelector<HTMLButtonElement>('.card-btn')!);
+    expect(latest().wizardStep).toBe(CLASS_STEP);
   });
 });
