@@ -291,16 +291,15 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   });
 
   // Single source of truth for the top-bar actions. `pinned` entries stay visible
-  // on phones; the rest collapse into the ⋯ menu. Both renderers below map this
-  // same array, so the handlers are shared by reference rather than duplicated.
+  // on phones; the rest collapse into the ⋯ menu. (Nothing is pinned right now —
+  // BIOGRAPHY and LEVEL UP live in the masthead — but the mechanism remains.)
+  // Both renderers below map this same array, so the handlers are shared by
+  // reference rather than duplicated.
   const topActions = [
     { id: 'rules', label: 'RULES', onClick: () => setRulesOpen(true) },
-    { id: 'bio', label: 'BIOGRAPHY', onClick: () => setBioOpen(true) },
     { id: 'export', label: 'EXPORT', onClick: exportFoundry,
       title: 'Download as a FoundryVTT (Draw Steel system) actor file' },
     canEdit && onEdit && { id: 'edit', label: 'EDIT', onClick: onEdit },
-    canEdit && { id: 'levelup', label: 'LEVEL UP ▲', kind: 'primary', pinned: true,
-      onClick: () => setLevelUpOpen(true) },
     { id: 'exit', label: '◂ ROSTER', onClick: onExit },
   ].filter(Boolean);
 
@@ -368,6 +367,12 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                 {cls?.name || 'Unclassed'}
                 {character.cclass.subclass && <span className="hb-sub"> · {subclassName || character.cclass.subclass}</span>}
               </div>
+            </div>
+            <div className="hb-actions">
+              {canEdit && (
+                <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>
+              )}
+              <Button kind="ghost" small onClick={() => setBioOpen(true)}>BIOGRAPHY</Button>
             </div>
             <div className="hb-level">
               <div className="hb-level-num">{character.level}</div>
@@ -927,7 +932,7 @@ const PLAY_CSS = `
 .play-head-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 16px; }
 
 .hero-masthead {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 22px;
   border: 1px solid var(--gold-deep);
   background: var(--grad-masthead);
   padding: 18px 24px; margin-bottom: 14px;
@@ -945,6 +950,23 @@ const PLAY_CSS = `
 .hb-name { font-family: var(--display); font-size: 2.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink); text-wrap: balance; font-variant-ligatures: none; }
 .hb-meta { font-family: var(--display-2); font-size: var(--fs-8); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); margin-top: 10px; }
 .hb-meta .hb-sub { color: var(--gold-2); }
+.hb-actions { display: flex; flex-direction: column; gap: 12px; align-items: stretch; flex: none; }
+/* .btn is inline-flex without justify-content; stretched to a common width the
+   shorter label would sit flush left. */
+.hb-actions .btn { justify-content: center; }
+/* The bare ghost variant vanishes against --grad-masthead; give it the same
+   filled-tint treatment as .btn.danger, in the masthead's gold. The resting
+   tint outshines the global .btn:hover wash (and outranks it on specificity),
+   so it needs its own brighter hover, like .btn.danger:hover. */
+.hb-actions .btn.ghost {
+  background: linear-gradient(180deg, rgba(212,169,69,0.14), rgba(212,169,69,0.05));
+  border-color: var(--gold-deep);
+  color: var(--ink);
+}
+.hb-actions .btn.ghost:hover {
+  background: linear-gradient(180deg, rgba(212,169,69,0.24), rgba(212,169,69,0.10));
+  border-color: var(--gold);
+}
 .hb-level { text-align: center; flex: none; padding-left: 22px; border-left: 1px solid var(--line-2); }
 .hb-level-num { font-family: var(--display-2); font-size: 2.875rem; line-height: 1; color: var(--gold-2); }
 .hb-level-lbl { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
@@ -1236,8 +1258,8 @@ const PLAY_CSS = `
 
 ${MQ.rail} {
   /* Swap the button row for the ⋯ menu. Measured, not a device tier: branding
-     plus six buttons needs ~930px, so the bar overflows well above the tablet
-     breakpoint. This is the only place the threshold is expressed — play.jsx
+     plus four buttons still crowds the bar once the save pill and read-only
+     tag join in. This is the only place the threshold is expressed — play.jsx
      renders both branches and lets CSS pick. */
   .play-top .tb-right > .btn.collapsible { display: none; }
   .pt-menu-wrap { display: block; }
@@ -1280,7 +1302,12 @@ ${MQ.phone} {
   .prog-row { grid-template-columns: auto 1fr; }
   .prog-row .prog-edit { grid-column: 1 / -1; justify-self: start; margin-top: 8px; }
 
-  .hero-masthead { gap: 10px; padding: 8px 10px; margin-bottom: 10px; }
+  /* Unlike the tablet tier, the actions do reflow to a second row here: two
+     44px-tall buttons cannot share a row with a 44px portrait, and the extra
+     masthead row is net-neutral — these buttons vacated the top bar. */
+  .hero-masthead { gap: 10px; padding: 8px 10px; margin-bottom: 10px; grid-template-columns: auto 1fr auto; }
+  .hb-actions { grid-column: 1 / -1; grid-row: 2; flex-direction: row; }
+  .hb-actions .btn { flex: 1; }
   .hb-portrait { width: 44px; height: 44px; }
   .hb-portrait .hb-glyph { font-size: 1.25rem; }
   .hb-eyebrow { display: none; }
