@@ -163,9 +163,10 @@ function DropCap({ letter, children }) {
 
 }
 
-function StatTile({ label, value, sub, gold }) {
+// `rubric` marks a value under a negative live effect (e.g. Speed while Slowed).
+function StatTile({ label, value, sub, gold, rubric, title }) {
   return (
-    <div className={`stat-tile ${gold ? 'gold' : ''}`}>
+    <div className={`stat-tile ${gold ? 'gold' : ''}${rubric ? ' rubric' : ''}`} title={title}>
       <div className="lbl">{label}</div>
       <div className="val">{value}{sub && <span className="sub">{sub}</span>}</div>
     </div>);

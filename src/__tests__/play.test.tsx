@@ -5,7 +5,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import React from 'react';
-import { PlayView } from '../play.jsx';
+import { PlayView, conditionedSpeed } from '../play.jsx';
 import { newCharacter } from '../app.jsx';
 import { DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS } from '../data.jsx';
 
@@ -130,6 +130,19 @@ describe('PlayView renders the character sheet', () => {
   });
 });
 
+describe('conditionedSpeed', () => {
+  it('caps speed per the rules text', () => {
+    expect(conditionedSpeed(6, {})).toBe(6);
+    expect(conditionedSpeed(6, { Slowed: true })).toBe(2);
+    expect(conditionedSpeed(1, { Slowed: true })).toBe(1);      // "unless already lower"
+    expect(conditionedSpeed(6, { Grabbed: true })).toBe(0);
+    expect(conditionedSpeed(6, { Restrained: true })).toBe(0);
+    expect(conditionedSpeed(6, { Slowed: true, Grabbed: true })).toBe(0);
+    expect(conditionedSpeed(6, { Weakened: true, Prone: true })).toBe(6); // no numeric effect
+    expect(conditionedSpeed(6, undefined)).toBe(6);
+  });
+});
+
 describe('PlayView sheet tabs', () => {
   it('renders three tabs and switches the visible panel', () => {
     const { container, getAllByRole } = render(
@@ -203,6 +216,74 @@ describe('PlayView sheet tabs', () => {
     const heads = Array.from(container.querySelectorAll('.abil-group-head')).map(h => h.textContent);
     expect(heads.some(h => h!.startsWith('Kit —'))).toBe(true);
     expect(heads).toContain('Ancestry');
+  });
+
+  it('active conditions cap the displayed Speed tile', () => {
+    const c = completedCharacter();
+    const base = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const speedTile = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('.stat-tile'))
+        .find(t => t.querySelector('.lbl')!.textContent === 'Speed')!;
+    const baseSpeed = Number(speedTile(base.container).querySelector('.val')!.textContent!.match(/^\d+/)![0]);
+    expect(baseSpeed).toBeGreaterThanOrEqual(5);
+    base.unmount();
+
+    c.play.conditions = { Slowed: true };
+    const slowed = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const tile = speedTile(slowed.container);
+    expect(tile.querySelector('.val')!.textContent).toBe(`2/${baseSpeed}`);
+    expect(tile.className).toContain('rubric');
+    slowed.unmount();
+
+    c.play.conditions = { Slowed: true, Grabbed: true };
+    const grabbed = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    expect(speedTile(grabbed.container).querySelector('.val')!.textContent).toBe(`0/${baseSpeed}`);
+  });
+
+  it('hovering a condition chip shows its rules text in a tooltip', () => {
+    const { container } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} onEdit={noop} />
+    );
+    expect(container.querySelector('.play-tip')).toBeNull();
+    const weakened = Array.from(container.querySelectorAll('.cond-wrap'))
+      .find(w => w.textContent === 'Weakened')!;
+    fireEvent.mouseEnter(weakened);
+    const tip = container.querySelector('.play-tip')!;
+    expect(tip.textContent).toContain('Weakened');
+    expect(tip.textContent).toContain('bane on power rolls');
+    fireEvent.mouseLeave(weakened);
+    expect(container.querySelector('.play-tip')).toBeNull();
+  });
+
+  it('potency legend entries show styled tooltips with their formula', () => {
+    const { container } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} onEdit={noop} />
+    );
+    const weak = Array.from(container.querySelectorAll('.potency-row span'))
+      .find(s => s.textContent!.startsWith('WEAK'))!;
+    fireEvent.mouseEnter(weak);
+    const tip = container.querySelector('.play-tip')!;
+    expect(tip.textContent).toContain('M < WEAK');
+    expect(tip.textContent).toContain('highest characteristic − 2');
+    fireEvent.mouseLeave(weak);
+    expect(container.querySelector('.play-tip')).toBeNull();
+  });
+
+  it('tooltips still show on the read-only sheet, where chips are disabled', () => {
+    const { container } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} canEdit={false} />
+    );
+    const dazed = Array.from(container.querySelectorAll('.cond-wrap'))
+      .find(w => w.textContent === 'Dazed')!;
+    expect((dazed.querySelector('.cond') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.mouseEnter(dazed);
+    expect(container.querySelector('.play-tip')!.textContent).toContain('only one thing on their turn');
   });
 
   it('progression tab consolidates a level-up into one editable row', () => {

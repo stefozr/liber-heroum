@@ -51,7 +51,6 @@ const RELIQUARY_CSS = `
   --grad-card-sel:   linear-gradient(180deg, rgba(212,169,69,0.13), var(--bg-2));
   --shadow-card-sel: 0 0 24px rgba(212,169,69,0.18), inset 0 0 0 1px rgba(212,169,69,0.2);
   --surface-input:   var(--bg-1);
-  --surface-portrait: var(--bg-2);
   --surface-backdrop: rgba(7,9,28,0.86);
   --grad-modal:      linear-gradient(180deg, var(--bg-1), var(--bg-0));
   --grad-dropcap:    linear-gradient(180deg, rgba(212,169,69,0.10), rgba(193,74,58,0.06));
@@ -128,7 +127,6 @@ body[data-theme="obsidian"] {
   --grad-card-sel:   linear-gradient(180deg, rgba(176,138,72,0.18), rgba(20,20,26, calc(0.97 * var(--surface-alpha))));
   --shadow-card-sel: 0 0 22px rgba(176,138,72,0.16), inset 0 0 0 1px rgba(176,138,72,0.18);
   --surface-input:   rgba(14,14,18, calc(0.72 * var(--surface-alpha)));
-  --surface-portrait: rgba(20,20,26, calc(0.82 * var(--surface-alpha)));
   --surface-backdrop: rgba(8,8,10, calc(0.86 * var(--surface-alpha)));
   --grad-modal:      linear-gradient(180deg, rgba(20,20,26, calc(0.95 * var(--surface-alpha))), rgba(8,8,10, calc(0.95 * var(--surface-alpha))));
   --grad-dropcap:    linear-gradient(180deg, rgba(176,138,72,0.08), rgba(138,58,48,0.04));
@@ -611,11 +609,6 @@ ${MQ.phone} {
   .tb-brand, .tb-sub { font-size: var(--fs-3); }
 }
 
-/* 5-up characteristics strip in the wizard preview card. Distinct from play's
-   .chars-row, which lives in PLAY_CSS and is not mounted during the wizard. */
-.chars-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.chars-5 .stat-tile .lbl { font-size: var(--fs-1); }
-
 /* Key/value rows in the career step. */
 .wiz-kv { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; align-items: baseline; }
 
@@ -806,35 +799,9 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
 .stat-tile .val .sub { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); font-weight: 400; margin-left: 3px; }
 .stat-tile.gold { border-color: var(--gold); }
 .stat-tile.gold .val { color: var(--gold-2); }
-
-/* Char preview side card */
-.preview-portrait {
-  height: 180px; background-size: cover; background-position: center;
-  border: 1px solid var(--gold); position: relative;
-  background-color: var(--surface-portrait);
-}
-.preview-portrait::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(12,19,48,0.95) 100%);
-}
-.preview-portrait .pp-name {
-  position: absolute; bottom: 10px; left: 14px; right: 14px;
-  font-family: var(--display); font-size: 1.25rem; letter-spacing: 0.08em; color: var(--ink);
-  z-index: 2;
-}
-.preview-portrait .pp-meta {
-  position: absolute; top: 10px; left: 14px;
-  font-family: var(--mono); font-size: var(--fs-2); color: var(--gold-2);
-  letter-spacing: 0.22em; text-transform: uppercase; z-index: 2;
-  background: rgba(7,9,28,0.8); border: 1px solid var(--gold); padding: 3px 8px;
-}
-.preview-portrait.empty {
-  background-image: linear-gradient(135deg, var(--bg-2), var(--bg-3));
-  display: grid; place-items: center;
-}
-.preview-portrait.empty::before {
-  content: '✠'; font-family: var(--display); font-size: 3.75rem; color: var(--gold); opacity: 0.3;
-}
+/* A value currently reduced by a live effect (e.g. Speed while Slowed). */
+.stat-tile.rubric { border-color: var(--rubric); cursor: help; }
+.stat-tile.rubric .val { color: var(--rubric-2); }
 
 /* Portrait uploader (Identity step) */
 .portrait-uploader {
@@ -1234,8 +1201,6 @@ ${MQ.phone} {
   .pb-grid .pb-stat:nth-child(5) { grid-column: 1 / -1; }
 
   .review-portrait { width: 116px; }
-  .preview-portrait { height: 150px; }
-  .chars-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wiz-kv { grid-template-columns: 1fr; gap: 2px 0; }
   .class-banner { padding: 14px 16px; gap: 12px; }
 

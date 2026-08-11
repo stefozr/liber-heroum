@@ -1,7 +1,7 @@
 import React from 'react';
 import { OrnDivider, GlyphRow, renderGlyph, renderRich, Pill, SavePill, Button, TopBar, H3, H4Meta, StatTile, Modal, AbilityCard } from './theme.jsx';
 import { heroName } from './campaigns.jsx';
-import { ManeuversPanel, RulesGlossary } from './rules.jsx';
+import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
@@ -14,7 +14,7 @@ import { MQ } from './theme/breakpoints.js';
 // play.jsx — Play view (at-the-table digital sheet) + Level-up modal.
 
 // Hooks used bare in this file (see note in wizard.jsx) — provide them under ES modules.
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // Sheet tabs. The active tab is a per-device, per-hero UI preference, so it
 // lives in localStorage under the session prefix (same convention as LS_VIEW).
@@ -24,6 +24,22 @@ const PLAY_TABS = [
   { id: 'progression', label: 'Progression', glyph: '▲' },
 ];
 const tabKey = (heroId) => `${DS.K.session}/playTab/${heroId}`;
+
+// The condition strip comes from the rules glossary, so chip names (which double
+// as play.conditions keys) and tooltip text always match the official entries.
+const CONDITIONS = DS_RULES.find(s => s.id === 'conditions')?.entries || [];
+
+// The only conditions with a flat numeric effect: a speed cap ("has speed 0" /
+// "has speed 2 unless their speed is already lower"). The rest are roll
+// mechanics (banes, edges, action economy) the tooltip explains instead.
+const CONDITION_SPEED = { Grabbed: 0, Restrained: 0, Slowed: 2 };
+function conditionedSpeed(speed, conditions) {
+  let s = speed;
+  for (const [name, cap] of Object.entries(CONDITION_SPEED)) {
+    if (conditions?.[name]) s = Math.min(s, cap);
+  }
+  return s;
+}
 
 // Phone-only overflow menu for the top bar, which cannot fit six buttons on a
 // narrow screen. CSS shows this and hides the .collapsible buttons below the
@@ -75,6 +91,11 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   const car = careerDef(character);
   const derived = computeDerived(character);
   const benefits = summarizeBenefits(character);
+  // Active conditions cap the *displayed* speed only — computeDerived stays
+  // condition-free because the wizard review, level-up projections, and the
+  // Foundry export all read it and must show the unconditioned character.
+  const condSpeed = conditionedSpeed(derived.speed, character.play.conditions);
+  const speedConds = Object.keys(CONDITION_SPEED).filter(n => character.play.conditions?.[n]);
 
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const [editLevel, setEditLevel] = useState(null);
@@ -91,6 +112,24 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
     try { localStorage.setItem(tabKey(character.id), activeTab); } catch {}
   }, [activeTab, character.id]);
 
+  // The sheet scrolls as one page and the tab strip scrolls away with it, but
+  // all tabs share the scroller's position. After a user tab switch, if the
+  // strip has been scrolled past, snap it back to the top of the scrollport so
+  // the new tab starts at its beginning instead of mid-page (or clamped to the
+  // bottom of a shorter tab). Near the top, do nothing — no jump.
+  const bodyRef = useRef(null);
+  const tabsRef = useRef(null);
+  const tabSwitched = useRef(false);
+  const changeTab = (id) => { tabSwitched.current = true; setActiveTab(id); };
+  useEffect(() => {
+    if (!tabSwitched.current) return;   // initial mount / restored tab: leave scroll alone
+    tabSwitched.current = false;
+    const scroller = bodyRef.current, tabs = tabsRef.current;
+    if (!scroller || !tabs) return;
+    const tabsTop = tabs.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    if (scroller.scrollTop > tabsTop) scroller.scrollTop = tabsTop;
+  }, [activeTab]);
+
   // Initialise current stamina if undefined (skip for read-only viewers — not our sheet).
   useEffect(() => {
     if (canEdit && character.play.stamina == null && derived.staminaMax) {
@@ -100,6 +139,24 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   }, [derived.staminaMax]);
 
   const setPlay = (mut) => update(c => ({ ...c, play: typeof mut === 'function' ? mut(c.play) : { ...c.play, ...mut } }));
+
+  // Hover tooltip (conditions, potency legend): one fixed-position box fed by
+  // whichever trigger is hovered or focused. Fixed (not absolute) because the
+  // condition strip is an overflow-x scroller with a mask that would clip a
+  // positioned child; rendered at the view root.
+  const [hoverTip, setHoverTip] = useState(null);
+  const showTip = (name, text) => (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const below = r.bottom < window.innerHeight * 0.6;
+    setHoverTip({
+      name,
+      text,
+      left: Math.min(Math.max(8, r.left + r.width / 2 - 190), Math.max(8, window.innerWidth - 396)),
+      top: below ? r.bottom + 8 : null,
+      bottom: below ? null : window.innerHeight - r.top + 8,
+    });
+  };
+  const hideTip = () => setHoverTip(null);
 
   const adjStamina = (delta) => setPlay(p => ({ ...p, stamina: Math.max(-derived.winded, Math.min(derived.staminaMax, (p.stamina ?? derived.staminaMax) + delta)) }));
   const setStamina = (val) => setPlay(p => ({ ...p, stamina: Math.max(0, Math.min(derived.staminaMax, Math.floor(val))) }));
@@ -292,10 +349,12 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
 
       <div className="play-bg" style={cls ? { backgroundImage: `url(${cls.img})` } : {}}></div>
 
-      {/* Pinned region — masthead, vitals and the tab strip stay visible while
-          the active tab's content scrolls beneath. */}
-      <div className="play-pinned">
-        <div className="play-pinned-inner">
+      {/* Body — the whole sheet scrolls as one page: masthead, vitals,
+          conditions, and the tab strip scroll away with the content. */}
+      {/* onScroll: a fixed tooltip would drift from its scrolled-away trigger. */}
+      <div className="play-body" ref={bodyRef} onScroll={hoverTip ? hideTip : undefined}>
+      <div className="play-head">
+        <div className="play-head-inner">
           {/* Hero masthead (named to avoid ad-blocker cosmetic filters on "banner") */}
           <div className="hero-masthead">
             <div className={`hb-portrait ${character.portrait ? 'has-img' : ''}`}
@@ -341,33 +400,42 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
             <CounterBox label="Hero Tokens" value={character.play.heroTokens || 0} onPlus={canEdit ? () => adjHero(1) : null} onMinus={canEdit ? () => adjHero(-1) : null} />
           </div>
 
-          {/* Conditions — live session toggles like the vitals, so they stay
-              visible on every tab. Scrolls sideways when the row runs out. */}
+          {/* Conditions — live session toggles like the vitals, shown above
+              every tab. Scrolls sideways when the row runs out. Hover/focus
+              handlers live on the wrapper span so tooltips still work on the
+              read-only sheet, where the buttons are disabled (disabled buttons
+              swallow mouse events). No title= — the custom tip replaces it. */}
           <div className="cond-strip">
-            {['Bleeding','Dazed','Frightened','Grabbed','Prone','Restrained','Slowed','Taunted','Weakened'].map(cond => {
+            {CONDITIONS.map(entry => {
+              const cond = entry.name;
               const on = !!character.play.conditions[cond];
               return (
-                <button
-                  type="button"
-                  key={cond}
-                  className={`cond ${on ? 'on' : ''}`}
-                  aria-pressed={on}
-                  disabled={!canEdit}
-                  onClick={() => setPlay(p => ({ ...p, conditions: { ...p.conditions, [cond]: !p.conditions[cond] } }))}
-                >
-                  {cond}
-                </button>
+                <span key={cond} className="cond-wrap"
+                  onMouseEnter={showTip(entry.name, entry.text)} onMouseLeave={hideTip}>
+                  <button
+                    type="button"
+                    className={`cond ${on ? 'on' : ''}`}
+                    aria-pressed={on}
+                    disabled={!canEdit}
+                    onFocus={showTip(entry.name, entry.text)}
+                    onBlur={hideTip}
+                    onClick={() => setPlay(p => ({ ...p, conditions: { ...p.conditions, [cond]: !p.conditions[cond] } }))}
+                  >
+                    {cond}
+                  </button>
+                </span>
               );
             })}
           </div>
 
-          <Tabs tabs={PLAY_TABS} value={activeTab} onChange={setActiveTab} idBase="play" />
+          <div ref={tabsRef}>
+            <Tabs tabs={PLAY_TABS} value={activeTab} onChange={changeTab} idBase="play" />
+          </div>
         </div>
       </div>
 
-      {/* Body — the active tab's content. Inactive panels stay mounted (hidden)
+      {/* The active tab's content. Inactive panels stay mounted (hidden)
           so panel collapse state survives tab switches. */}
-      <div className="play-body">
         <div className="play-content">
           <TabPanel id="combat" idBase="play" active={activeTab === 'combat'}>
           <div className="play-grid">
@@ -418,11 +486,27 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                     </div>
                   ))}
                 </div>
-                <div className="potency-row"
-                  title={`Potency thresholds — an ability that reads "M < WEAK" compares the target's Might against your weak number (${derived.potency.weak}).`}>
-                  <span>WEAK {derived.potency.weak}</span>
-                  <span>AVERAGE {derived.potency.average}</span>
-                  <span className="strong">STRONG {derived.potency.strong}</span>
+                {/* Custom hover tips, not title= — same style as the conditions. */}
+                <div className="potency-row">
+                  {[
+                    ['Weak', derived.potency.weak, 'your highest characteristic − 2'],
+                    ['Average', derived.potency.average, 'your highest characteristic − 1'],
+                    ['Strong', derived.potency.strong, 'your highest characteristic'],
+                  ].map(([name, val, formula]) => {
+                    const show = showTip(`${name} ${val}`,
+                      `Potency threshold — an ability that reads "M < ${name.toUpperCase()}" applies its potency effect when the target's Might is less than ${val}. ${name} is ${formula}.`);
+                    return (
+                      <span
+                        key={name}
+                        className={name === 'Strong' ? 'strong' : undefined}
+                        tabIndex={0}
+                        onMouseEnter={show} onMouseLeave={hideTip}
+                        onFocus={show} onBlur={hideTip}
+                      >
+                        {name.toUpperCase()} {val}
+                      </span>
+                    );
+                  })}
                 </div>
               </Panel>
 
@@ -499,7 +583,10 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                 <div className="grid-3" style={{gap:8}}>
                   <StatTile label="Recovery" value={derived.recoveryValue} />
                   <StatTile label="Winded" value={derived.winded} />
-                  <StatTile label="Speed" value={derived.speed} />
+                  <StatTile label="Speed" value={condSpeed}
+                    sub={condSpeed !== derived.speed ? `/${derived.speed}` : undefined}
+                    rubric={condSpeed !== derived.speed}
+                    title={condSpeed !== derived.speed ? `Speed ${condSpeed} while ${speedConds.join(' + ')} — normally ${derived.speed}` : undefined} />
                   <StatTile label="Stability" value={derived.stability} />
                   <StatTile label="Disengage" value={derived.disengage} />
                   <StatTile label="Size" value={derived.size} />
@@ -636,6 +723,19 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       />
 
       <RulesGlossary open={rulesOpen} onClose={() => setRulesOpen(false)} />
+
+      {hoverTip && (
+        <div
+          className="play-tip"
+          role="tooltip"
+          style={{ left: hoverTip.left, top: hoverTip.top ?? 'auto', bottom: hoverTip.bottom ?? 'auto' }}
+        >
+          <div className="pt-name">{hoverTip.name}</div>
+          {(Array.isArray(hoverTip.text) ? hoverTip.text : [hoverTip.text]).map((p, i) => (
+            <p className="pt-text" key={i}>{p}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -811,7 +911,7 @@ function BiographyContent({ character, canEdit = false }) {
 const PLAY_CSS = `
 .play {
   position: relative; z-index: 2; width: 100%; height: 100%;
-  display: grid; grid-template-rows: auto auto 1fr; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr; overflow: hidden;
   /* Grid and flex children default to min-width:auto, so a wide row would push
      this past the viewport and get clipped rather than fitting. */
   min-width: 0;
@@ -819,15 +919,12 @@ const PLAY_CSS = `
 /* Bar geometry/type comes from the shared .topbar (theme/styles.js); only the
    play-specific rules (collapsible buttons, ⋯ menu, readonly tag) live here. */
 
-/* Pinned region — its own grid row, so scrolled tab content clips beneath it.
-   z-index lifts it above the fixed class-art background. min-width: 0 because,
-   unlike .play-body (a scroll container, automatic minimum size 0), this item
-   defaults to min-width auto — the unshrinkable vitals tiles would floor the
-   shared column track past the viewport and widen every row, top bar included. */
-.play-pinned { position: relative; z-index: 2; min-width: 0; }
-/* Bottom padding keeps a band of empty page background between the tab bar and
-   the scroll boundary, so clipped content doesn't merge into the buttons. */
-.play-pinned-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 16px; }
+/* Sheet head — masthead, vitals, conditions, and the tab strip. Scrolls away
+   with the rest of the sheet; z-index lifts it above the fixed class-art
+   background. min-width: 0 so the unshrinkable vitals tiles can't widen it
+   past the viewport. */
+.play-head { position: relative; z-index: 2; min-width: 0; }
+.play-head-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 16px; }
 
 .hero-masthead {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px;
@@ -1002,16 +1099,12 @@ const PLAY_CSS = `
 
 .empty-note { font-family: var(--hand); font-style: italic; color: var(--ink-3); font-size: var(--fs-7); padding: 14px; text-align: center; }
 
-/* Source-group headers inside the Abilities panel. Sticky: the current group's
-   header pins to the top of the .play-body scrollport until its group passes,
-   so long ability lists never lose their section context. */
+/* Source-group headers inside the Abilities panel — ornamental rule-and-label
+   rows that scroll with their group. */
 .abil-group + .abil-group { margin-top: 18px; }
 .abil-group-head {
-  position: sticky; top: 0; z-index: 2;
   display: flex; align-items: center; gap: 12px;
   padding: 8px 0; margin-bottom: 10px;
-  /* Same surface recipe as .panel, so cards blur beneath the pinned header. */
-  background: var(--surface-panel); backdrop-filter: blur(6px);
 }
 .abil-group-head .agh-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-2)); }
 .abil-group-head .agh-line:last-child { background: linear-gradient(90deg, var(--line-2), transparent); }
@@ -1025,7 +1118,7 @@ const PLAY_CSS = `
 .abil-group-head .agh-label::before { content: '❦'; margin-right: 10px; opacity: 0.55; }
 .abil-group-head .agh-label::after { content: '❦'; margin-left: 10px; opacity: 0.55; }
 
-/* Pinned conditions strip — one scrollable row beside the other live trackers,
+/* Conditions strip — one scrollable row beside the other live trackers,
    with the same right-edge fade as the vitals and tab strips. */
 .cond-strip {
   display: flex; gap: 6px; margin-bottom: 14px;
@@ -1034,7 +1127,9 @@ const PLAY_CSS = `
   mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
 }
 .cond-strip::-webkit-scrollbar { display: none; }
-.cond-strip .cond { flex: 0 0 auto; }
+/* The wrapper is the flex item (and the tooltip hover target — it keeps firing
+   on the read-only sheet where the button itself is disabled). */
+.cond-strip .cond-wrap { flex: 0 0 auto; display: inline-flex; }
 .cond {
   font-family: var(--mono); font-size: var(--fs-3); padding: 8px 6px;
   background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink-2);
@@ -1048,6 +1143,25 @@ const PLAY_CSS = `
 .cond:hover { border-color: var(--line-strong); }
 .cond.on { background: var(--rubric); border-color: var(--rubric); color: #fff; box-shadow: 0 0 10px var(--rubric-glow); }
 .cond:disabled { opacity: 0.5; cursor: default; }
+
+/* Hover tooltip (conditions, potency legend) — position: fixed so the condition
+   strip's overflow-x scroller and mask can't clip it; pointer-events: none so
+   it never traps the cursor. */
+.play-tip {
+  position: fixed; z-index: 60; width: max-content; max-width: 380px;
+  border: 1px solid var(--gold-deep); background: var(--bg-1);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.55);
+  padding: 12px 16px; pointer-events: none;
+}
+.play-tip .pt-name {
+  font-family: var(--mono); font-size: var(--fs-3); color: var(--gold-2);
+  letter-spacing: 0.24em; text-transform: uppercase; margin-bottom: 7px;
+}
+.play-tip .pt-text {
+  font-family: var(--serif); font-size: var(--fs-6); color: var(--ink-2);
+  line-height: 1.5; margin: 0;
+}
+.play-tip .pt-text + .pt-text { margin-top: 7px; }
 
 /* .trait-block / .trait-name / .sig-tag / .cost-tag / .trait-text / .sig-option-* /
    .kit-meta-line / .kv-row live in theme/sheet.jsx (SHEET_CSS) — shared with Review. */
@@ -1131,10 +1245,10 @@ ${MQ.rail} {
      vitals row and the 2-column grid collide labels with values. Same
      collapse as the tablet tier, one breakpoint earlier. */
   .play-grid { grid-template-columns: minmax(0, 1fr); }
-  .play-pinned-inner { padding: 16px 20px 14px; }
-  /* The vitals live in the pinned region now, so they must not wrap into a
-     second row: one horizontally scrollable strip, right-edge fade signalling
-     the rest (same pattern as the tab strip and the app-bar nav). */
+  .play-head-inner { padding: 16px 20px 14px; }
+  /* Keep the vitals to one horizontally scrollable strip rather than wrapping
+     into a second row, right-edge fade signalling the rest (same pattern as
+     the tab strip and the app-bar nav). */
   .vitals {
     display: flex; gap: 8px;
     overflow-x: auto; scrollbar-width: none;
@@ -1148,8 +1262,8 @@ ${MQ.rail} {
 
 ${MQ.tab} {
   .play-grid { grid-template-columns: 1fr; }
-  /* Compact in place rather than reflowing the level below the name — the
-     masthead is pinned, so extra rows cost scroll room on every tab. */
+  /* Compact in place rather than reflowing the level below the name — extra
+     masthead rows push the vitals and tabs further down the page. */
   .hero-masthead { gap: 16px; padding: 12px 16px; }
   .hb-portrait { width: 72px; height: 72px; }
   .hb-name { font-size: 1.75rem; }
@@ -1177,7 +1291,7 @@ ${MQ.phone} {
   .vitals .vital { flex: 0 0 220px; }
   .vitals .counter { flex: 0 0 96px; }
 
-  .play-pinned-inner { padding: 10px max(14px, env(safe-area-inset-left)) 12px max(14px, env(safe-area-inset-right)); }
+  .play-head-inner { padding: 10px max(14px, env(safe-area-inset-left)) 12px max(14px, env(safe-area-inset-right)); }
   .play-content { padding: 14px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }
   .panel-body { padding: 14px; }
 
@@ -1194,4 +1308,4 @@ ${MQ.touch} {
 const PlayStyles = () => React.createElement('style', {}, PLAY_CSS);
 
 Object.assign(window, { PlayView });
-export { PlayView };
+export { PlayView, conditionedSpeed };

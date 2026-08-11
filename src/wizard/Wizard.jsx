@@ -1,7 +1,9 @@
-// wizard/Wizard.jsx — the orchestrator: main Wizard + CharacterPreview + isStepValid + the step map.
+// wizard/Wizard.jsx — the orchestrator: main Wizard + isStepValid + the step map.
 import React from 'react';
-import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../data.jsx';import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../theme.jsx';import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../app.jsx';
-import { timeString, parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
+import { DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CLASSES, DS_STEPS, kitPoolFor } from '../data.jsx';
+import { Crest, SavePill, Button, TopBar, Modal } from '../theme.jsx';
+import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept } from '../app.jsx';
+import { parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { UnfinishedChapters } from './UnfinishedChapters.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
@@ -467,106 +469,6 @@ function stepSummary(c, stepId) {
     default: return null;
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SIDE PREVIEW
-// ─────────────────────────────────────────────────────────────────────────────
-
-function CharacterPreview({ character }) {
-  const cls = classDef(character);
-  const anc = ancestryDef(character);
-  const kit = kitDef(character);
-  const kit2 = kit2Def(character);
-  const heroName = character.identity.name || character.name || '— Unnamed —';
-  const sub = [
-    anc ? anc.name : 'Ancestry?',
-    cls ? cls.name : 'Class?',
-    cls && character.cclass.subclass ? (cls.subclasses && cls.subclasses.find(s => s.id === character.cclass.subclass || s.name === character.cclass.subclass)?.name) : null,
-  ].filter(Boolean).join(' · ');
-  const derived = computeDerived(character);
-
-  return (
-    <div className="stack-22">
-      <div className="preview-portrait" style={character.portrait ? {backgroundImage: `url(${character.portrait})`} : (cls ? {backgroundImage: `url(${cls.img})`} : {})}>
-        <div className="pp-meta">LV {String(character.level).padStart(2,'0')}</div>
-        <div className="pp-name">{heroName}</div>
-      </div>
-
-      <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', textAlign:'center'}}>
-        {sub || 'Begin the rites'}
-      </div>
-
-      <OrnDivider glyph="✠" size="small" />
-
-      <div>
-        <H4Meta>Vitals</H4Meta>
-        <div className="grid-3" style={{gap: 6}}>
-          <StatTile label="Stamina" value={derived.staminaMax || '—'} gold />
-          <StatTile label="Recoveries" value={derived.recoveries || '—'} />
-          <StatTile label="Recovery" value={derived.recoveryValue || '—'} />
-          <StatTile label="Speed" value={derived.speed || '—'} />
-          <StatTile label="Stability" value={derived.stability ?? '—'} />
-          <StatTile label="Winded" value={derived.winded || '—'} />
-        </div>
-      </div>
-
-      <div>
-        <H4Meta>Characteristics</H4Meta>
-        <div className="chars-5" style={{gap: 6}}>
-          {['Might','Agility','Reason','Intuition','Presence'].map(k => (
-            <div key={k} className="stat-tile" style={{textAlign:'center', padding:'10px 4px'}}>
-              <div className="lbl">{k.slice(0,3).toUpperCase()}</div>
-              <div className="val" style={{fontSize: '1.125rem'}}>
-                {derived.chars[k] != null ? (derived.chars[k] > 0 ? '+' + derived.chars[k] : derived.chars[k]) : '—'}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {cls && (
-        <div>
-          <H4Meta>Heroic Resource</H4Meta>
-          <div style={{
-            padding:'10px 14px', border:'1px solid var(--rubric)',
-            background:'rgba(193,74,58,0.08)',
-          }}>
-            <div style={{fontFamily:'var(--display)', fontSize: '1.125rem', letterSpacing:'0.12em', color: 'var(--rubric-2)'}}>
-              {cls.resource.toUpperCase()}
-            </div>
-            <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color: 'var(--ink-2)', marginTop: 2}}>
-              The {cls.name.toLowerCase()}'s fuel for greatness.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {kit && (
-        <div>
-          <H4Meta>{kit2 ? 'Kits' : 'Kit'}</H4Meta>
-          <div style={{padding:'10px 14px', border:'1px solid var(--line-2)', background:'var(--bg-2)'}}>
-            <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.14em', color:'var(--gold-2)'}}>{kit.name.toUpperCase()}</div>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:4}}>
-              {kit.armor} · {kit.weapon}
-            </div>
-            {kit2 && (
-              <>
-                <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.14em', color:'var(--gold-2)', marginTop:8, paddingTop:8, borderTop:'1px dashed var(--line)'}}>{kit2.name.toUpperCase()}</div>
-                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.16em', marginTop:4}}>
-                  {kit2.armor} · {kit2.weapon}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STEP 1: ANCESTRY
-// ─────────────────────────────────────────────────────────────────────────────
 
 const STEP_COMPONENTS = {
   ancestry: AncestryStep,
