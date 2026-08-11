@@ -328,7 +328,7 @@ body[data-theme="obsidian"] { -webkit-tap-highlight-color: rgba(176,138,72,0.15)
   border: 2px double var(--line);
   background: var(--grad-card);
   padding: 16px 18px; position: relative;
-  transition: border-color .15s, background .15s, box-shadow .15s; cursor: pointer;
+  transition: border-color .15s, background .15s, box-shadow .15s, opacity .15s; cursor: pointer;
   /* Pairs with the minmax(0, …) tracks below: the grid no longer grows to fit a
      stubborn card, so the card itself has to be allowed to shrink. */
   min-width: 0;
@@ -350,6 +350,10 @@ body[data-theme="obsidian"] { -webkit-tap-highlight-color: rgba(176,138,72,0.15)
 .card.selected .c-stamp { display: none; }
 .card.blocked { opacity: 0.4; cursor: not-allowed; }
 .card.blocked:hover { border-color: var(--line); background: var(--grad-card); }
+/* Group already decided — fade the also-rans, but keep them live: hovering
+   restores full strength and clicking switches the pick in one step. */
+.card.dimmed { opacity: 0.5; }
+.card.dimmed:hover { opacity: 1; }
 
 /* ───────── Header / titles ───────── */
 .eyebrow {

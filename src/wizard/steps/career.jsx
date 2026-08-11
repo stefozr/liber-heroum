@@ -85,7 +85,7 @@ function CareerStep({ character, update }) {
       )}
       <div className="grid-3">
         {DS_CAREERS.map(ca => (
-          <SelCard key={ca.id} selected={sel === ca.id} onClick={() => setCareer(ca.id)}>
+          <SelCard key={ca.id} selected={sel === ca.id} dimmed={!!sel && sel !== ca.id} onClick={() => setCareer(ca.id)}>
             {/* paddingRight keeps the tag clear of the ✠ selection stamp (absolute top-right). */}
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8, paddingRight:16}}>
               <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em'}}>{ca.name}</div>
@@ -136,7 +136,9 @@ function CareerStep({ character, update }) {
                   const incName = typeof inc === 'string' ? inc : inc.name;
                   const incText = typeof inc === 'string' ? null : inc.text;
                   return (
-                    <SelCard key={incName} selected={character.career.incident === incName} onClick={() => setIncident(incName)} style={{padding:'10px 14px'}}>
+                    <SelCard key={incName} selected={character.career.incident === incName}
+                      dimmed={!!character.career.incident && character.career.incident !== incName}
+                      onClick={() => setIncident(incName)} style={{padding:'10px 14px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.75rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600, textTransform:'uppercase'}}>{incName}</div>
                       {incText && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', lineHeight:1.5, marginTop:5}}>{incText}</div>}
                     </SelCard>
@@ -261,6 +263,7 @@ function CareerStep({ character, update }) {
                 <SelCard
                   key={p.name}
                   selected={character.career.perk === p.name}
+                  dimmed={!!character.career.perk && character.career.perk !== p.name}
                   onClick={() => setPerkName(p.name)}
                   style={{padding: '12px 16px'}}
                 >

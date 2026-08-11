@@ -49,3 +49,18 @@ describe('theme primitives render', () => {
     });
   }
 });
+
+describe('SelCard dimmed state', () => {
+  it('adds the dimmed class but stays clickable', () => {
+    const { container } = render(<SelCard dimmed onClick={() => {}}>Faded</SelCard>);
+    const btn = container.querySelector('button')!;
+    expect(btn.className).toContain('dimmed');
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('blocked disables, dimmed does not', () => {
+    const { container } = render(<SelCard blocked onClick={() => {}}>Stuck</SelCard>);
+    const btn = container.querySelector('button')!;
+    expect(btn.disabled).toBe(true);
+  });
+});

@@ -23,9 +23,14 @@ function CultureStep({ character, update }) {
     const archetype = arche && arche[aField] === itemId ? c.culture.archetype : null;
     return { ...c, culture: { ...c.culture, [key]: itemId, skills: skillsCopy, archetype } };
   });
-  const setSkill = (key, skill) => update(c => ({
-    ...c, culture: { ...c.culture, skills: { ...(c.culture.skills || {}), [key]: skill } },
-  }));
+  // Toggle, like career's toggleSkill: clicking the picked chip releases it, so
+  // a made choice can be revisited even though the other chips are blocked.
+  const toggleSkill = (key, skill) => update(c => {
+    const skills = { ...(c.culture.skills || {}) };
+    if (skills[key] === skill) delete skills[key];
+    else skills[key] = skill;
+    return { ...c, culture: { ...c.culture, skills } };
+  });
 
   const apply = (arche) => update(c => ({
     ...c, culture: {
@@ -49,7 +54,9 @@ function CultureStep({ character, update }) {
         <Deck>Pick an archetype to populate all three aspects at once, then customize.</Deck>
         <div className="grid-3" style={{marginTop:12, gap:8}}>
           {DS_CULTURES.archetypes.map(a => (
-            <SelCard key={a.name} selected={cu.archetype === a.name} onClick={() => apply(a)} style={{padding:'10px 14px'}}>
+            <SelCard key={a.name} selected={cu.archetype === a.name}
+              dimmed={!!(cu.environment && cu.organization && cu.upbringing) && cu.archetype !== a.name}
+              onClick={() => apply(a)} style={{padding:'10px 14px'}}>
               <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.12em', color:'var(--ink)', fontWeight:600, paddingRight:16}}>{a.name}</div>
               <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.16em', textTransform:'uppercase', marginTop:3}}>
                 {a.env} · {a.org} · {a.upb}
@@ -74,7 +81,7 @@ function CultureStep({ character, update }) {
             <H3>{name}</H3>
             <div className="grid-3" style={{marginTop:10}}>
               {items.map(it => (
-                <SelCard key={it.id} selected={cu[key] === it.id} onClick={() => setAspect(key, it.id, it)}>
+                <SelCard key={it.id} selected={cu[key] === it.id} dimmed={!!cu[key] && cu[key] !== it.id} onClick={() => setAspect(key, it.id, it)}>
                   <div style={{fontFamily:'var(--display)', fontSize: '0.9375rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{it.name}</div>
                   <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.18em', textTransform:'uppercase', marginTop:4}}>
                     SKILL: {it.skillLabel || it.skillGroups.join(' / ')} · Quick build: {it.quick}
@@ -92,21 +99,26 @@ function CultureStep({ character, update }) {
                   <H4Meta>Choose a {sel.name} Skill</H4Meta>
                   <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.8125rem', color:'var(--ink-3)'}}>
                     From: {skillLabel}{!picked && !quickBlocked && ' \u2014 quick pick: '}
-                    {!picked && !quickBlocked && <button type="button" className="quick-pick-btn" onClick={() => setSkill(key, sel.quick)}>{sel.quick}</button>}
+                    {!picked && !quickBlocked && <button type="button" className="quick-pick-btn" onClick={() => toggleSkill(key, sel.quick)}>{sel.quick}</button>}
                   </div>
+                </div>
+                <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:6}}>
+                  picked <b style={{color: picked ? 'var(--gold-2)' : 'var(--ink)'}}>{picked ? 1 : 0}</b> / 1
                 </div>
                 <div className="skill-chip-grid">
                   {skillPool.map(s => {
                     const on = picked === s;
-                    const blocked = !on && takenElsewhere.has(s);
+                    const elsewhere = !on && takenElsewhere.has(s);
+                    // Block a skill held in another slot, or anything else once the 1 pick is made.
+                    const blocked = elsewhere || (!on && !!picked);
                     return (
                       <button
                         type="button"
                         key={s}
                         className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
-                        onClick={() => !blocked && setSkill(key, s)}
+                        onClick={() => !blocked && toggleSkill(key, s)}
                         disabled={blocked}
-                        title={blocked ? `Already chosen \u2014 ${takenElsewhere.get(s)}` : ''}
+                        title={elsewhere ? `Already chosen \u2014 ${takenElsewhere.get(s)}` : blocked ? 'Already picked 1' : ''}
                       >
                         {s}
                       </button>
@@ -135,6 +147,7 @@ function CultureStep({ character, update }) {
                   key={L}
                   selected={on}
                   blocked={blocked}
+                  dimmed={!!cu.language && !on && !blocked}
                   onClick={() => !blocked && setField('language', L)}
                   title={blocked ? `Already chosen — ${takenElsewhere.get(L)}` : ''}
                   style={{padding:'10px 12px'}}

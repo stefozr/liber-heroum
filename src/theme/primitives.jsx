@@ -175,7 +175,9 @@ function StatTile({ label, value, sub, gold }) {
 // Selectable card (used in grids). A real <button> so every choice in the app
 // is keyboard-operable; .card-btn resets the UA button chrome and the .card
 // classes paint over it.
-function SelCard({ selected, onClick, children, style, id, className, blocked, title }) {
+// `dimmed` is visual-only (no disabled): the group's pick is made, but clicking
+// still switches to this card in one step. `blocked` means the pick is invalid.
+function SelCard({ selected, onClick, children, style, id, className, blocked, dimmed, title }) {
   return (
     <button
       type="button"
@@ -183,7 +185,7 @@ function SelCard({ selected, onClick, children, style, id, className, blocked, t
       title={title}
       disabled={blocked || undefined}
       aria-pressed={!!selected}
-      className={`card-btn card ${selected ? 'selected' : ''}${blocked ? ' blocked' : ''}${className ? ' ' + className : ''}`}
+      className={`card-btn card ${selected ? 'selected' : ''}${blocked ? ' blocked' : ''}${dimmed ? ' dimmed' : ''}${className ? ' ' + className : ''}`}
       onClick={onClick}
       style={style}>
 

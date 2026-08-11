@@ -261,7 +261,7 @@ function ClassSubclassPicker({ character, update }) {
             {cls.domains.map(d => {
               const on = chosenDomains.includes(d);
               return (
-                <SelCard key={d} selected={on} onClick={() => toggleDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
+                <SelCard key={d} selected={on} dimmed={chosenDomains.length >= 2 && !on} onClick={() => toggleDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
                   <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
                 </SelCard>
               );
@@ -279,7 +279,7 @@ function ClassSubclassPicker({ character, update }) {
                 if (!f) return null;
                 const on = curFeature?.domain === d;
                 return (
-                  <SelCard key={d} selected={on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
+                  <SelCard key={d} selected={on} dimmed={!!curFeature && !on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
                     <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
                     <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{f.text}</div>
@@ -351,7 +351,9 @@ function ClassSubclassPicker({ character, update }) {
       <H3>{cls.subclassName}</H3>
       <div className="grid-3" style={{marginTop:10}}>
         {cls.subclasses.map(s => (
-          <SelCard key={s.id || s.name} selected={character.cclass.subclass === (s.id || s.name)} onClick={() => setSub(s.id || s.name)}>
+          <SelCard key={s.id || s.name} selected={character.cclass.subclass === (s.id || s.name)}
+            dimmed={!!character.cclass.subclass && character.cclass.subclass !== (s.id || s.name)}
+            onClick={() => setSub(s.id || s.name)}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8, paddingRight:16}}>
               <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em'}}>{s.name}</div>
               {s.tag && <Tag>{s.tag}</Tag>}
@@ -498,7 +500,7 @@ function CensorDomainPicker({ character, update }) {
           {cls.domains.map(d => {
             const on = chosen === d;
             return (
-              <SelCard key={d} selected={on} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
+              <SelCard key={d} selected={on} dimmed={!!chosen && !on} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
               </SelCard>
             );
@@ -747,9 +749,11 @@ function ClassKitPicker({ character, update }) {
         const blocked = disabledId && k.id === disabledId;
         const order = dualSel ? orderOf(k.id) : 0;
         const isSel = dualSel ? order > 0 : selected === k.id;
+        // Slot(s) filled — fade the rest; clicking still swaps (dual mode rotates).
+        const full = dualSel ? !!(sel && sel2) : !!selected;
         const sig = parseKitSig(k.sig);
         return (
-          <SelCard key={k.id} selected={isSel} blocked={blocked} onClick={() => !blocked && onPick(k.id)}>
+          <SelCard key={k.id} selected={isSel} blocked={blocked} dimmed={full && !isSel && !blocked} onClick={() => !blocked && onPick(k.id)}>
             <div className="kit-card">
               <div className="ac-row">
                 <span className="ac-name">{k.name}</span>
