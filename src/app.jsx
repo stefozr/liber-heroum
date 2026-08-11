@@ -280,10 +280,11 @@ function computeDerived(c) {
 
   const recoveries = (cls ? cls.starting.recoveries : 0) + sum('rec');
 
-  // Speed: additive bonuses stack on the ancestry base; "you have speed N"
-  // traits (spdMin) then raise it to a minimum without stacking.
-  let speed = (anc ? anc.speed : 5) + kb('spd') + sum('spd') + sumChar('spdChar');
-  for (const b of bonuses) if (b.spdMin) speed = Math.max(speed, b.spdMin);
+  // Speed: "you have speed N" traits (spdMin) upgrade the ancestry base
+  // (official data: upgrade @ initial phase); additive bonuses stack on top.
+  let speedBase = anc ? anc.speed : 5;
+  for (const b of bonuses) if (b.spdMin) speedBase = Math.max(speedBase, b.spdMin);
+  const speed = speedBase + kb('spd') + sum('spd') + sumChar('spdChar');
 
   const stability = (anc ? anc.stability : 0) + kb('stab') + sum('stab') + sumChar('stabChar') + sum('stabLvl') * lvl;
 

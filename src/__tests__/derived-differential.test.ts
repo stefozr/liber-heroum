@@ -100,8 +100,9 @@ function oracle(c: any) {
   let staminaMax = cls ? cls.starting.stamina1 + (lvl - 1) * cls.starting.staminaPer : 0;
   staminaMax += (kb('sta_per') + sum('sta_per')) * ech + sum('sta') + sum('sta_lvl') * lvl;
   const recoveries = (cls?.starting.recoveries || 0) + sum('rec');
-  let speed = (anc?.speed ?? 5) + kb('spd') + sum('spd') + sumChar('spdChar');
-  for (const b of bonuses) if (b.spdMin) speed = Math.max(speed, b.spdMin);
+  let speedBase = anc?.speed ?? 5;
+  for (const b of bonuses) if (b.spdMin) speedBase = Math.max(speedBase, b.spdMin);
+  const speed = speedBase + kb('spd') + sum('spd') + sumChar('spdChar');
   const stability = (anc?.stability ?? 0) + kb('stab') + sum('stab') + sumChar('stabChar') + sum('stabLvl') * lvl;
   const disengage = 1 + kb('disengage') + sum('disengage') + sumChar('disChar');
   const recoveryValue = Math.floor(staminaMax / 3) + bonuses.reduce((s, b) => s + cv(b.recBonusChar), 0);
@@ -255,17 +256,17 @@ describe('DS_LEVEL_BONUSES gating', () => {
 });
 
 describe('interaction rules', () => {
-  it('spdMin upgrades after additives and does not stack', () => {
-    // Wode-elf Swift: speed floor 6. Without other speed bonuses → 6.
+  it('spdMin upgrades the base before additive bonuses stack', () => {
+    // Wode-elf Swift: base speed upgraded to 6. Without other speed bonuses → 6.
     const c = baseHero('fury');
     c.ancestry.id = 'wode-elf';
     const swift = ((DS_ANCESTRIES as any[]).find(a => a.id === 'wode-elf').traits as any[]).find(t => t.bonuses?.spdMin);
     c.ancestry.traits = [swift.name];
     expect(computeDerived(c).speed).toBe(swift.bonuses.spdMin);
-    // Adding a +2 speed kit beats the floor: max(5+2, 6) = 7, not 6+2 or 6+2+...
+    // A +2 speed kit stacks on the upgraded base: max(5, 6) + 2 = 8, not max(5+2, 6) = 7.
     const fast = (DS_KITS as any[]).find(k => (k.bonuses?.spd || 0) >= 2);
     c.kit = { id: fast.id };
-    expect(computeDerived(c).speed).toBe(Math.max(5 + fast.bonuses.spd, swift.bonuses.spdMin));
+    expect(computeDerived(c).speed).toBe(Math.max(5, swift.bonuses.spdMin) + fast.bonuses.spd);
   });
   it('multiple additive sources stack (kit + prayer + complication)', () => {
     const c = baseHero('conduit', 4);

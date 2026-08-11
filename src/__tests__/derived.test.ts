@@ -97,15 +97,39 @@ describe('ancestry traits (data-driven)', () => {
     expect(computeDerived(c).disengage).toBe(2);
   });
 
-  it('"speed N" traits raise to a minimum without stacking on additive bonuses', () => {
+  it('"speed N" traits upgrade the base; additive bonuses stack on top', () => {
     const c = withClass('shadow');
     c.ancestry.id = 'wode-elf';
-    c.ancestry.traits = ['Swift'];            // speed becomes 6
+    c.ancestry.traits = ['Swift'];            // base 5 upgraded to 6
     expect(computeDerived(c).speed).toBe(6);
-    c.kit.id = 'arcane-archer';               // +1 speed → additive 6, upgrade is a no-op
-    expect(computeDerived(c).speed).toBe(6);
-    c.kit.id = 'swashbuckler';                // +3 speed → 8, above the minimum
+    c.kit.id = 'arcane-archer';               // +1 speed on the upgraded base
+    expect(computeDerived(c).speed).toBe(7);
+    c.kit.id = 'swashbuckler';                // +3 speed
+    expect(computeDerived(c).speed).toBe(9);
+  });
+
+  it('devil Beast Legs + a +2 speed kit yields 8', () => {
+    const c = withClass('shadow');
+    c.ancestry.id = 'devil';
+    c.ancestry.traits = ['Beast Legs'];       // base 5 → 6
+    c.kit.id = 'cloak-dagger';            // +2 speed
     expect(computeDerived(c).speed).toBe(8);
+  });
+
+  it('memonek Lightning Nimbleness is never a no-op alongside a kit', () => {
+    const c = withClass('shadow');
+    c.ancestry.id = 'memonek';
+    c.ancestry.traits = ['Lightning Nimbleness'];  // base 5 → 7
+    c.kit.id = 'cloak-dagger';                 // +2 speed
+    expect(computeDerived(c).speed).toBe(9);
+  });
+
+  it('speed penalties are not swallowed by a "speed N" upgrade', () => {
+    const c = withClass('shadow');
+    c.ancestry.id = 'devil';
+    c.ancestry.traits = ['Beast Legs'];       // base 5 → 6
+    c.complication.id = 'curse-of-caution';   // −1 speed
+    expect(computeDerived(c).speed).toBe(5);
   });
 
   it('human Staying Power adds recoveries', () => {
