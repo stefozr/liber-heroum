@@ -371,9 +371,9 @@ function ClassSubclassPicker({ character, update }) {
 // plus one chip grid per pick group — same idiom as the career skills picker.
 function ClassSkillPicker({ character, update }) {
   const cls = classDef(character);
-  const sub = cls ? (cls.subclasses || []).find(s => (s.id || s.name) === character.cclass.subclass) : null;
-  const picks = cls ? classSkillPicks(cls, sub) : [];
-  if (!cls || !picks.length) return null;
+  if (!cls) return null;
+  const sub = (cls.subclasses || []).find(s => (s.id || s.name) === character.cclass.subclass);
+  const picks = classSkillPicks(cls, sub);
 
   const granted = classGrantedSkills(cls, sub);
   const chosen = character.cclass.skills || [];
@@ -381,7 +381,10 @@ function ClassSkillPicker({ character, update }) {
   const takenElsewhere = skillsTakenExcept(character, 'class');
   const attribution = attributeCareerSkills({ auto: granted, picks }, chosen, character.cclass.skillPicks);
   // Grants duplicated by an earlier slot — official rules allow a same-group swap.
+  // A class with grants but no pick groups still needs its swap prompt rendered,
+  // so only bail when there is neither a pick to make nor a collision to resolve.
   const collisions = classGrantCollisions(character);
+  if (!picks.length && !collisions.length) return null;
   const swaps = character.cclass.skillSwaps || {};
   const setSwap = (skill, name) => update(c => {
     const next = { ...(c.cclass.skillSwaps || {}) };

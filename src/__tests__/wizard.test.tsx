@@ -349,6 +349,29 @@ describe('duplicate-grant swap UI', () => {
     expect(cc.textContent).not.toContain('is already granted by');
   });
 
+  it('a stale duplicate class pick stays an enabled chip; deselecting clears the issue', () => {
+    // Ordering hole: class skills picked first, then the career switched to one whose
+    // auto grant matches (Warden's Track). The chip must stay clickable so the player
+    // can deselect it, and the step must report the duplicate until they do.
+    const c = atStep(CLASS_STEP, { cls: 'shadow', subclass: 'black-ash', career: 'warden' });
+    const victim = c.cclass.skills[0];
+    const idx = c.cclass.skillPicks[victim];
+    c.cclass.skills = [...c.cclass.skills.filter((x: string) => x !== victim), 'Track'];
+    delete c.cclass.skillPicks[victim];
+    c.cclass.skillPicks['Track'] = idx;
+    const dupLine = 'Duplicate skill: Track already held by Career — choose another';
+    expect(stepIssues(c, CLASS_STEP)).toContain(dupLine);
+    const { container, latest } = renderWizard(c);
+    const chip = [...container.querySelectorAll<HTMLButtonElement>('.skill-chip.on')]
+      .find(ch => ch.textContent === 'Track');
+    expect(chip, 'the stored duplicate pick must render as an on chip').toBeTruthy();
+    expect(chip!.disabled).toBe(false);
+    fireEvent.click(chip!);
+    const after = latest();
+    expect(after.cclass.skills).not.toContain('Track');
+    expect(stepIssues(after, CLASS_STEP)).not.toContain(dupLine);
+  });
+
   it('a complication fixed-grant collision renders the block and gates the step until swapped', () => {
     const COMP_STEP = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
     const c = atStep(COMP_STEP, { cls: 'fury', career: 'agent', complication: 'silent-sentinel' });

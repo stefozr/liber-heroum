@@ -3,7 +3,7 @@
 // level-up). These tests pin the shared collectors in app.jsx that every picker consults to
 // grey out an already-held skill/perk. See src/wizard/steps/* and src/levelup.jsx pickers.
 import { describe, it, expect } from 'vitest';
-import { newCharacter, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept, collectLanguagePicks, languagesTakenExcept, normalizeLanguages, summarizeBenefits } from '../app.jsx';
+import { newCharacter, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept, collectLanguagePicks, languagesTakenExcept, normalizeLanguages, summarizeBenefits, duplicateSkillPicks, normalizeSkills } from '../app.jsx';
 import { complicationGrantCollisions, effectiveComplicationSkills } from '../wizard/helpers.js';
 
 function charWithPicks() {
@@ -192,6 +192,111 @@ describe('complication grant dedupe', () => {
     c.complication.skillSwaps = { Sneak: 'Hide' };
     const row = summarizeBenefits(c).skills.find((s: any) => s.source === 'Silent Sentinel');
     expect(row.text).toContain('Sneak → Hide');
+  });
+});
+
+// A pick that duplicates a granted skill (or an earlier slot's pick) is invalid — the
+// rules say "choose another instead". The live pickers block the chip, but drafts saved
+// through the soft commit gate, free rail navigation (pick class skills, then choose a
+// career that auto-grants one of them), and legacy saves can still carry one.
+// duplicateSkillPicks is the order-free detector; normalizeSkills is the load-time
+// repair (the skills mirror of normalizeLanguages): the grant keeps the name, the pick
+// is shed, and the wizard's existing "N of M picked" prompt re-opens the slot.
+describe('duplicate skill picks: detection + normalizeSkills repair', () => {
+  // The reported bug: Shadow grants Sneak; the Criminal career picked it too.
+  function criminalShadow() {
+    const c: any = newCharacter('u-test', null);
+    c.career.id = 'criminal';
+    c.career.skills = ['Criminal Underworld', 'Sneak', 'Pick Lock'];
+    c.career.skillPicks = { Sneak: 0, 'Pick Lock': 0 };
+    c.cclass.id = 'shadow';
+    c.cclass.subclass = 'black-ash';
+    return c;
+  }
+
+  it('flags the career pick colliding with the class grant in repair scope only', () => {
+    const c = criminalShadow();
+    // Wizard scope: the LATER slot's grant owns this collision (the class step's swap
+    // prompt) — flagging the pick too would demand two replacements for one duplicate.
+    expect(duplicateSkillPicks(c)).toEqual([]);
+    // Repair scope: no swap stored means the duplicate is real; the pick is prunable.
+    const dups = duplicateSkillPicks(c, { includeLaterGrants: true });
+    expect(dups).toHaveLength(1);
+    expect(dups[0]).toMatchObject({ name: 'Sneak', key: 'career', holder: 'Shadow' });
+  });
+
+  it('normalizeSkills sheds the career pick and keeps the grant (Criminal + Shadow)', () => {
+    const fixed = normalizeSkills(criminalShadow());
+    expect(fixed.career.skills).toEqual(['Criminal Underworld', 'Pick Lock']);
+    expect(fixed.career.skillPicks).toEqual({ 'Pick Lock': 0 });
+    const names = collectSkillPicks(fixed).map((p: any) => p.name);
+    expect(names.filter((n: string) => n === 'Sneak')).toHaveLength(1);
+  });
+
+  it('a resolved swap is no duplicate — the character passes through untouched', () => {
+    const c = criminalShadow();
+    c.cclass.skillSwaps = { Sneak: 'Alertness' }; // the class grant reads Alertness
+    expect(normalizeSkills(c)).toBe(c);
+  });
+
+  it('ordering hole: a class pick made before a career whose auto grant matches', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'shadow';
+    c.cclass.skills = ['Track'];
+    c.cclass.skillPicks = { Track: 0 };
+    c.career.id = 'warden'; // auto-grants Track
+    c.career.skills = ['Track', 'Endurance'];
+    c.career.skillPicks = { Endurance: 0 };
+    // The grant sits EARLIER in the slot order, so this one flags in wizard scope too.
+    const dups = duplicateSkillPicks(c);
+    expect(dups).toHaveLength(1);
+    expect(dups[0]).toMatchObject({ name: 'Track', key: 'class', holder: 'Career' });
+    const fixed = normalizeSkills(c);
+    expect(fixed.cclass.skills).toEqual([]);          // the pick is shed…
+    expect(fixed.career.skills).toContain('Track');   // …the auto grant keeps the name
+  });
+
+  it('pick vs pick: the later slot is pruned (culture keeps, career sheds)', () => {
+    const c: any = newCharacter('u-test', null);
+    c.culture.skills = { environment: 'Sneak' };
+    c.career.id = 'criminal';
+    c.career.skills = ['Criminal Underworld', 'Sneak'];
+    c.career.skillPicks = { Sneak: 0 };
+    const fixed = normalizeSkills(c);
+    expect(fixed.culture.skills.environment).toBe('Sneak');
+    expect(fixed.career.skills).toEqual(['Criminal Underworld']);
+  });
+
+  it('a level-up pick duplicating a career grant is dropped', () => {
+    const c: any = newCharacter('u-test', null);
+    c.cclass.id = 'fury';     // fury's level 4 offers an any-skill choice
+    c.career.id = 'agent';    // auto-grants Sneak
+    c.career.skills = ['Sneak'];
+    c.levelChoices = { 4: { picks: { 'skill-4': { chosen: 'Sneak' } } } };
+    const fixed = normalizeSkills(c);
+    expect(fixed.levelChoices['4'].picks['skill-4']).toBeUndefined();
+    expect(fixed.career.skills).toEqual(['Sneak']);
+  });
+
+  it('is identity-preserving on clean characters and idempotent on dirty ones', () => {
+    const clean: any = newCharacter('u-test', null);
+    clean.career.id = 'criminal';
+    clean.career.skills = ['Criminal Underworld', 'Lie'];
+    expect(normalizeSkills(clean)).toBe(clean);
+    const once = normalizeSkills(criminalShadow());
+    expect(normalizeSkills(once)).toBe(once);
+  });
+
+  it('grant-vs-grant duplicates are not prunable — the swap prompt owns those', () => {
+    // Agent's auto Sneak vs Shadow's granted Sneak with no swap stored: both sides
+    // are grants, so the repair leaves the character alone; the wizard's commit gate
+    // keeps the hero a draft until the class step's swap is chosen.
+    const c: any = newCharacter('u-test', null);
+    c.career.id = 'agent';
+    c.career.skills = ['Sneak'];
+    c.cclass.id = 'shadow';
+    expect(duplicateSkillPicks(c, { includeLaterGrants: true })).toEqual([]);
+    expect(normalizeSkills(c)).toBe(c);
   });
 });
 

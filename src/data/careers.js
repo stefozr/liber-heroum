@@ -194,7 +194,7 @@ const DS_CAREERS = [
     ] },
   { id: 'warden', name: 'Warden', desc: 'You protected a wild region from poachers, cultists, and disaster — and could guide or rescue those who wandered the wilds.',
     skills: 'Track; two exploration', quick: 'Endurance · Nature · Track',
-    languages: 1, perk: 'Exploration', quickPerk: 'Danger Sense',
+    languages: 1, perk: 'Exploration', quickPerk: 'Danger Sense', projectPoints: 120,
     questions: ['What environment did you protect?', 'Were you part of a group or self-appointed?', 'Which animal was your constant companion?', 'What mysterious creature did you meet in the wilds?'],
     incidents: [
       { name: 'Cleared Land', text: 'Developers or settlers razed the wild you swore to protect. You left to defend nature wherever it is threatened.' },
@@ -203,6 +203,18 @@ const DS_CAREERS = [
       { name: 'Sacred Grove', text: 'Cultists desecrated a sacred grove in your care. You hunt them and the dark powers they serve.' },
       { name: 'Strange Beast', text: 'A creature unlike any you knew passed through your land and vanished. You follow its trail into a wider, stranger world.' },
       { name: 'Wild Companion', text: 'A wild creature you saved now travels at your side. Together you venture beyond the borders of the land you once kept.' },
+    ] },
+  { id: 'watch-officer', name: 'Watch Officer', desc: 'You served as an officer of the law — one badge in a big city watch, or the only constable patrolling a small village.',
+    skills: 'Alertness; two intrigue', quick: 'Alertness · Search · Track',
+    languages: 2, perk: 'Exploration', quickPerk: 'Team Leader',
+    questions: ['What type of settlement did you protect?', 'What was your law-enforcement style — by the book, lenient but fair, or totally corrupt?', 'What criminal still eludes your grasp to this day?', 'Whose life did you save in the line of duty?'],
+    incidents: [
+      { name: 'Bigger Fish', text: 'Chasing petty thieves and jailing folk just trying to survive left you disillusioned. Surely greater evils lurk in the world — you’ll be the one to stop them.' },
+      { name: 'Corruption Within', text: 'You refused to cover for corrupt fellow officers and were told to leave town or face the consequences. You travel now as the protector you always wanted to be.' },
+      { name: 'Frame Job', text: 'Your partner was murdered and the evidence points at you. You fled before taking the fall, adventuring under a new name while you work to clear your own.' },
+      { name: 'Missing Mentor', text: 'The officer who taught you everything vanished after uncovering “something big.” Trusting no one, you slipped away to do what good you can while you search for the truth.' },
+      { name: 'One That Got Away', text: 'A criminal who slipped your grasp began targeting you and yours. The trail has gone cold — for now — so you help folk while you hunt.' },
+      { name: 'Powerful Enemies', text: 'You took on the region’s crime syndicate; their goons burned your home and left you bleeding in the street. You became a hero to gain the power to destroy them.' },
     ] },
 ];
 

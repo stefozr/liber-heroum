@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CLASSES, DS_STEPS, kitPoolFor } from '../data.jsx';
 import { Crest, SavePill, Button, TopBar, Modal } from '../theme.jsx';
-import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept } from '../app.jsx';
+import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept, duplicateSkillPicks } from '../app.jsx';
 import { parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { UnfinishedChapters } from './UnfinishedChapters.jsx';
@@ -264,6 +264,13 @@ function swapsResolved(c, collisions, swaps, ownKey, ownNames) {
 function stepIssues(c, idx) {
   const id = DS_STEPS[idx].id;
   const swapIssues = (...args) => unresolvedSwaps(c, ...args).map(skill => `Duplicate skill: swap for ${skill} not chosen`);
+  // Picks that duplicate a grant or an earlier slot's pick, attributed to the step
+  // that owns the pick. The live pickers block these chips, but free rail navigation
+  // can invalidate a pick after the fact (choose class skills, then a career whose
+  // auto grant matches one) — the issue makes the stale pick visible and deselectable.
+  const dupPickIssues = (ownsKey) => duplicateSkillPicks(c)
+    .filter(d => ownsKey(d.key))
+    .map(d => `Duplicate skill: ${d.name} already held by ${d.holder} — choose another`);
   switch (id) {
     case 'ancestry': {
       if (!c.ancestry.id) return ['Ancestry not chosen'];
@@ -319,6 +326,7 @@ function stepIssues(c, idx) {
           issues.push(`${remaining} ancestry ${remaining === 1 ? 'point' : 'points'} unspent`);
         }
       }
+      issues.push(...dupPickIssues(k => k.startsWith('sig:') || k.startsWith('trait:')));
       return issues;
     }
     case 'culture': {
@@ -330,6 +338,7 @@ function stepIssues(c, idx) {
       if (!(c.culture.skills?.environment)) issues.push('Environment skill not picked');
       if (!(c.culture.skills?.organization)) issues.push('Organization skill not picked');
       if (!(c.culture.skills?.upbringing)) issues.push('Upbringing skill not picked');
+      issues.push(...dupPickIssues(k => k.startsWith('culture:')));
       return issues;
     }
     case 'career': {
@@ -348,6 +357,7 @@ function stepIssues(c, idx) {
       if (!c.career.perk) issues.push('Perk not chosen');
       // Auto-granted duplicates need their "choose another instead" swap.
       issues.push(...swapIssues(careerAutoCollisions(c), c.career.skillSwaps, 'career', c.career.skills || []));
+      issues.push(...dupPickIssues(k => k === 'career'));
       return issues;
     }
     case 'class': {
@@ -391,6 +401,7 @@ function stepIssues(c, idx) {
         // Grant duplicates need their "choose another instead" swap.
         const ownNames = [...classGrantedSkills(cls, sub), ...(c.cclass.skills || [])];
         issues.push(...swapIssues(classGrantCollisions(c), c.cclass.skillSwaps, 'class', ownNames));
+        issues.push(...dupPickIssues(k => k === 'class' || k === 'domain'));
       }
       // Point-buy: flex stats spend the full budget, each within range — OR match one of
       // the official arrays exactly (some official arrays total less than the budget).
@@ -423,6 +434,7 @@ function stepIssues(c, idx) {
       // Fixed grants colliding with an earlier slot must carry a same-group swap.
       const ownNames = [...(comp.skills || []), ...Object.values(c.complication.skills || {}).flat()];
       issues.push(...swapIssues(complicationGrantCollisions(c), c.complication.skillSwaps, 'comp:fixed', ownNames));
+      issues.push(...dupPickIssues(k => k.startsWith('comp:')));
       return issues;
     }
     case 'identity':

@@ -8,7 +8,7 @@ import { ReviewStep } from '../wizard/steps/review.jsx';
 import { buildValidCharacter } from './helpers/factories';
 import { kitDef } from '../app.jsx';
 import { parseKitSig } from '../wizard/helpers.js';
-import { DS_CAREERS } from '../data.jsx';
+import { DS_CAREERS, DS_KITS } from '../data.jsx';
 import { DOMAIN_1ST_FEATURES } from '../levelup.jsx';
 
 afterEach(() => cleanup());
@@ -66,6 +66,32 @@ describe('ReviewStep renders complete feature data', () => {
     const sig = parseKitSig(kit.sig);
     expect(text).toContain(sig.name);
     if (sig.rows) expect(text).toContain(sig.rows[0][1]); // first tier's result text
+  });
+
+  it('parseKitSig keeps tiers/distance intact under the full-sentence effect texts', () => {
+    // The clarity pass lengthened several effect clauses (amounts, durations,
+    // conditions per the official wording) — the tier matcher and distance
+    // split must not shift. Pain for Pain is the reported case.
+    const mountain: any = DS_KITS.find((k: any) => k.id === 'mountain');
+    const sig = parseKitSig(mountain.sig);
+    expect(sig.name).toBe('Pain for Pain');
+    expect(sig.distance).toBe('melee 1');
+    expect(sig.rows![0]).toEqual(['≤ 11', '3 + M or A']);
+    expect(sig.rows![2]).toEqual(['≥ 17', '13 + M or A']);
+    expect(sig.effect).toContain('extra damage equal to your Might or Agility score');
+    // Driving Pounce's effect contains its own N/N/N push clause — the FIRST
+    // triple must stay the damage tier, the push must stay in the effect.
+    const pounceKit: any = DS_KITS.find((k: any) => k.sig.startsWith('Driving Pounce'));
+    const pounce = parseKitSig(pounceKit.sig);
+    expect(pounce.rows![1][1]).toBe('5 + A');
+    expect(pounce.effect).toContain('push 0/1/2');
+    expect(pounce.effect).toContain('as many squares as you pushed');
+    // Every kit still parses to a name and either rows or an effect.
+    for (const k of DS_KITS as any[]) {
+      const s = parseKitSig(k.sig);
+      expect(s.name, k.id).toBeTruthy();
+      expect(s.rows || s.effect, k.id).toBeTruthy();
+    }
   });
 
   it('shows the inciting incident text, not just its name', () => {

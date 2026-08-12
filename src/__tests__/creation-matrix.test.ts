@@ -6,9 +6,9 @@ import {
   DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS,
   DS_SKILL_GROUPS, DS_STEPS, kitPoolFor,
 } from '../data.jsx';
-import { isStepValid } from '../wizard.jsx';
-import { collectSkillPicks } from '../app.jsx';
-import { PERKS, parseCareerSkills, classSkillPicks, pickPool, charBudget } from '../wizard/helpers.js';
+import { isStepValid, stepIssues } from '../wizard.jsx';
+import { collectSkillPicks, normalizeSkills, skillsTakenExcept } from '../app.jsx';
+import { PERKS, parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, charBudget, classGrantCollisions } from '../wizard/helpers.js';
 import { buildValidCharacter, hero, resolveGrantSwaps } from './helpers/factories';
 
 const STEP_INDEX = Object.fromEntries((DS_STEPS as any[]).map((s: any, i: number) => [s.id, i]));
@@ -143,6 +143,9 @@ describe('class step options', () => {
           const pool = pickPool(p);
           for (const s of pool) {
             const c = buildValidCharacter({ cls: cls.id, subclass: sub });
+            // Auto-granted skills and skills held by another slot render as disabled
+            // chips — not selectable states, and the duplicate-pick check rejects them.
+            if (classGrantedSkills(cls, subDef).includes(s) || skillsTakenExcept(c, 'class').has(s)) continue;
             // Swap the option under test into this pick group (count is preserved).
             const mine = c.cclass.skills.filter((x: string) => c.cclass.skillPicks[x] === idx);
             if (!c.cclass.skills.includes(s)) {
@@ -282,6 +285,8 @@ describe('ancestries', () => {
         const pool = sig.skillChoice.groups.flatMap((g: string) => (DS_SKILL_GROUPS as any)[g] || []);
         for (const s of pool) {
           const c = buildValidCharacter({ ancestry: anc.id });
+          // Skills held by another slot are blocked chips in the ancestry picker.
+          if (skillsTakenExcept(c, 'sig:' + sig.name).has(s)) continue;
           c.ancestry.sigSkills = { [sig.name]: [s] };
           expectComplete(c, `${anc.id} sig skill ${s}`);
         }
@@ -302,6 +307,8 @@ describe('culture', () => {
         const pool: string[] = def.skills || (def.skillGroups || []).flatMap((g: string) => (DS_SKILL_GROUPS as any)[g] || []);
         for (const s of pool) {
           const c2 = buildValidCharacter({ [key]: def.id });
+          // Skills held by another slot are blocked chips in the culture picker.
+          if (skillsTakenExcept(c2, 'culture:' + key).has(s)) continue;
           c2.culture.skills[key] = s;
           // Forcing the pick may duplicate an auto-grant — resolve the required swap,
           // exactly as the wizard now demands.
@@ -338,6 +345,9 @@ describe('careers', () => {
       parsed.picks.forEach((p: any, idx: number) => {
         for (const s of pickPool(p)) {
           const c = buildValidCharacter({ career: car.id });
+          // A skill held by another slot renders as a blocked chip — not a
+          // selectable state, and the duplicate-pick check rejects it too.
+          if (skillsTakenExcept(c, 'career').has(s)) continue;
           if (!c.career.skills.includes(s)) {
             const mine = c.career.skills.filter((x: string) => c.career.skillPicks[x] === idx && !parsed.auto.includes(x));
             c.career.skills = [...c.career.skills.filter((x: string) => x !== mine[0]), s];
@@ -394,6 +404,42 @@ describe('duplicate-grant skill swaps', () => {
     if (takenByCareer) expect(bad(takenByCareer), `held by career (${takenByCareer})`).toBe(false);
   });
 
+  it('Criminal PICKS Sneak + Shadow grants it: the class step demands the swap', () => {
+    // The reported bug's shape: the colliding career skill is a player pick, not an
+    // auto grant (every earlier case here used Agent's fixed Sneak).
+    const c = buildValidCharacter({ cls: 'shadow', subclass: 'caustic-alchemy', career: 'criminal' });
+    const parsed = parseCareerSkills((DS_CAREERS as any[]).find((x: any) => x.id === 'criminal'));
+    const mine = c.career.skills.filter((x: string) => !parsed.auto.includes(x));
+    const idx = c.career.skillPicks[mine[0]];
+    c.career.skills = [...c.career.skills.filter((x: string) => x !== mine[0]), 'Sneak'];
+    delete c.career.skillPicks[mine[0]];
+    c.career.skillPicks['Sneak'] = idx;
+    c.cclass.skillSwaps = {};
+    expect(classGrantCollisions(c).map((x: any) => x.skill)).toContain('Sneak');
+    expect(isStepValid(c, STEP_INDEX['career']), 'career keeps its pick').toBe(true);
+    expect(isStepValid(c, CLASS_STEP), 'class must swap its grant').toBe(false);
+    resolveGrantSwaps(c);
+    expectComplete(c, 'criminal pick + shadow grant');
+  });
+
+  it('ordering hole: a class pick made before choosing a career that auto-grants it', () => {
+    // Free rail navigation: class skills chosen first, then the career switched to
+    // Warden (auto Track). Neither swap chain sees this direction — the class step's
+    // duplicate-pick issue must gate it, and the load-time repair must shed the pick.
+    const c = buildValidCharacter({ cls: 'shadow', subclass: 'black-ash', career: 'warden' });
+    const victim = c.cclass.skills[0];
+    const idx = c.cclass.skillPicks[victim];
+    c.cclass.skills = [...c.cclass.skills.filter((x: string) => x !== victim), 'Track'];
+    delete c.cclass.skillPicks[victim];
+    c.cclass.skillPicks['Track'] = idx;
+    expect(isStepValid(c, STEP_INDEX['career']), 'career keeps its auto grant').toBe(true);
+    expect(isStepValid(c, CLASS_STEP), 'the stale class pick must invalidate').toBe(false);
+    expect(stepIssues(c, CLASS_STEP)).toContain('Duplicate skill: Track already held by Career — choose another');
+    const fixed = normalizeSkills(c);
+    expect(fixed.cclass.skills).not.toContain('Track');
+    expect(fixed.career.skills).toContain('Track');
+  });
+
   it('a stale swap is ignored once the collision disappears', () => {
     const c = buildValidCharacter({ cls: 'fury', career: 'agent', environment: 'urban' });
     c.culture.skills.environment = 'Sneak';
@@ -403,8 +449,10 @@ describe('duplicate-grant skill swaps', () => {
     let names = collectSkillPicks(c).map((p: any) => p.name);
     expect(names).toContain(replacement);
     expect(names.filter((n: string) => n === 'Sneak')).toHaveLength(1);
-    // Remove the collision (change the culture pick) — the swap goes stale and is ignored.
-    c.culture.skills.environment = 'Alertness';
+    // Remove the collision (change the culture pick to a skill nothing else holds —
+    // an arbitrary name could itself duplicate a factory pick) — the swap goes stale.
+    const held = new Set(collectSkillPicks(c).map((p: any) => p.name));
+    c.culture.skills.environment = (DS_SKILL_GROUPS as any).exploration.find((s: string) => !held.has(s));
     names = collectSkillPicks(c).map((p: any) => p.name);
     expect(names).toContain('Sneak');
     expect(names).not.toContain(replacement);

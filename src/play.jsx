@@ -4,7 +4,7 @@ import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
 import { SheetStyles, AncestryTraitsList, KitDetails } from './theme/sheet.jsx';
 import { Tabs, TabPanel, TabsStyles } from './theme/tabs.jsx';
@@ -100,7 +100,18 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const [editLevel, setEditLevel] = useState(null);
   const [bioOpen, setBioOpen] = useState(false);
+  const [respiteOpen, setRespiteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [portraitOpen, setPortraitOpen] = useState(false);
+
+  // ESC closes the enlarged portrait — it's a bare backdrop overlay (no Modal
+  // chrome), so it handles its own key, same idiom as the rules glossary.
+  useEffect(() => {
+    if (!portraitOpen) return;
+    const fn = (e) => { if (e.key === 'Escape') setPortraitOpen(false); };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [portraitOpen]);
 
   const [activeTab, setActiveTab] = useState(() => {
     try {
@@ -166,6 +177,30 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   const adjSurges = (delta) => setPlay(p => ({ ...p, surges: Math.max(0, (p.surges || 0) + delta) }));
   const adjHero = (delta) => setPlay(p => ({ ...p, heroTokens: Math.max(0, (p.heroTokens || 0) + delta) }));
 
+  // Renown/Wealth show derived-base + Director delta; the steppers move the
+  // delta. Renown can't go below 0 (clamp the delta, not the display, so a
+  // no-op minus doesn't drift the stored adjustment). Wealth may go negative.
+  const currencies = playCurrencies(character, derived);
+  const adjRenown = (delta) => setPlay(p => {
+    const next = Math.max(-(derived.renownBase || 0), (p.renownAdj || 0) + delta);
+    return { ...p, renownAdj: next === 0 ? 0 : next };  // normalize Math.max's −0
+  });
+  const adjWealth = (delta) => setPlay(p => ({ ...p, wealthAdj: (p.wealthAdj || 0) + delta }));
+
+  // Respite (rules glossary): regain all Stamina and Recoveries; Victories
+  // convert into XP. stamina:null is the existing "full" sentinel (lazy-filled
+  // above), the same reset applyLevelUp uses.
+  const takeRespite = () => {
+    setPlay(p => ({
+      ...p,
+      stamina: null,
+      recoveriesUsed: 0,
+      xp: (p.xp || 0) + (p.victories || 0),
+      victories: 0,
+    }));
+    setRespiteOpen(false);
+  };
+
   const heroName = character.identity.name || character.name || 'Unnamed Hero';
   const subclassName = (cls && cls.subclasses && cls.subclasses.find(s => s.id === character.cclass.subclass || s.name === character.cclass.subclass)?.name) || character.cclass.subclass;
 
@@ -173,8 +208,14 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   // the local heroName above, which shadows the campaigns.jsx import of the same name.
   const exportFoundry = async () => {
     try {
-      // Official compendium index (null → generated-item fallback).
+      // The official compendium index ships with the app — a null index means the
+      // fetch broke and every item would silently export as a generated "custom"
+      // one. Abort instead; the load isn't memoized on failure, so retry works.
       const idx = await loadOfficialIndex();
+      if (!idx) {
+        onError('EXPORT ABORTED — OFFICIAL COMPENDIUM FAILED TO LOAD, RETRY');
+        return;
+      }
       const file = heroName.trim().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'hero';
       downloadJson(characterToFoundryHero(character, idx), `${file}-foundryvtt.json`);
     } catch (err) {
@@ -356,10 +397,15 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
         <div className="play-head-inner">
           {/* Hero masthead (named to avoid ad-blocker cosmetic filters on "banner") */}
           <div className="hero-masthead">
-            <div className={`hb-portrait ${character.portrait ? 'has-img' : ''}`}
-              style={character.portrait ? { backgroundImage: `url(${character.portrait})` } : {}}>
-              {!character.portrait && <span className="hb-glyph">{renderGlyph(cls?.glyph || '✠')}</span>}
-            </div>
+            {character.portrait ? (
+              <button type="button" className="hb-portrait has-img"
+                style={{ backgroundImage: `url(${character.portrait})` }}
+                onClick={() => setPortraitOpen(true)} aria-label="Enlarge portrait"></button>
+            ) : (
+              <div className="hb-portrait">
+                <span className="hb-glyph">{renderGlyph(cls?.glyph || '✠')}</span>
+              </div>
+            )}
             <div className="hb-text">
               <div className="hb-eyebrow">{[anc?.name].filter(Boolean).join(' · ') || 'Hero'}</div>
               <div className="hb-name">{heroName}</div>
@@ -368,11 +414,23 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                 {character.cclass.subclass && <span className="hb-sub"> · {subclassName || character.cclass.subclass}</span>}
               </div>
             </div>
+            {/* Ledger — Renown/Wealth from derived base + Director delta; XP only
+                grows via the respite conversion, so it renders without steppers. */}
+            <div className="hb-ledger">
+              <HBStat label="Renown" value={currencies.renown}
+                onSet={canEdit ? (n) => adjRenown(n - currencies.renown) : null} />
+              <HBStat label="Wealth" value={currencies.wealth}
+                onSet={canEdit ? (n) => adjWealth(n - currencies.wealth) : null} />
+              <HBStat label="XP" value={currencies.xp} />
+            </div>
             <div className="hb-actions">
               {canEdit && (
                 <Button kind="primary" small onClick={() => setLevelUpOpen(true)}>LEVEL UP ▲</Button>
               )}
               <Button kind="ghost" small onClick={() => setBioOpen(true)}>BIOGRAPHY</Button>
+              {canEdit && (
+                <Button kind="ghost" small onClick={() => setRespiteOpen(true)}>RESPITE ❧</Button>
+              )}
             </div>
             <div className="hb-level">
               <div className="hb-level-num">{character.level}</div>
@@ -595,7 +653,6 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                   <StatTile label="Stability" value={derived.stability} />
                   <StatTile label="Disengage" value={derived.disengage} />
                   <StatTile label="Size" value={derived.size} />
-                  <StatTile label="Echelon" value={derived.echelon} />
                 </div>
               </Panel>
 
@@ -712,6 +769,24 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
         <BiographyContent character={character} canEdit={canEdit && !!onEdit} />
       </Modal>
 
+      <Modal open={respiteOpen} onClose={() => setRespiteOpen(false)} title="Take a Respite" width={440}
+        footer={(
+          <>
+            <Button kind="ghost" onClick={() => setRespiteOpen(false)}>CANCEL</Button>
+            <div style={{ flex: 1 }}></div>
+            <Button kind="primary" onClick={takeRespite}>TAKE RESPITE ❧</Button>
+          </>
+        )}>
+        <p className="respite-lede">
+          An uninterrupted 24-hour rest in a safe place. At its end:
+        </p>
+        <ul className="respite-list">
+          <li>Convert <strong>{character.play.victories || 0} {(character.play.victories || 0) === 1 ? 'Victory' : 'Victories'}</strong> into XP{(character.play.victories || 0) > 0 && <> — XP becomes <strong>{(character.play.xp || 0) + (character.play.victories || 0)}</strong></>}</li>
+          <li>Restore Stamina to <strong>{derived.staminaMax}</strong></li>
+          <li>Regain all <strong>{derived.recoveries}</strong> Recoveries</li>
+        </ul>
+      </Modal>
+
       <LevelUpFlow
         open={levelUpOpen}
         onClose={() => setLevelUpOpen(false)}
@@ -728,6 +803,15 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       />
 
       <RulesGlossary open={rulesOpen} onClose={() => setRulesOpen(false)} />
+
+      {/* Enlarged portrait — a bare lightbox on the shared backdrop; the full
+          Modal's parchment chrome would fight the artwork. */}
+      {portraitOpen && character.portrait && (
+        <div className="modal-backdrop portrait-lightbox" onClick={() => setPortraitOpen(false)}>
+          <img src={character.portrait} alt={`${heroName} — portrait`} onClick={(e) => e.stopPropagation()} />
+          <button type="button" className="pl-close" onClick={() => setPortraitOpen(false)} aria-label="Close">{'×'}</button>
+        </div>
+      )}
 
       {hoverTip && (
         <div
@@ -813,6 +897,45 @@ function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
         <button disabled={!onAdj} onClick={() => onAdj && onAdj(+1)}>+1</button>
         <button disabled={!onAdj} onClick={() => onAdj && onAdj(+5)}>+5</button>
       </div>
+    </div>
+  );
+}
+
+// Masthead ledger stat: display-font number over a mono label, like .hb-level.
+// Clicking the number swaps it for a type-in field — Enter or blur commits,
+// Escape cancels, and invalid/empty/unchanged drafts commit nothing. Read-only
+// sheets (and the respite-only XP) get a bare figure with no click affordance.
+function HBStat({ label, value, onSet }) {
+  const editable = !!onSet;
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState('');
+  const skip = React.useRef(false); // Escape must not commit through the blur that follows
+  const start = () => { setDraft(String(value)); setEditing(true); };
+  const commit = () => {
+    const n = Math.round(Number(draft));
+    if (draft.trim() !== '' && Number.isFinite(n) && n !== value) onSet(n);
+    setEditing(false);
+  };
+  return (
+    <div className="hb-stat">
+      <div className="hb-stat-row">
+        {editing ? (
+          <input className="hb-stat-input" type="text" inputMode="numeric"
+            aria-label={`${label} value`} value={draft} autoFocus
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => { if (skip.current) { skip.current = false; return; } commit(); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit();
+              else if (e.key === 'Escape') { skip.current = true; setEditing(false); }
+            }} />
+        ) : editable ? (
+          <button type="button" className="hb-stat-num" aria-label={`Edit ${label}`} onClick={start}>{value}</button>
+        ) : (
+          <div className="hb-stat-num">{value}</div>
+        )}
+      </div>
+      <div className="hb-stat-lbl">{label}</div>
     </div>
   );
 }
@@ -932,7 +1055,7 @@ const PLAY_CSS = `
 .play-head-inner { max-width: 1320px; margin: 0 auto; padding: 20px 32px 16px; }
 
 .hero-masthead {
-  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 22px;
+  display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 22px;
   border: 1px solid var(--gold-deep);
   background: var(--grad-masthead);
   padding: 18px 24px; margin-bottom: 14px;
@@ -946,14 +1069,35 @@ const PLAY_CSS = `
   box-shadow: 0 0 22px var(--gold-glow), inset 0 0 0 1px rgba(0,0,0,0.5);
 }
 .hb-portrait .hb-glyph { font-family: var(--display); font-size: 2.875rem; color: var(--gold); opacity: 0.45; }
+/* Clickable portrait + lightbox. The thumb becomes a <button> when an image
+   exists; the reset keeps the grid cell at the exact thumb size in every tier. */
+button.hb-portrait { padding: 0; cursor: zoom-in; }
+.portrait-lightbox { cursor: zoom-out; }
+.portrait-lightbox img {
+  max-width: min(92vw, 720px); max-height: 88dvh; object-fit: contain;
+  border: 1px solid var(--gold); background: var(--bg-2);
+  box-shadow: 0 0 44px var(--gold-glow), 0 18px 60px rgba(0,0,0,0.6);
+  cursor: default;
+}
+.portrait-lightbox .pl-close {
+  position: absolute; top: 14px; right: 18px;
+  background: none; border: none; padding: 6px; cursor: pointer;
+  font-size: 1.75rem; line-height: 1; color: var(--ink-2);
+}
+.portrait-lightbox .pl-close:hover { color: var(--gold-2); }
+/* The lone 1fr track competes with four fixed ones; min-width:auto would let a
+   long name push the row past the viewport (same reasoning as .play above). */
+.hb-text { min-width: 0; }
 .hb-eyebrow { font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-2); margin-bottom: 6px; }
 .hb-name { font-family: var(--display); font-size: 2.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--ink); text-wrap: balance; font-variant-ligatures: none; }
 .hb-meta { font-family: var(--display-2); font-size: var(--fs-8); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); margin-top: 10px; }
 .hb-meta .hb-sub { color: var(--gold-2); }
-.hb-actions { display: flex; flex-direction: column; gap: 12px; align-items: stretch; flex: none; }
+/* Three stacked buttons must fit beside the 96px portrait without growing the
+   masthead: tighter gap and vertical padding keep the stack at ~94px. */
+.hb-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; flex: none; }
 /* .btn is inline-flex without justify-content; stretched to a common width the
    shorter label would sit flush left. */
-.hb-actions .btn { justify-content: center; }
+.hb-actions .btn { justify-content: center; padding-top: 6px; padding-bottom: 6px; }
 /* The bare ghost variant vanishes against --grad-masthead; give it the same
    filled-tint treatment as .btn.danger, in the masthead's gold. The resting
    tint outshines the global .btn:hover wash (and outranks it on specificity),
@@ -970,6 +1114,38 @@ const PLAY_CSS = `
 .hb-level { text-align: center; flex: none; padding-left: 22px; border-left: 1px solid var(--line-2); }
 .hb-level-num { font-family: var(--display-2); font-size: 2.875rem; line-height: 1; color: var(--gold-2); }
 .hb-level-lbl { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+
+/* Ledger — Renown/Wealth/XP as .hb-level-style stat blocks (smaller numbers so
+   Level stays the dominant figure), hairline dividers; .hb-level supplies the
+   divider after XP. Editable numbers render as buttons (click → type-in field);
+   the dotted underline is the only resting affordance so the ledger still reads
+   as plain figures. */
+.hb-ledger { display: flex; align-items: center; flex: none; }
+.hb-stat { text-align: center; padding: 0 16px; border-left: 1px solid var(--line-2); }
+.hb-stat:first-child { border-left: 0; }
+.hb-stat-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.hb-stat-num { font-family: var(--display-2); font-size: 1.5rem; line-height: 1;
+  color: var(--gold-2); min-width: 1.4em; }
+button.hb-stat-num {
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-decoration: underline dotted var(--line-2); text-underline-offset: 5px;
+}
+button.hb-stat-num:hover { color: var(--gold); text-decoration-color: var(--gold); }
+/* The type-in field mirrors the number's font metrics so the row doesn't jump. */
+.hb-stat-input {
+  font-family: var(--display-2); font-size: 1.5rem; line-height: 1;
+  width: 3.5ch; padding: 0; text-align: center;
+  color: var(--ink); background: var(--bg-2);
+  border: 1px solid var(--gold); outline: none;
+}
+.hb-stat-lbl { font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+
+/* Respite confirm modal body */
+.respite-lede { color: var(--ink-2); margin: 0 0 12px; }
+.respite-list { margin: 0; padding-left: 20px; color: var(--ink-2); }
+.respite-list li { margin: 6px 0; }
+.respite-list strong { color: var(--gold-2); font-weight: 600; }
 
 .play-body {
   position: relative; overflow-y: auto;
@@ -1290,6 +1466,9 @@ ${MQ.tab} {
   .hb-portrait { width: 72px; height: 72px; }
   .hb-name { font-size: 1.75rem; }
   .hb-level-num { font-size: 1.75rem; }
+  .hb-stat { padding: 0 10px; }
+  .hb-stat-num, .hb-stat-input { font-size: 1.25rem; }
+  .hb-stat-lbl { letter-spacing: 0.16em; }
   .play-content { padding: 18px 20px 22px; }
 }
 
@@ -1315,6 +1494,15 @@ ${MQ.phone} {
   .hb-meta { letter-spacing: 0.1em; font-size: var(--fs-3); margin-top: 4px; }
   .hb-level { padding-left: 10px; }
   .hb-level-num { font-size: 1.375rem; }
+  /* The ledger takes its own full-width row under the actions — a footer strip
+     of the masthead card (same net-neutral-row argument as .hb-actions above). */
+  .hb-ledger {
+    grid-column: 1 / -1; grid-row: 3;
+    justify-content: space-around;
+    border-top: 1px solid var(--line-2); padding-top: 8px;
+  }
+  .hb-stat { border-left: 0; padding: 0; }
+  .hb-stat-num, .hb-stat-input { font-size: 1.375rem; }
   .vitals .vital { flex: 0 0 220px; }
   .vitals .counter { flex: 0 0 96px; }
 

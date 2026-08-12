@@ -11,7 +11,7 @@ const TweaksHost = import.meta.env.DEV ? React.lazy(() => import('./tweaks-host.
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
-import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills } from './wizard/helpers.js';
 import { LEVELUP_DATA } from './levelup.jsx';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
 
@@ -96,6 +96,9 @@ function newCharacter(ownerId = null, campaignId = null) {
       victories: 0,
       surges: 0,
       heroTokens: 0,
+      renownAdj: 0,  // Director-awarded delta on top of the derived renown base
+      wealthAdj: 0,  // Director-awarded delta on top of the derived wealth base
+      xp: 0,         // grows when a respite converts victories
       conditions: {},
       notes: '',
     },
@@ -297,13 +300,32 @@ function computeDerived(c) {
   // A revenant's size is the former life's size (Former Life signature trait).
   const size = (formerLifeDef(c) || anc)?.size || '1M';
 
+  // Renown/Wealth bases: careers and complications grant flat amounts; wealth
+  // starts at 1 and rises by 1 at every odd level from 3 (3/5/7/9). Director
+  // adjustments live in c.play.renownAdj / wealthAdj on top of these.
+  const car = careerDef(c);
+  const comp = complicationDef(c);
+  const renownBase = (car?.renown || 0) + (comp?.renown || 0);
+  const wealthBase = 1 + (car?.wealth || 0) + (comp?.wealth || 0) + Math.floor((lvl - 1) / 2);
+
   return {
     staminaMax, recoveries, recoveryValue, winded,
-    speed, stability, disengage, size,
+    speed, stability, disengage, size, renownBase, wealthBase,
     chars, highest, echelon,
     potency: cls ? {
       weak: highest - 2, average: highest - 1, strong: highest,
     } : { weak: 0, average: 0, strong: 0 },
+  };
+}
+
+// Current Renown / Wealth / XP: derived base + Director adjustment. Renown can't
+// drop below 0; wealth can (Indebted starts at −5 — debt is a real state).
+function playCurrencies(c, derived = computeDerived(c)) {
+  const p = c.play || {};
+  return {
+    renown: Math.max(0, (derived.renownBase || 0) + (p.renownAdj || 0)),
+    wealth: (derived.wealthBase || 0) + (p.wealthAdj || 0),
+    xp: p.xp || 0,
   };
 }
 
@@ -370,7 +392,7 @@ function App() {
   const refreshStore = useCallback(async () => {
     const { profiles, characters: chs, campaigns: cps } = await DS.loadAll();
     setUsers(profiles);
-    setCharacters(chs.map(c => normalizeLanguages(migrateCharacterChars(c))));
+    setCharacters(chs.map(c => normalizeSkills(normalizeLanguages(migrateCharacterChars(c)))));
     setCampaigns(cps);
   }, []);
 
@@ -407,7 +429,7 @@ function App() {
     const off = DS.subscribeCharacters(
       (row) => setCharacters(prev => {
         if (row.id === activeIdRef.current && canEditCharacter(row)) return prev;
-        const merged = normalizeLanguages(migrateCharacterChars(row));
+        const merged = normalizeSkills(normalizeLanguages(migrateCharacterChars(row)));
         const i = prev.findIndex(c => c.id === row.id);
         return i === -1 ? [...prev, merged] : prev.map(c => (c.id === row.id ? merged : c));
       }),
@@ -1142,40 +1164,89 @@ function summarizeBenefits(c) {
 // collectors gather every *concrete* pick tagged with a stable `key`, so a picker can
 // exclude its own slot and grey out anything already taken elsewhere.
 
-// Returns [{ name, source, key }] — one entry per skill the character currently holds.
-function collectSkillPicks(c) {
+// Fixed slot rank for duplicate resolution — the order the wizard grants skills in.
+// When a pick duplicates a grant (or an earlier pick), the earlier slot keeps the
+// name and the later pick is the invalid side; grants themselves resolve through the
+// swap chain in wizard/helpers.js, which encodes the same order.
+const SKILL_RANK = { ancestry: 0, culture: 1, career: 2, class: 3, complication: 4, level: 5 };
+
+// Returns [{ name, source, key, kind, rank, idx }] — every skill the character holds,
+// tagged 'grant' (auto-granted, resolves via skillSwaps) or 'pick' (player-chosen,
+// resolves by choosing another). `idx` is the position in the slot's stored array for
+// slots where grants and picks share one flat list (career) and a prune must be
+// positional rather than by name.
+function collectSkillEntries(c) {
   const out = [];
-  const push = (name, source, key) => { if (name) out.push({ name, source, key }); };
-  Object.entries((c.culture && c.culture.skills) || {}).forEach(([k, s]) => push(s, 'Culture', 'culture:' + k));
+  const push = (name, source, key, kind, rank, idx) => { if (name) out.push({ name, source, key, kind, rank, idx }); };
+  Object.entries((c.culture && c.culture.skills) || {}).forEach(([k, s]) => push(s, 'Culture', 'culture:' + k, 'pick', SKILL_RANK.culture));
   // Career skills with duplicate-grant swaps applied ("choose another instead").
-  effectiveCareerSkills(c).forEach(s => push(s, 'Career', 'career'));
-  if (c.cclass && c.cclass.domainSkill) push(c.cclass.domainSkill, 'Domain', 'domain');
+  // The stored list holds autos and picks in one flat array and effectiveCareerSkills
+  // maps it element-wise, so zip positionally and tag the parsed autos as grants.
+  {
+    const car = careerDef(c);
+    const autos = car ? [...parseCareerSkills(car).auto] : [];
+    const eff = effectiveCareerSkills(c);
+    ((c.career && c.career.skills) || []).forEach((raw, i) => {
+      const ai = autos.indexOf(raw);
+      if (ai !== -1) autos.splice(ai, 1); // positional first-match for repeated names
+      push(eff[i], 'Career', 'career', ai !== -1 ? 'grant' : 'pick', SKILL_RANK.career, i);
+    });
+  }
+  if (c.cclass && c.cclass.domainSkill) push(c.cclass.domainSkill, 'Domain', 'domain', 'pick', SKILL_RANK.class);
   Object.entries((c.ancestry && c.ancestry.sigSkills) || {}).forEach(([sig, arr]) =>
-    (arr || []).forEach(s => push(s, sig, 'sig:' + sig)));
+    (arr || []).forEach(s => push(s, sig, 'sig:' + sig, 'pick', SKILL_RANK.ancestry)));
   Object.entries((c.ancestry && c.ancestry.traitSkills) || {}).forEach(([trait, arr]) =>
-    (arr || []).forEach(s => push(s, trait, 'trait:' + trait)));
+    (arr || []).forEach(s => push(s, trait, 'trait:' + trait, 'pick', SKILL_RANK.ancestry)));
   const cls = classDef(c);
   if (cls) {
     // Class skills: grants (with swaps applied) and the picker's choices.
-    for (const s of effectiveClassGrants(c)) push(s, cls.name, 'class');
-    for (const s of c.cclass?.skills || []) push(s, cls.name, 'class');
+    for (const s of effectiveClassGrants(c)) push(s, cls.name, 'class', 'grant', SKILL_RANK.class);
+    for (const s of c.cclass?.skills || []) push(s, cls.name, 'class', 'pick', SKILL_RANK.class);
   }
   const lvl = cls && LEVELUP_DATA[cls.id];
   if (lvl) Object.entries(c.levelChoices || {}).forEach(([L, stored]) => {
     for (const ch of ((lvl[L] && lvl[L].choices) || [])) {
       if (ch.kind !== 'skill-group') continue;
       const p = stored && stored.picks && stored.picks[ch.id];
-      if (p && p.chosen) push(p.chosen, 'Level ' + L, 'lvl:' + L + ':' + ch.id);
+      if (p && p.chosen) push(p.chosen, 'Level ' + L, 'lvl:' + L + ':' + ch.id, 'pick', SKILL_RANK.level);
     }
   });
   const comp = complicationDef(c);
   if (comp) {
     // Fixed grants read through duplicate-grant swaps (comp step is the last granter).
-    for (const s of effectiveComplicationSkills(c)) push(s, comp.name, 'comp:fixed');
+    for (const s of effectiveComplicationSkills(c)) push(s, comp.name, 'comp:fixed', 'grant', SKILL_RANK.complication);
     (comp.skillChoices || []).forEach((ch, i) =>
-      (((c.complication && c.complication.skills) || {})[i] || []).forEach(s => push(s, comp.name, 'comp:' + i)));
+      (((c.complication && c.complication.skills) || {})[i] || []).forEach(s => push(s, comp.name, 'comp:' + i, 'pick', SKILL_RANK.complication)));
   }
   return out;
+}
+
+// Returns [{ name, source, key }] — one entry per skill the character currently holds.
+function collectSkillPicks(c) {
+  return collectSkillEntries(c).map(({ name, source, key }) => ({ name, source, key }));
+}
+
+// Picks that duplicate a skill held elsewhere → [{ name, key, source, holder, idx }].
+// A pick collides with a grant at the same or an earlier rank (the grant always keeps
+// the name — swaps live on the grant side), or with a kept pick at an earlier rank.
+// Picks colliding with a LATER slot's grant are deliberately not flagged: that
+// collision belongs to the grant's "choose another instead" swap prompt, and flagging
+// both sides would demand two replacements for one duplicate. includeLaterGrants
+// widens the check to any-rank grants for the load-time repair pass, where an
+// unresolved swap means the duplicate is real and the pick is the prunable side.
+function duplicateSkillPicks(c, { includeLaterGrants = false } = {}) {
+  const entries = collectSkillEntries(c);
+  const grants = entries.filter(e => e.kind === 'grant');
+  const picks = entries.filter(e => e.kind === 'pick').sort((a, b) => a.rank - b.rank);
+  const kept = new Map();
+  const dups = [];
+  for (const p of picks) {
+    const g = grants.find(x => x.name === p.name && (includeLaterGrants || x.rank <= p.rank));
+    const holder = g ? g.source : kept.get(p.name);
+    if (holder !== undefined) dups.push({ name: p.name, key: p.key, source: p.source, holder, idx: p.idx });
+    else kept.set(p.name, p.source);
+  }
+  return dups;
 }
 
 // Returns [{ name, source, key }] — one entry per perk the character currently holds.
@@ -1250,16 +1321,86 @@ function normalizeLanguages(c) {
   return out;
 }
 
+// Remove one duplicate pick from its slot. Emptying the stored value re-opens the
+// wizard's existing "N of M picked" prompt for that slot, and the pick's skillPicks
+// bookkeeping goes with it. Returns the character unchanged if nothing matched.
+function pruneSkillPick(c, d) {
+  const key = d.key;
+  if (key === 'career') {
+    const arr = c.career.skills || [];
+    if (arr[d.idx] !== d.name) return c; // stale index — the caller recomputes
+    const picks = { ...(c.career.skillPicks || {}) };
+    delete picks[d.name];
+    return { ...c, career: { ...c.career, skills: arr.filter((_, i) => i !== d.idx), skillPicks: picks } };
+  }
+  if (key === 'class') {
+    const arr = c.cclass.skills || [];
+    const cleaned = arr.filter(s => s !== d.name);
+    if (cleaned.length === arr.length) return c;
+    const picks = { ...(c.cclass.skillPicks || {}) };
+    delete picks[d.name];
+    return { ...c, cclass: { ...c.cclass, skills: cleaned, skillPicks: picks } };
+  }
+  if (key === 'domain') return { ...c, cclass: { ...c.cclass, domainSkill: null } };
+  if (key.startsWith('culture:')) {
+    const k = key.slice('culture:'.length);
+    return { ...c, culture: { ...c.culture, skills: { ...c.culture.skills, [k]: null } } };
+  }
+  if (key.startsWith('sig:') || key.startsWith('trait:')) {
+    const field = key.startsWith('sig:') ? 'sigSkills' : 'traitSkills';
+    const name = key.slice(key.indexOf(':') + 1);
+    const arr = ((c.ancestry[field] || {})[name] || []).filter(s => s !== d.name);
+    return { ...c, ancestry: { ...c.ancestry, [field]: { ...c.ancestry[field], [name]: arr } } };
+  }
+  if (key.startsWith('comp:')) {
+    const i = key.slice('comp:'.length);
+    const arr = (((c.complication && c.complication.skills) || {})[i] || []).filter(s => s !== d.name);
+    return { ...c, complication: { ...c.complication, skills: { ...c.complication.skills, [i]: arr } } };
+  }
+  if (key.startsWith('lvl:')) {
+    const rest = key.slice('lvl:'.length);
+    const L = rest.slice(0, rest.indexOf(':'));
+    const chId = rest.slice(rest.indexOf(':') + 1);
+    const lc = c.levelChoices && c.levelChoices[L];
+    if (!lc || !lc.picks || !(chId in lc.picks)) return c;
+    const picks = { ...lc.picks };
+    delete picks[chId];
+    return { ...c, levelChoices: { ...c.levelChoices, [L]: { ...lc, picks } } };
+  }
+  return c;
+}
+
+// Repair pass for stored duplicate skill picks (the skills mirror of
+// normalizeLanguages): a hero saved with an unresolved duplicate — the "save as
+// draft" escape, a legacy save, or free rail navigation reordering the grants —
+// keeps the granted copy and sheds the pick, so the wizard honestly reports the
+// freed slot on the next edit. One prune per iteration: removing a pick can make a
+// stored grant swap stale (the collision disappears and the grant reverts at read
+// time), so positions and effective names are recomputed until no duplicate remains.
+// Identity-preserving when the character is already clean.
+function normalizeSkills(c) {
+  let out = c;
+  for (;;) {
+    const dups = duplicateSkillPicks(out, { includeLaterGrants: true });
+    if (!dups.length) return out;
+    const next = pruneSkillPick(out, dups[0]);
+    if (next === out) return out; // nothing prunable — never true for pick-side dups
+    out = next;
+  }
+}
+
 // Expose helpers globally for other files
 Object.assign(window, {
   newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived,
   summarizeBenefits, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept,
+  collectSkillEntries, duplicateSkillPicks, normalizeSkills,
   collectLanguagePicks, languagesTakenExcept, normalizeLanguages,
   collectDistanceBonuses, applyDistanceBonuses,
 });
-export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, chosenFeatureOptions };
+export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions };
 export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
+export { collectSkillEntries, duplicateSkillPicks, normalizeSkills };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
 export { canEditCharacterFor };
 export { parseHash, navToHash };

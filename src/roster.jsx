@@ -25,7 +25,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           <div className="glyphs-top"><GlyphRow>✠ · ❦ · ✦ · ❦ · ✠</GlyphRow></div>
           <h1>LIBER HEROUM</h1>
           <div className="sub">A Chronicle of Heroes, Drawn from Steel</div>
-          <div className="meta">A Draw Steel Character Manager · v 1.4</div>
+          <div className="meta">A Draw Steel Character Manager · v 1.5</div>
           <div style={{marginTop: 22, display:'flex', justifyContent:'center'}}>
             <RulesButton onClick={() => setRulesOpen(true)}>Rules Glossary</RulesButton>
           </div>

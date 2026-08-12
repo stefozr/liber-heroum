@@ -130,6 +130,117 @@ describe('PlayView renders the character sheet', () => {
   });
 });
 
+describe('masthead ledger & respite', () => {
+  // PlayView mutates through update(mutator) — capture the evolving character
+  // the same way App.updateActive would apply it.
+  const capture = (initial: any) => {
+    const ref = { c: initial };
+    const update = (mut: any) => { ref.c = typeof mut === 'function' ? mut(ref.c) : mut; };
+    return { ref, update };
+  };
+  const stat = (container: HTMLElement, label: string) =>
+    Array.from(container.querySelectorAll('.hb-stat'))
+      .find(s => s.querySelector('.hb-stat-lbl')!.textContent === label)!;
+
+  it('shows Renown/Wealth/XP with career grants; the numbers are click-to-edit', () => {
+    const c = completedCharacter();
+    c.career.id = 'aristocrat';               // renown 1, wealth 1
+    const { container } = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    expect(stat(container, 'Renown').querySelector('.hb-stat-num')!.textContent).toBe('1');
+    expect(stat(container, 'Wealth').querySelector('.hb-stat-num')!.textContent).toBe('2'); // 1 base + career
+    expect(stat(container, 'XP').querySelector('.hb-stat-num')!.textContent).toBe('0');
+    // Renown/Wealth render their number as an edit button; the respite-only XP
+    // stays a bare figure with no control at all.
+    for (const label of ['Renown', 'Wealth']) {
+      expect(stat(container, label).querySelector(`button[aria-label="Edit ${label}"]`)).toBeTruthy();
+    }
+    expect(stat(container, 'XP').querySelector('button')).toBeNull();
+  });
+
+  it('clicking the number opens a type-in field; Enter commits as the Director delta', () => {
+    const { ref, update } = capture(completedCharacter()); // agent career: renown base 0
+    const { container } = render(
+      <PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />
+    );
+    fireEvent.click(stat(container, 'Renown').querySelector('[aria-label="Edit Renown"]')!);
+    const input = stat(container, 'Renown').querySelector('input') as HTMLInputElement;
+    expect(input.value).toBe('0');                                 // pre-filled with the shown value
+    expect(stat(container, 'Wealth').querySelector('input')).toBeNull(); // Wealth stays at rest
+    fireEvent.change(input, { target: { value: '7' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(ref.c.play.renownAdj).toBe(7);                          // base 0 → delta = typed value
+    expect(stat(container, 'Renown').querySelector('input')).toBeNull(); // field closed
+
+    // Blur commits too; wealth is unclamped so a typed negative sticks.
+    fireEvent.click(stat(container, 'Wealth').querySelector('[aria-label="Edit Wealth"]')!);
+    const w = stat(container, 'Wealth').querySelector('input') as HTMLInputElement;
+    fireEvent.change(w, { target: { value: '-3' } });
+    fireEvent.blur(w);
+    expect(ref.c.play.wealthAdj).toBe(-4);                         // shown 1 (base) → typed −3
+  });
+
+  it('Escape cancels; a below-floor value clamps; garbage commits nothing', () => {
+    const { ref, update } = capture(completedCharacter()); // renown base 0
+    const { container } = render(
+      <PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />
+    );
+    const open = () => {
+      fireEvent.click(stat(container, 'Renown').querySelector('[aria-label="Edit Renown"]')!);
+      return stat(container, 'Renown').querySelector('input') as HTMLInputElement;
+    };
+    let input = open();
+    fireEvent.change(input, { target: { value: '9' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(stat(container, 'Renown').querySelector('input')).toBeNull();
+    expect(ref.c.play.renownAdj).toBe(0);
+    // Typing below the floor clamps via the delta (display can never go negative).
+    input = open();
+    fireEvent.change(input, { target: { value: '-5' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(ref.c.play.renownAdj).toBe(0);
+    // Non-numeric and empty drafts close without committing.
+    for (const junk of ['abc', '  ']) {
+      input = open();
+      fireEvent.change(input, { target: { value: junk } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(ref.c.play.renownAdj).toBe(0);
+      expect(stat(container, 'Renown').querySelector('input')).toBeNull();
+    }
+  });
+
+  it('read-only sheets show the figures without any edit affordance', () => {
+    const { container } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop}
+        canEdit={false} owner={{ id: 'u-test', displayName: 'Mara Quill' }} />
+    );
+    expect(container.querySelectorAll('.hb-stat')).toHaveLength(3);
+    expect(container.querySelectorAll('.hb-stat button, .hb-stat input')).toHaveLength(0);
+    expect(container.textContent).not.toContain('RESPITE');
+  });
+
+  it('RESPITE converts victories into XP and restores stamina and recoveries', () => {
+    const init = completedCharacter();
+    init.play = { ...init.play, stamina: 5, recoveriesUsed: 2, victories: 3, xp: 1 };
+    const { ref, update } = capture(init);
+    const { getByText } = render(
+      <PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />
+    );
+    fireEvent.click(getByText('RESPITE ❧'));
+    // The confirm modal previews the conversion before anything changes.
+    expect(getByText(/Convert/).textContent).toContain('3 Victories');
+    expect(ref.c.play.victories).toBe(3);
+    fireEvent.click(getByText('TAKE RESPITE ❧'));
+    expect(ref.c.play).toMatchObject({
+      victories: 0,
+      xp: 4,                 // 1 + 3 converted
+      recoveriesUsed: 0,
+      stamina: null,         // the "full" sentinel, lazily refilled like level-up
+    });
+  });
+});
+
 describe('conditionedSpeed', () => {
   it('caps speed per the rules text', () => {
     expect(conditionedSpeed(6, {})).toBe(6);
@@ -198,8 +309,8 @@ describe('PlayView sheet tabs', () => {
     );
     const charPanel = container.querySelector('#play-panel-character')!;
     expect(charPanel.textContent).toContain('Might');
-    expect(charPanel.textContent).toContain('Echelon');
-    expect(container.querySelector('#play-panel-combat')!.textContent).not.toContain('Echelon');
+    // The Echelon tile was retired — echelon only feeds stamina math now.
+    expect(charPanel.textContent).not.toContain('Echelon');
     // Conditions sit in the pinned strip, not inside any tab panel.
     const strip = container.querySelector('.cond-strip')!;
     expect(strip.querySelectorAll('.cond').length).toBe(9);

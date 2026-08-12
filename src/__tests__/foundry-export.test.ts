@@ -3,11 +3,12 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { newCharacter, computeDerived } from '../app.jsx';
-import { DS_CLASSES } from '../data.jsx';
+import { DS_CLASSES, DS_KITS, DS_COMPLICATIONS } from '../data.jsx';
 import {
   characterToFoundryHero, officialOrGenerated, parseTiers, parseTierClause,
   parseDistance, parseTarget, skillId, langId, randomId, dsid,
 } from '../foundry-export.js';
+import { parseKitSig } from '../wizard/helpers.js';
 import { buildValidCharacter, levelTo } from './helpers/factories';
 import { collectLevelUpFeatures } from '../levelup.jsx';
 
@@ -155,7 +156,7 @@ function censor() {
   c.cclass.heroic3 = 'Driving Assault';
   c.kit.id = 'mountain';
   c.complication.id = 'amnesia';
-  c.play = { ...c.play, stamina: 20, resource: 2, recoveriesUsed: 3, victories: 1, surges: 2 };
+  c.play = { ...c.play, stamina: 20, resource: 2, recoveriesUsed: 3, victories: 1, surges: 2, renownAdj: 1, wealthAdj: -1, xp: 5 };
   return c;
 }
 
@@ -179,6 +180,10 @@ describe('characterToFoundryHero', () => {
     expect(doc.system.hero.victories).toBe(1);
     expect(doc.system.hero.surges).toBe(2);
     expect(doc.system.recoveries.value).toBe(computeDerived(censor()).recoveries - 3);
+    // Currencies: derived base (agent career grants 0/0, level 1) + Director deltas.
+    expect(doc.system.hero.renown).toBe(1);   // 0 + renownAdj 1
+    expect(doc.system.hero.wealth).toBe(0);   // 1 base + wealthAdj −1
+    expect(doc.system.hero.xp).toBe(5);
   });
 
   it('embeds exactly one class item that reproduces the app stamina math', () => {
@@ -447,6 +452,24 @@ describe('whole-document presence (no index)', () => {
     }
     expect(doc.items.find((i: any) => i.type === 'class').system.level).toBe(7);
   });
+
+  it('{t1,t2,t3}-form abilities get the power-roll characteristic fallback (M / I for Piety)', () => {
+    // Mirrors normalizeAbilityTiers(a, resource === 'Piety' ? 'I' : 'M') in the Play view.
+    const c: any = buildValidCharacter({ cls: 'censor' });
+    c.cclass.levelAbilities = {
+      2: [
+        { name: 'Homebrew Smite', type: 'Main action', distance: 'Melee 1', target: 'One creature',
+          tiers: { t1: '2 damage', t2: '4 damage', t3: '6 damage' } },
+        { name: 'Homebrew Blessing', type: 'Maneuver', distance: 'Ranged 5', target: 'One ally', resource: 'Piety',
+          tiers: { t1: 'Slide 1', t2: 'Slide 2', t3: 'Slide 3' } },
+      ],
+    };
+    const doc: any = characterToFoundryHero(c);
+    const smite = doc.items.find((i: any) => i.name === 'Homebrew Smite');
+    expect(smite.system.power.roll.characteristics).toEqual(['might']);
+    const blessing = doc.items.find((i: any) => i.name === 'Homebrew Blessing');
+    expect(blessing.system.power.roll.characteristics).toEqual(['intuition']);
+  });
 });
 
 const INDEX_PATH = 'public/foundry-items.json';
@@ -678,5 +701,73 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     const nullScoped = entry.find((e: any) => e.scope.includes('null'));
     expect(aug.system).toEqual(nullScoped.doc.system);
     expect(doc.items.map((i: any) => i.name)).not.toContain('Psionic Augmentation');
+  });
+
+  // The blanket class×subclass test above only sees the character's chosen kit —
+  // sweep every kit's signature so a data-name drift (the old 'Shock and Awe'
+  // vs official "Raider's Awe") can't slip back in as a custom ability.
+  it('every kit signature resolves to an official ability', () => {
+    const generated = { name: 'gen', type: 'ability', system: {} };
+    for (const k of DS_KITS as any[]) {
+      const sigName = parseKitSig(k.sig).name;
+      expect(sigName, `kit ${k.id} has a parseable signature name`).toBeTruthy();
+      const out = officialOrGenerated(index, 'ability', sigName, generated);
+      expect(out, `kit ${k.id} signature "${sigName}" must match an official ability`).not.toBe(generated);
+    }
+  });
+
+  it('every complication resolves to an official complication doc', () => {
+    const generated = { name: 'gen', type: 'complication', system: {} };
+    for (const comp of DS_COMPLICATIONS as any[]) {
+      const out = officialOrGenerated(index, 'complication', comp.name, generated);
+      expect(out, `complication "${comp.name}" must match an official doc`).not.toBe(generated);
+    }
+  });
+
+  it("exports the Raider kit signature as the official Raider's Awe", () => {
+    const c: any = buildValidCharacter({ cls: 'fury', kit: 'raider' });
+    const doc: any = characterToFoundryHero(c, index);
+    const awe = doc.items.find((i: any) => i.system._dsid === 'raiders-awe');
+    expect(awe).toBeTruthy();
+    expect(awe.type).toBe('ability');
+    expect(awe.img).toMatch(/^(icons|systems|assets)\//);
+  });
+
+  it('a stormwight fury exports its kit-specific Growing Ferocity, not the berserker one', () => {
+    const entry = index.items['feature:growing-ferocity'];
+    for (const kitId of ['boren', 'corven', 'raden', 'vuken']) {
+      const expected = entry.find((e: any) => e.scope.includes(kitId)).doc;
+      const c: any = buildValidCharacter({ cls: 'fury', subclass: 'stormwight', kit: kitId });
+      const doc: any = characterToFoundryHero(c, index);
+      const names = doc.items.map((i: any) => i.name);
+      expect(names, `${kitId} stormwight`).toContain(expected.name); // e.g. 'Boren Growing Ferocity'
+      expect(names, `${kitId} stormwight must not get the berserker/reaver doc`).not.toContain('Growing Ferocity');
+    }
+  });
+
+  it('berserker and reaver furies still get their own Growing Ferocity doc', () => {
+    const entry = index.items['feature:growing-ferocity'];
+    for (const subclass of ['berserker', 'reaver']) {
+      const expected = entry.find((e: any) => e.scope.includes(subclass)).doc;
+      const c: any = buildValidCharacter({ cls: 'fury', subclass });
+      const doc: any = characterToFoundryHero(c, index);
+      const gf = doc.items.find((i: any) => i.name === 'Growing Ferocity');
+      expect(gf, `${subclass} Growing Ferocity`).toBeTruthy();
+      expect(gf.system.description.value, subclass).toBe(expected.system.description.value);
+    }
+  });
+
+  it('a revenant borrowing orc Grounded exports the orc version of the trait', () => {
+    // 'Grounded' collides across dwarf and orc with different official contents; a
+    // borrowed trait must disambiguate by its source ancestry, not the revenant.
+    const c: any = buildValidCharacter({
+      ancestry: 'revenant', formerLife: 'orc',
+      traits: ['Previous Life: 1pt'], prevLifeTraits: { '1pt': 'Grounded' },
+    });
+    const doc: any = characterToFoundryHero(c, index);
+    const grounded = doc.items.find((i: any) => i.type === 'ancestryTrait' && i.name === 'Grounded');
+    expect(grounded).toBeTruthy();
+    const orcDoc = index.items['ancestryTrait:grounded'].find((e: any) => e.scope.includes('orc')).doc;
+    expect(grounded.system.description.value).toBe(orcDoc.system.description.value);
   });
 });

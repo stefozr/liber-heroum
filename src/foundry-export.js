@@ -5,7 +5,7 @@
 // max, recoveries max, potency) are recomputed by Foundry from the embedded class item.
 import {
   classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef,
-  computeDerived, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
+  computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
 } from './app.jsx';
 import { parseKitSig, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
@@ -205,7 +205,13 @@ function loadOfficialIndex() {
     const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || './';
     _officialIndexPromise = fetch(base + 'foundry-items.json')
       .then(r => (r.ok ? r.json() : null))
-      .catch(() => null);
+      .catch(() => null)
+      // A null index means every export would silently fall back to generated
+      // "custom" items — don't memoize the failure, so a retry can succeed.
+      .then((idx) => {
+        if (!idx) _officialIndexPromise = null;
+        return idx;
+      });
   }
   return _officialIndexPromise;
 }
@@ -315,7 +321,12 @@ function abilityItem(a, category, sort) {
 
   let power = { roll: { formula: '', characteristics: [], reactive: false }, effects: {} };
   if (tiers && tiers.some(t => t && t[1])) {
-    const { effects, characteristics } = parseTiers(tiers, a.powerRoll);
+    // {t1,t2,t3}-form abilities omit powerRoll in the data; supply the same
+    // fallback normalizeAbilityTiers gives the Play view (play.jsx:212-219).
+    const powerRoll = (a.tiers && !Array.isArray(a.tiers))
+      ? (a.powerRoll || (a.resource === 'Piety' ? 'I' : 'M'))
+      : a.powerRoll;
+    const { effects, characteristics } = parseTiers(tiers, powerRoll);
     power = { roll: { formula: '@chr', characteristics, reactive: false }, effects };
   }
 
@@ -427,18 +438,21 @@ function characterToFoundryHero(c, officialIndex = null) {
   const car = careerDef(c);
   const comp = complicationDef(c);
   const derived = computeDerived(c);
+  const currencies = playCurrencies(c, derived);
   const benefits = summarizeBenefits(c);
   const name = c.identity?.name || c.name || 'Unnamed Hero';
   const img = c.portrait || 'icons/svg/mystery-man.svg';
 
   // Disambiguation context for official-index collisions (domain features shared
-  // between classes, same-named ancestry traits, ...).
+  // between classes, same-named ancestry traits, ...). Kit ids matter too: the
+  // stormwight Growing Ferocity docs are scoped per kit (boren/corven/raden/vuken).
   const subDef = cls && c.cclass?.subclass
     ? (cls.subclasses || []).find(s => s.id === c.cclass.subclass || s.name === c.cclass.subclass)
     : null;
-  const ctx = [cls?.name, subDef?.name, anc?.name].filter(Boolean).map(dsid);
-  const official = (type, itemName, generated, overrides) =>
-    officialOrGenerated(officialIndex, type, itemName, generated, ctx, c.level || 1, overrides);
+  const ctx = [cls?.name, subDef?.name, anc?.name, kit?.id, kit2?.id].filter(Boolean).map(dsid);
+  const official = (type, itemName, generated, overrides, extraCtx) =>
+    officialOrGenerated(officialIndex, type, itemName, generated,
+      extraCtx?.length ? [...extraCtx.map(dsid), ...ctx] : ctx, c.level || 1, overrides);
 
   // ── embedded items ──
   const items = [];
@@ -479,10 +493,14 @@ function characterToFoundryHero(c, officialIndex = null) {
         descriptionItem(sig.name, 'ancestryTrait', 0, para(sig.text) + sigExtra + skillExtra)));
     }
     // Resolved: a revenant's 'Previous Life' picks export as the actual borrowed trait,
-    // and choice-bearing traits carry their picks in the description.
+    // and choice-bearing traits carry their picks in the description. A borrowed
+    // trait disambiguates by its source ancestry, not the revenant's own — several
+    // trait names collide across ancestries with different official contents.
     for (const t of resolvedAncestryTraits(c)) {
       const extra = t.chosen?.length ? para(`${t.choiceLabel}: ${t.chosen.join(', ')}`) : '';
-      add(official('ancestryTrait', t.name, descriptionItem(t.name, 'ancestryTrait', 0, para(t.text || '') + extra)));
+      add(official('ancestryTrait', t.name,
+        descriptionItem(t.name, 'ancestryTrait', 0, para(t.text || '') + extra),
+        null, t.borrowedFrom ? [t.borrowedFrom] : null));
     }
   }
 
@@ -583,8 +601,10 @@ function characterToFoundryHero(c, officialIndex = null) {
   // The "Subclass Name — Pick" composite summarizeBenefits builds is skipped: the
   // official subclass document is already exported above and covers it.
   const subComposite = sub ? `${cls?.subclassName || 'Subclass'} — ${sub.name}` : null;
+  const seenFeatures = new Set();
   for (const f of (benefits.features || [])) {
     if (f.name === 'Heroic Resource' || f.name === subComposite || expandedComposites.has(f.name)) continue;
+    seenFeatures.add(f.name);
     // Domain features arrive as "Creation: Hands of the Maker" — the official
     // items key off the bare name, so try it stripped of the domain prefix too.
     const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
@@ -593,8 +613,8 @@ function characterToFoundryHero(c, officialIndex = null) {
   }
 
   // Features gained at levels 2-10: auto-granted + 'feature'-kind level-up picks.
-  // Dedupe by name — 'Characteristic Increase' style entries recur across levels.
-  const seenFeatures = new Set((benefits.features || []).map(f => f.name));
+  // Dedupe by name against features actually exported above (skipped composites
+  // don't count) — 'Characteristic Increase' style entries recur across levels.
   for (const f of collectLevelUpFeatures(c)) {
     if (seenFeatures.has(f.name)) continue;
     seenFeatures.add(f.name);
@@ -603,11 +623,13 @@ function characterToFoundryHero(c, officialIndex = null) {
     add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
   }
 
-  // Abilities, mirroring the Play view's collections (play.jsx:51-97).
+  // Abilities, mirroring the Play view's collections (abilityGroups, play.jsx:186-280).
+  // Dedup keys on dsid, matching the compendium lookup — two spellings of one name
+  // must not export as two copies of the same official doc.
   const seenAbilities = new Set();
   const addAbility = (a, category) => {
-    if (!a || !a.name || seenAbilities.has(a.name)) return;
-    seenAbilities.add(a.name);
+    if (!a || !a.name || seenAbilities.has(dsid(a.name))) return;
+    seenAbilities.add(dsid(a.name));
     const generated = abilityItem(a, category, 0);
     let overrides = null;
     for (const f of (a.modifiedFields || [])) {
@@ -663,10 +685,11 @@ function characterToFoundryHero(c, officialIndex = null) {
       primary: { value: c.play?.resource || 0 },
       epic: { value: 0 },
       surges: c.play?.surges || 0,
-      xp: 0,
+      // Live values: derived base (career/complication/level) + Director deltas.
+      xp: currencies.xp,
       victories: c.play?.victories || 0,
-      renown: car?.renown || 0,
-      wealth: 1 + (car?.wealth || 0),
+      renown: currencies.renown,
+      wealth: currencies.wealth,
       preferredKit: kitItems[0]?._id || '',
     },
     skills: { value: skills },

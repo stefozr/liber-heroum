@@ -2,7 +2,7 @@
 // (Field Arsenal max-merge), ancestry traits, prayer/enchantment/augmentation
 // picks, complications, and subclass level-gated features (DS_LEVEL_BONUSES).
 import { describe, it, expect } from 'vitest';
-import { newCharacter, computeDerived } from '../app.jsx';
+import { newCharacter, computeDerived, playCurrencies } from '../app.jsx';
 import { resolvedAncestryTraits } from '../wizard/helpers.js';
 
 function hero(over: any = {}) {
@@ -246,5 +246,44 @@ describe('subclass level-gated features', () => {
     c.level = 9;
     const withoutFeature = 21 + 8 * 9;        // base progression
     expect(computeDerived(c).staminaMax).toBe(withoutFeature + 21);
+  });
+});
+
+describe('renown & wealth bases', () => {
+  it('wealth starts at 1 and rises by 1 at odd levels from 3', () => {
+    const c = hero();
+    for (const [lvl, want] of [[1, 1], [2, 1], [3, 2], [4, 2], [5, 3], [7, 4], [9, 5], [10, 5]] as const) {
+      c.level = lvl;
+      expect(computeDerived(c).wealthBase, `level ${lvl}`).toBe(want);
+    }
+  });
+
+  it('career and complication grants feed the bases', () => {
+    const c = hero();
+    c.career.id = 'aristocrat';               // renown 1, wealth 1
+    c.complication.id = 'disgraced';          // renown 1
+    const d = computeDerived(c);
+    expect(d.renownBase).toBe(2);
+    expect(d.wealthBase).toBe(2);
+    c.career.id = 'gladiator';                // renown 2, no wealth
+    expect(computeDerived(c).renownBase).toBe(3);
+  });
+
+  it('indebted starts wealth in debt (base can be negative)', () => {
+    const c = hero();
+    c.complication.id = 'indebted';           // wealth −5
+    expect(computeDerived(c).wealthBase).toBe(-4);
+    expect(playCurrencies(c).wealth).toBe(-4);
+  });
+
+  it('playCurrencies applies Director deltas; renown floors at 0', () => {
+    const c = hero();
+    c.career.id = 'gladiator';                // renown base 2
+    c.play.renownAdj = 3;
+    c.play.wealthAdj = -2;
+    c.play.xp = 7;
+    expect(playCurrencies(c)).toEqual({ renown: 5, wealth: -1, xp: 7 });
+    c.play.renownAdj = -10;
+    expect(playCurrencies(c).renown).toBe(0);
   });
 });
