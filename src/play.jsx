@@ -153,9 +153,9 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   const setPlay = (mut) => update(c => ({ ...c, play: typeof mut === 'function' ? mut(c.play) : { ...c.play, ...mut } }));
 
   // Hover tooltip (conditions, potency legend): one fixed-position box fed by
-  // whichever trigger is hovered or focused. Fixed (not absolute) because the
-  // condition strip is an overflow-x scroller with a mask that would clip a
-  // positioned child; rendered at the view root.
+  // whichever trigger is hovered or focused. Fixed (not absolute) so no header
+  // stacking context or clipping ancestor can cut it off; rendered at the
+  // view root.
   const [hoverTip, setHoverTip] = useState(null);
   const showTip = (name, text) => (e) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -465,7 +465,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
           </div>
 
           {/* Conditions — live session toggles like the vitals, shown above
-              every tab. Scrolls sideways when the row runs out. Hover/focus
+              every tab. Wraps when the row runs out. Hover/focus
               handlers live on the wrapper span so tooltips still work on the
               read-only sheet, where the buttons are disabled (disabled buttons
               swallow mouse events). No title= — the custom tip replaces it. */}
@@ -1358,15 +1358,12 @@ button.hb-stat-num:hover { color: var(--gold); text-decoration-color: var(--gold
 .abil-group-head .agh-label::before { content: '❦'; margin-right: 10px; opacity: 0.55; }
 .abil-group-head .agh-label::after { content: '❦'; margin-left: 10px; opacity: 0.55; }
 
-/* Conditions strip — one scrollable row beside the other live trackers,
-   with the same right-edge fade as the vitals and tab strips. */
+/* Conditions strip — wraps into extra rows beside the other live trackers so
+   every chip stays visible; no scroll, so no fade mask (a mask on a row that
+   doesn't overflow would permanently dim the last chip). */
 .cond-strip {
-  display: flex; gap: 6px; margin-bottom: 14px;
-  overflow-x: auto; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
-  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
 }
-.cond-strip::-webkit-scrollbar { display: none; }
 /* The wrapper is the flex item (and the tooltip hover target — it keeps firing
    on the read-only sheet where the button itself is disabled). */
 .cond-strip .cond-wrap { flex: 0 0 auto; display: inline-flex; }
@@ -1384,9 +1381,9 @@ button.hb-stat-num:hover { color: var(--gold); text-decoration-color: var(--gold
 .cond.on { background: var(--rubric); border-color: var(--rubric); color: #fff; box-shadow: 0 0 10px var(--rubric-glow); }
 .cond:disabled { opacity: 0.5; cursor: default; }
 
-/* Hover tooltip (conditions, potency legend) — position: fixed so the condition
-   strip's overflow-x scroller and mask can't clip it; pointer-events: none so
-   it never traps the cursor. */
+/* Hover tooltip (conditions, potency legend) — position: fixed so no header
+   stacking context or clipping ancestor can cut it off; pointer-events: none
+   so it never traps the cursor. */
 .play-tip {
   position: fixed; z-index: 60; width: max-content; max-width: 380px;
   border: 1px solid var(--gold-deep); background: var(--bg-1);
@@ -1488,18 +1485,11 @@ ${MQ.rail} {
      collapse as the tablet tier, one breakpoint earlier. */
   .play-grid { grid-template-columns: minmax(0, 1fr); }
   .play-head-inner { padding: 16px 20px 14px; }
-  /* Keep the vitals to one horizontally scrollable strip rather than wrapping
-     into a second row, right-edge fade signalling the rest (same pattern as
-     the tab strip and the app-bar nav). */
-  .vitals {
-    display: flex; gap: 8px;
-    overflow-x: auto; scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent);
-  }
-  .vitals::-webkit-scrollbar { display: none; }
-  .vitals .vital { flex: 0 0 240px; }
-  .vitals .counter { flex: 0 0 104px; }
+  /* Two rows instead of a scroll strip: the gauges split the top row, the four
+     counters share the second — everything visible without horizontal scroll.
+     minmax(0, …) for the same reason as the desktop rule above. */
+  .vitals { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .vitals .vital { grid-column: span 2; }
 }
 
 ${MQ.tab} {
@@ -1514,6 +1504,9 @@ ${MQ.tab} {
   .hb-stat-num, .hb-stat-input { font-size: 1.25rem; }
   .hb-stat-lbl { letter-spacing: 0.16em; }
   .play-content { padding: 18px 20px 22px; }
+  /* At 561px a counter track is ~121px; RECOVERIES at the default 0.22em
+     tracking is ~105px against ~91px of inner width — 0.1em fits it. */
+  .cnt-lbl { letter-spacing: 0.1em; }
 }
 
 ${MQ.phone} {
@@ -1529,8 +1522,12 @@ ${MQ.phone} {
      44px-tall buttons cannot share a row with a 44px portrait, and the extra
      masthead row is net-neutral — these buttons vacated the top bar. */
   .hero-masthead { gap: 10px; padding: 8px 10px; margin-bottom: 10px; grid-template-columns: auto 1fr auto; }
-  .hb-actions { grid-column: 1 / -1; grid-row: 2; flex-direction: row; }
-  .hb-actions .btn { flex: 1; }
+  .hb-actions { grid-column: 1 / -1; grid-row: 2; flex-direction: row; gap: 6px; }
+  /* Three labels share ~332px: at the default 0.18em tracking the longest
+     (biography) is wider than a third of that, so the other two wrap into
+     two-line blobs. Tighter tracking + slim padding keeps each on one line;
+     nowrap so a near-miss overflows the border a pixel instead of stacking. */
+  .hb-actions .btn { flex: 1; padding-left: 4px; padding-right: 4px; letter-spacing: 0.08em; white-space: nowrap; min-width: 0; }
   .hb-portrait { width: 44px; height: 44px; }
   .hb-portrait .hb-glyph { font-size: 1.25rem; }
   .hb-eyebrow { display: none; }
@@ -1547,8 +1544,11 @@ ${MQ.phone} {
   }
   .hb-stat { border-left: 0; padding: 0; }
   .hb-stat-num, .hb-stat-input { font-size: 1.375rem; }
-  .vitals .vital { flex: 0 0 220px; }
-  .vitals .counter { flex: 0 0 96px; }
+  /* Gauges stack full-width, counters go 2×2: four-across would leave ~23px
+     buttons and clip RECOVERIES; side-by-side gauges leave ~31px buttons. */
+  .vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .vitals .vital { grid-column: 1 / -1; }
+  .vital, .counter { padding: 10px 12px; }
 
   .play-head-inner { padding: 10px max(14px, env(safe-area-inset-left)) 12px max(14px, env(safe-area-inset-right)); }
   .play-content { padding: 14px max(14px, env(safe-area-inset-left)) 32px max(14px, env(safe-area-inset-right)); }

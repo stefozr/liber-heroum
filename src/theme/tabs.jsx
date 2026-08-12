@@ -46,8 +46,20 @@ const TABS_CSS = `
 .lh-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; position: relative; z-index: 3; }
 .lh-tab-glyph { font-size: 1.1em; letter-spacing: 0; line-height: 1; }
 
+${MQ.tab} {
+  /* All three segments must fit the tier's narrowest viewport (561px ≈ 521px
+     inner): tighter tracking and padding, glyph down to 1em. */
+  .lh-tab { letter-spacing: 0.1em; padding: 12px 8px; gap: 5px; }
+  .lh-tab-glyph { font-size: 1em; }
+}
+
 ${MQ.phone} {
-  .lh-tab { min-height: 44px; padding: 10px 8px; letter-spacing: 0.08em; gap: 6px; }
+  /* Fit CHARACTER / COMBAT / PROGRESSION in ~332px at a 360px viewport: drop
+     the decorative glyph, step down one size, near-zero tracking. min-height
+     preserves the 44px tap target as the padding shrinks. Below ~330px the
+     .scrollable fade fallback above still engages. */
+  .lh-tab { min-height: 44px; padding: 10px 4px; letter-spacing: 0.04em; font-size: var(--fs-4); gap: 0; }
+  .lh-tab-glyph { display: none; }
 }
 `;
 
