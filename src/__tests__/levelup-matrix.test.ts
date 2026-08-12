@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { DS_CLASSES, DS_SKILL_GROUPS } from '../data.jsx';
 import { classDef, computeDerived, collectSkillPicks, collectPerkPicks } from '../app.jsx';
-import { LEVELUP_DATA, makeContext, levelChoicesFor, applyLevelUp, deriveGroupName } from '../levelup.jsx';
+import { LEVELUP_DATA, makeContext, levelChoicesFor, applyLevelUp, deleteLevelProgression, deriveGroupName } from '../levelup.jsx';
 import { PERKS } from '../wizard/helpers.js';
 import { buildValidCharacter, picksForLevel, firstPickFor, levelTo } from './helpers/factories';
 
@@ -207,5 +207,49 @@ describe('conduit domain-count condition', () => {
     const up = applyLevelUp(c, 2, picksForLevel(c, 2));
     expect(up.level).toBe(2);
     expect(up.levelChoices[2].picks['domain-feature-2']).toBeUndefined();
+  });
+});
+
+// ─── Deleting level progressions (rollback) ───
+describe('deleteLevelProgression', () => {
+  it('deleting a mid level cascades: from 2 on a level-4 hero rolls back to level 1', () => {
+    const at4 = levelTo(buildValidCharacter({ cls: 'fury' }), 4);
+    const back = deleteLevelProgression({ ...at4, play: { ...at4.play, stamina: 17, xp: 3, victories: 2 } }, 2);
+    expect(back.level).toBe(1);
+    expect(back.levelChoices).toEqual({});
+    expect(back.cclass.levelAbilities).toEqual({});
+    // Current stamina resets to the "full" sentinel (max just dropped)…
+    expect(back.play.stamina).toBeNull();
+    // …but respite-earned resources are untouched.
+    expect(back.play.xp).toBe(3);
+    expect(back.play.victories).toBe(2);
+    // Derived stats come back down with the level.
+    expect(computeDerived(back).staminaMax).toBeLessThan(computeDerived(at4).staminaMax);
+  });
+
+  it('deleting the top level keeps the levels beneath it intact', () => {
+    const at4 = levelTo(buildValidCharacter({ cls: 'fury' }), 4);
+    const back = deleteLevelProgression(at4, 4);
+    expect(back.level).toBe(3);
+    expect(Object.keys(back.levelChoices).map(Number).sort()).toEqual([2, 3]);
+    expect(back.levelChoices[2]).toEqual(at4.levelChoices[2]);
+    expect(back.cclass.levelAbilities[4]).toBeUndefined();
+    // Freed perks/skills drop out of the collectors again.
+    expect(collectPerkPicks(back).some((p: any) => p.key.startsWith('lvl:4:'))).toBe(false);
+  });
+
+  it('survives the persistence round-trip that stringifies the level keys', () => {
+    const at4 = levelTo(buildValidCharacter({ cls: 'fury' }), 4);
+    const back = deleteLevelProgression(JSON.parse(JSON.stringify(at4)), 3);
+    expect(back.level).toBe(2);
+    expect(Object.keys(back.levelChoices)).toEqual(['2']);
+    expect(Object.keys(back.cclass.levelAbilities).every(k => Number(k) < 3)).toBe(true);
+  });
+
+  it('does not mutate the input character', () => {
+    const at3 = levelTo(buildValidCharacter({ cls: 'censor' }), 3);
+    const frozen = JSON.stringify(at3);
+    deleteLevelProgression(at3, 2);
+    expect(JSON.stringify(at3)).toBe(frozen);
   });
 });

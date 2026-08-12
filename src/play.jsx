@@ -2,7 +2,7 @@ import React from 'react';
 import { OrnDivider, GlyphRow, renderGlyph, renderRich, Pill, SavePill, Button, TopBar, H3, H4Meta, StatTile, Modal, AbilityCard } from './theme.jsx';
 import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
-import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures } from './levelup.jsx';
+import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, deleteLevelProgression } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
@@ -99,6 +99,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
 
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const [editLevel, setEditLevel] = useState(null);
+  const [pendingDeleteLevel, setPendingDeleteLevel] = useState(null);
   const [bioOpen, setBioOpen] = useState(false);
   const [respiteOpen, setRespiteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -733,10 +734,21 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                           <div className="prog-pick"><span className="prog-pick-v" style={{color:'var(--ink-3)', fontStyle:'italic'}}>No tracked choices.</span></div>
                         )}
                       </div>
-                      {editable && (
-                        <button type="button" className="prog-edit" onClick={() => setEditLevel(lvl)} title={`Edit Level ${lvl} selections`}>
-                          EDIT
-                        </button>
+                      {(editable || canEdit) && (
+                        <div className="prog-actions">
+                          {editable && (
+                            <button type="button" className="prog-edit" onClick={() => setEditLevel(lvl)} title={`Edit Level ${lvl} selections`}>
+                              EDIT
+                            </button>
+                          )}
+                          {/* Deleting works even for levels with no LEVELUP_DATA mapping —
+                              the rollback only trims stored state, so canEdit is enough. */}
+                          {canEdit && (
+                            <button type="button" className="prog-edit prog-del" onClick={() => setPendingDeleteLevel(lvl)} title={`Delete Level ${lvl} progression`}>
+                              DELETE
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
@@ -801,6 +813,36 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
         character={character}
         update={update}
       />
+
+      <Modal open={pendingDeleteLevel != null} onClose={() => setPendingDeleteLevel(null)} title="Undo this Ascension?" width={460}
+        footer={(
+          <>
+            <Button kind="ghost" onClick={() => setPendingDeleteLevel(null)}>◂ KEEP</Button>
+            <div style={{ flex: 1 }}></div>
+            <Button kind="danger" onClick={() => { const lvl = pendingDeleteLevel; setPendingDeleteLevel(null); update(c => deleteLevelProgression(c, lvl)); }}>DELETE ✕</Button>
+          </>
+        )}>
+        {pendingDeleteLevel != null && (
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--display)', fontSize:'1.5rem', color:'var(--gold-2)', letterSpacing:'0.08em', marginBottom:14}}>
+              {pendingDeleteLevel < character.level
+                ? `Levels ${pendingDeleteLevel}–${character.level}`
+                : `Level ${pendingDeleteLevel}`}
+            </div>
+            <div style={{fontFamily:'var(--serif)', fontSize:'0.9375rem', color:'var(--ink-2)', lineHeight:1.6, maxWidth:360, margin:'0 auto'}}>
+              {pendingDeleteLevel < character.level && (
+                <>Later levels are built on this one, so they fall with it. </>
+              )}
+              Everything gained at {pendingDeleteLevel < character.level
+                ? `levels ${Array.from({ length: character.level - pendingDeleteLevel + 1 }, (_, i) => pendingDeleteLevel + i).join(', ')}`
+                : `level ${pendingDeleteLevel}`} — abilities, features, perks, skills,
+              characteristic increases and stamina — will be removed, and{' '}
+              <strong>{heroName}</strong> returns to level {pendingDeleteLevel - 1}.
+              This cannot be undone.
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <RulesGlossary open={rulesOpen} onClose={() => setRulesOpen(false)} />
 
@@ -1405,6 +1447,8 @@ button.hb-stat-num:hover { color: var(--gold); text-decoration-color: var(--gold
   transition: border-color .12s, color .12s, box-shadow .12s;
 }
 .prog-edit:hover { color: var(--gold-2); border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow); }
+.prog-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.prog-del:hover { color: var(--rubric-2); border-color: var(--rubric); box-shadow: 0 0 12px rgba(193,74,58,0.35); }
 
 /* Top-bar overflow menu (phone only — see Responsive below) */
 .pt-menu-wrap { position: relative; display: none; }
@@ -1479,7 +1523,7 @@ ${MQ.phone} {
   .chars-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .cond { padding: 8px 8px; letter-spacing: 0.12em; }
   .prog-row { grid-template-columns: auto 1fr; }
-  .prog-row .prog-edit { grid-column: 1 / -1; justify-self: start; margin-top: 8px; }
+  .prog-row .prog-actions { grid-column: 1 / -1; justify-self: start; margin-top: 8px; flex-direction: row; }
 
   /* Unlike the tablet tier, the actions do reflow to a second row here: two
      44px-tall buttons cannot share a row with a 44px portrait, and the extra

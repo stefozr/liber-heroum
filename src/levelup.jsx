@@ -1193,6 +1193,25 @@ function applyLevelUp(character, nextLevel, picks, { isEditing = false } = {}) {
   return next;
 }
 
+// Pure rollback reducer: undo the fromLevel progression and everything above it,
+// returning the character at fromLevel - 1. Only levelChoices and levelAbilities
+// are stored per level — every other grant (stamina, perks, skills, characteristic
+// increases) is re-derived from level + levelChoices, so nothing else needs
+// unwinding. Keys may be strings after a JSON round-trip, hence Number(k).
+function deleteLevelProgression(character, fromLevel) {
+  const keep = (obj) => Object.fromEntries(
+    Object.entries(obj || {}).filter(([k]) => Number(k) < fromLevel)
+  );
+  return {
+    ...character,
+    level: Math.max(1, fromLevel - 1),
+    levelChoices: keep(character.levelChoices),
+    cclass: { ...character.cclass, levelAbilities: keep(character.cclass?.levelAbilities) },
+    // Max stamina drops with the level; null is the "heal to full" sentinel.
+    play: { ...character.play, stamina: null },
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Step contents
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1537,4 +1556,4 @@ ${MQ.phone} { .skill-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)
 function LevelUpStyles() { return <style>{LEVELUP_CSS}</style>; }
 
 Object.assign(window, { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 });
-export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, collectLevelUpFeatures, levelChoicesFor, applyLevelUp, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };
+export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, collectLevelUpFeatures, levelChoicesFor, applyLevelUp, deleteLevelProgression, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };
