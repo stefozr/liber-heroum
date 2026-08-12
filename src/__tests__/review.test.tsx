@@ -63,7 +63,7 @@ describe('ReviewStep renders complete feature data', () => {
     const kit: any = kitDef(c);
     const text = renderReview(c);
     expect(text).toContain(kit.desc);
-    const sig = parseKitSig(kit.sig);
+    const sig = parseKitSig(kit.sig, kit.sigTiers);
     expect(text).toContain(sig.name);
     if (sig.rows) expect(text).toContain(sig.rows[0][1]); // first tier's result text
   });
@@ -79,18 +79,42 @@ describe('ReviewStep renders complete feature data', () => {
     expect(sig.rows![0]).toEqual(['≤ 11', '3 + M or A']);
     expect(sig.rows![2]).toEqual(['≥ 17', '13 + M or A']);
     expect(sig.effect).toContain('extra damage equal to your Might or Agility score');
-    // Driving Pounce's effect contains its own N/N/N push clause — the FIRST
-    // triple must stay the damage tier, the push must stay in the effect.
-    const pounceKit: any = DS_KITS.find((k: any) => k.sig.startsWith('Driving Pounce'));
-    const pounce = parseKitSig(pounceKit.sig);
-    expect(pounce.rows![1][1]).toBe('5 + A');
-    expect(pounce.effect).toContain('push 0/1/2');
-    expect(pounce.effect).toContain('as many squares as you pushed');
     // Every kit still parses to a name and either rows or an effect.
     for (const k of DS_KITS as any[]) {
-      const s = parseKitSig(k.sig);
+      const s = parseKitSig(k.sig, k.sigTiers);
       expect(s.name, k.id).toBeTruthy();
       expect(s.rows || s.effect, k.id).toBeTruthy();
+    }
+  });
+
+  it('sigTiers spell out tier-dependent riders per row (Net and Stab et al.)', () => {
+    // Tier-varying conditions/potencies/forced movement used to collapse into one
+    // ambiguous effect line ("slowed/restrained (EoT)") — they now live in the rows.
+    const byName = (name: string): any => DS_KITS.find((k: any) => k.sig.startsWith(name));
+    const net = parseKitSig(byName('Net and Stab').sig, byName('Net and Stab').sigTiers);
+    expect(net.rows![0]).toEqual(['≤ 11', '4 + M or A; A < WEAK, slowed (EoT)']);
+    expect(net.rows![1][1]).toBe('6 + M or A; A < AVERAGE, slowed (EoT)');
+    expect(net.rows![2][1]).toBe('8 + M or A; A < STRONG, restrained (EoT)');
+    expect(net.effect).toBeNull(); // nothing ambiguous left behind
+    // Shield Bash: prone is a tier-3-only rider, not a blanket condition.
+    const bash = parseKitSig(byName('Shield Bash').sig, byName('Shield Bash').sigTiers);
+    expect(bash.rows![0][1]).toBe('4 + M or A; push 1');
+    expect(bash.rows![2][1]).toBe('9 + M or A; push 3; M < STRONG, prone');
+    expect(bash.rows![0][1]).not.toContain('prone');
+    expect(bash.rows![1][1]).not.toContain('prone');
+    // Driving Pounce: the push lives per-tier now; the shift rider stays an effect.
+    const pounce = parseKitSig(byName('Driving Pounce').sig, byName('Driving Pounce').sigTiers);
+    expect(pounce.rows![1][1]).toBe('5 + A; push 1');
+    expect(pounce.effect).toContain('as many squares as you pushed');
+    expect(pounce.effect).not.toMatch(/\d\/\d\/\d/);
+    // Consistency: every sigTiers kit has exactly 3 rows, each starting with the
+    // same damage number as the sig's own summary triple (guards silent drift).
+    for (const k of DS_KITS.filter((x: any) => x.sigTiers) as any[]) {
+      expect(k.sigTiers, k.id).toHaveLength(3);
+      const triple = k.sig.match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/)!;
+      k.sigTiers.forEach((row: string, i: number) => {
+        expect(row.startsWith(triple[i + 1]), `${k.id} tier ${i + 1}: "${row}" vs ${triple[i + 1]}`).toBe(true);
+      });
     }
   });
 

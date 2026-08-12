@@ -754,7 +754,7 @@ function ClassKitPicker({ character, update }) {
         const isSel = dualSel ? order > 0 : selected === k.id;
         // Slot(s) filled — fade the rest; clicking still swaps (dual mode rotates).
         const full = dualSel ? !!(sel && sel2) : !!selected;
-        const sig = parseKitSig(k.sig);
+        const sig = parseKitSig(k.sig, k.sigTiers);
         return (
           <SelCard key={k.id} selected={isSel} blocked={blocked} dimmed={full && !isSel && !blocked} onClick={() => !blocked && onPick(k.id)}>
             <div className="kit-card">

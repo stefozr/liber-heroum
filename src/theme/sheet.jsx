@@ -116,7 +116,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
 function KitDetails({ kit, divider = false }) {
   const kt = kit;
   const b = kt.bonuses || {};
-  const sig = parseKitSig(kt.sig);
+  const sig = parseKitSig(kt.sig, kt.sigTiers);
   const meleeDmg = fmtKitDmg(b.melee);
   const rangedDmg = fmtKitDmg(b.ranged);
   return (

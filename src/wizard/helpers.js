@@ -285,7 +285,11 @@ function defaultFlexValues(cls) {
 }
 
 
-function parseKitSig(sig) {
+// sigTiers (optional): full per-tier row texts for kits whose riders vary by tier
+// (conditions, potencies, forced movement) — the sig's own damage triple stays as
+// the compact summary, but the displayed rows come from sigTiers so each tier says
+// exactly what it does, matching the class-ability convention in data/classes.js.
+function parseKitSig(sig, sigTiers) {
   const [namePart, ...rest] = (sig || '').split(/\s*—\s*/);
   const name = (namePart || '').trim();
   const detail = rest.join(' — ').trim();
@@ -296,7 +300,9 @@ function parseKitSig(sig) {
   const suffix = desc ? ` ${desc}` : '';
   const distance = detail.slice(0, tier.index).replace(/[,;:\s]+$/, '').trim() || null;
   const effect = detail.slice(tier.index + tier[0].length).replace(/^[\s,;.]+/, '').trim() || null;
-  const rows = [['\u2264 11', `${t1}${suffix}`], ['12\u201316', `${t2}${suffix}`], ['\u2265 17', `${t3}${suffix}`]];
+  const rows = (sigTiers && sigTiers.length === 3)
+    ? [['\u2264 11', sigTiers[0]], ['12\u201316', sigTiers[1]], ['\u2265 17', sigTiers[2]]]
+    : [['\u2264 11', `${t1}${suffix}`], ['12\u201316', `${t2}${suffix}`], ['\u2265 17', `${t3}${suffix}`]];
   return { name, distance, rows, effect };
 }
 
@@ -312,7 +318,7 @@ function fmtKitDmg(v) {
 
 // A kit's signature ability parsed into the shape AbilityCard expects.
 function kitSigAbility(kt) {
-  const s = parseKitSig(kt.sig);
+  const s = parseKitSig(kt.sig, kt.sigTiers);
   return {
     name: s.name, flavor: '', keywords: ['Weapon'], type: 'Main action', badge: 'SIG',
     distance: s.distance || undefined,

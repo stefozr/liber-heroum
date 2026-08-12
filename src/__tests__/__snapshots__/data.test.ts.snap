@@ -42,9 +42,9 @@ exports[`game data tables > DS_CULTURES is present and unchanged 1`] = `
 
 exports[`game data tables > DS_KITS is present and unchanged 1`] = `
 {
-  "bytes": 8407,
+  "bytes": 9224,
   "count": 25,
-  "hash": "a964cb2d",
+  "hash": "800e32ec",
 }
 `;
 

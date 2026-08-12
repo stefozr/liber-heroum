@@ -390,7 +390,7 @@ function kitItem(k, sort) {
 
 // Kit signature string → ability-shaped object (mirrors mkKitSig in play.jsx).
 function kitSigAbility(kt) {
-  const s = parseKitSig(kt.sig);
+  const s = parseKitSig(kt.sig, kt.sigTiers);
   if (!s.name) return null;
   return {
     name: s.name, flavor: '', keywords: ['Weapon'], type: 'Main action',
