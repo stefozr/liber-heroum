@@ -239,6 +239,28 @@ function PowerRoll({ rows }) {
 
 }
 
+// Generic benefit table attached to a feature (e.g. the Fury's Growing Ferocity).
+// table = { head: ['Ferocity','Benefit'], rows: [[label, text, minLevel?], ...] }.
+// When a level is given, rows above it render dimmed; the label still carries the
+// "(4th level)" annotation, so surfaces without a level lose nothing.
+function FeatureTable({ table, level }) {
+  if (!table || !table.rows || !table.rows.length) return null;
+  return (
+    <div className="feat-table">
+      {(table.head || []).map((h, i) => <span key={`h${i}`} className="fth">{h}</span>)}
+      {table.rows.map(([label, text, minLevel], i) => {
+        const gated = level != null && minLevel != null && level < minLevel;
+        return (
+          <React.Fragment key={i}>
+            <span className={`ftl${gated ? ' ft-gated' : ''}`}>{label}</span>
+            <span className={`ftv${gated ? ' ft-gated' : ''}`}>{renderRich(text)}</span>
+          </React.Fragment>);
+
+      })}
+    </div>);
+
+}
+
 // Map an ability's action type to a color-coded class for its header tag.
 function actionTagClass(type) {
   const t = String(type || '').toLowerCase();
@@ -296,4 +318,4 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
 
 // Expose to window so other files can use these in shared scope
 
-export { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard };
+export { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard };

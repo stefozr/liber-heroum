@@ -1098,7 +1098,7 @@ function summarizeBenefits(c) {
           if (picks.length) for (const p of picks) features.push({ name: `${p.label}: ${p.name}`, text: p.text });
           else features.push({ name: f.name, text: f.text });
         } else {
-          features.push({ name: f.name, text: f.text });
+          features.push({ name: f.name, text: f.text, table: f.table });
         }
       }
     }
@@ -1108,9 +1108,13 @@ function summarizeBenefits(c) {
         features.push({ name: `${cls.subclassName || 'Subclass'} \u2014 ${sub.name}`, text: sub.text });
         // Subclass-specific level-1 passives and abilities (e.g. Elementalist specializations).
         if (sub.acolyte) features.push({ name: sub.acolyte.name, text: sub.acolyte.text });
-        if (sub.features) for (const sf of sub.features) features.push({ name: sf.name, text: sf.text });
+        if (sub.features) for (const sf of sub.features) features.push({ name: sf.name, text: sf.text, table: sf.table });
         if (sub.abilities) for (const sa of sub.abilities) classAbilities.push(sa);
       }
+    }
+    // Kit-granted features (e.g. the stormwight kits' per-kit Growing Ferocity tables).
+    for (const kd of [kitDef(c), kit2Def(c)]) {
+      if (kd?.features) for (const kf of kd.features) features.push({ name: kf.name, text: kf.text, table: kf.table });
     }
     if (cls.pickTwoDomains && (c.cclass?.domains?.length)) {
       features.push({ name: 'Domains', text: c.cclass.domains.join(', ') });

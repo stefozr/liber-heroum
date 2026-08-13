@@ -47,6 +47,17 @@ function esc(s) {
 function para(text) {
   return text ? `<p>${esc(text)}</p>` : '';
 }
+// Feature benefit table ({ head, rows: [[label, text, minLevel?]] }) as real HTML,
+// used when no official doc substitutes (offline export) so the table isn't lost.
+function tableHtml(table) {
+  if (!table?.rows?.length) return '';
+  const head = table.head?.length
+    ? `<thead><tr>${table.head.map((h) => `<th><p>${esc(h)}</p></th>`).join('')}</tr></thead>`
+    : '';
+  const body = table.rows.map(([label, text]) =>
+    `<tr><td><p>${esc(label)}</p></td><td><p>${esc(text)}</p></td></tr>`).join('');
+  return `<table>${head}<tbody>${body}</tbody></table>`;
+}
 function section(title, text) {
   return text ? `<h3>${esc(title)}</h3>${para(text)}` : '';
 }
@@ -609,7 +620,7 @@ function characterToFoundryHero(c, officialIndex = null) {
     // items key off the bare name, so try it stripped of the domain prefix too.
     const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
     const names = bare !== f.name ? [f.name, bare] : [f.name];
-    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
+    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || '') + tableHtml(f.table))));
   }
 
   // Features gained at levels 2-10: auto-granted + 'feature'-kind level-up picks.
@@ -620,7 +631,7 @@ function characterToFoundryHero(c, officialIndex = null) {
     seenFeatures.add(f.name);
     const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
     const names = bare !== f.name ? [f.name, bare] : [f.name];
-    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || ''))));
+    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || '') + tableHtml(f.table))));
   }
 
   // Abilities, mirroring the Play view's collections (abilityGroups, play.jsx:186-280).

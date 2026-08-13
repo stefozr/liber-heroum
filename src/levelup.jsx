@@ -596,13 +596,36 @@ const LEVELUP_DATA = {
       autoFeatures: ({ sub }) => [
         sub === 'earth' && { name: 'Disciple of Earth', text: 'Your body is strengthened by your connection to permanence. You gain a +6 bonus to Stamina, plus an additional +3 bonus to Stamina whenever you gain a level past 2nd.' },
         sub === 'fire' && { name: 'Disciple of Fire', text: 'You have fire immunity equal to 5 + your level, and your fire damage ignores a target\u2019s fire immunity. At the start of a combat encounter, you gain surges equal to your Victories; surge damage you deal can be fire damage.' },
-        sub === 'green' && { name: 'Disciple of the Green', text: 'As a maneuver, you can shapeshift into a creature from the Green Animal Forms table (by level), speaking and making Reason-based melee free strikes. Revert as a maneuver; you revert and lock when dying.' },
+        sub === 'green' && { name: 'Disciple of the Green',
+          text: 'You can use a maneuver to shapeshift into a type of creature on the Green Animal Forms table. While in animal form, you can speak, and you use your Reason score to make melee free strikes. Your statistics stay the same except as noted on the table.\n\nEach form has a prerequisite level that you must attain before you can adopt it. Some animal forms grant you temporary Stamina. You lose this temporary Stamina when you revert back to your true form.\n\nYou choose a specific animal and appearance while in animal form. When you take on an animal form, your equipment either melds into your new form or falls undamaged to the ground (your choice). When you return to your true form, any melded gear reappears on your person.\n\nYou can revert back to your true form as a maneuver. You can’t enter an animal form unless you are in your true form. When you are dying, you revert to your true form and can’t turn back into an animal until you are no longer dying.',
+          table: { head: ['Animal Form', 'Traits'], rows: [
+            ['Canine (2nd)', '5 temporary Stamina; speed 7; size 1M; melee damage +1/+1/+1. You gain an edge on tests that involve smell.', 2],
+            ['Fish (2nd)', 'Speed 5 (swim only); size 1T. You can breathe in water but can’t breathe outside of it.', 2],
+            ['Rodent (2nd)', 'Speed 5 (climb); size 1T. You gain an edge on tests that involve smell.', 2],
+            ['Bird (3rd)', 'Speed 5 (fly); size 1T.', 3],
+            ['Great cat (3rd)', '5 temporary Stamina; speed 6 (climb); size 2; melee damage +1/+1/+1. As a maneuver, you can jump up to 3 squares in any direction. If you land on an enemy of your size or smaller, that enemy is knocked prone, and you can make a melee free strike against them (no action required).', 3],
+            ['Giant frog (4th)', '5 temporary Stamina; speed 5 (swim); size 2. Your melee free strike has a distance of melee 3. When you take the Advance move action, you can high jump or long jump up to half your speed. This jump can allow you to move more squares than your speed.', 4],
+            ['Horse (4th)', '5 temporary Stamina; speed 8; size 2; stability +1. You can use the Charge main action as a maneuver. You can’t use two Charge main actions on the same turn.', 4],
+            ['Mohler (4th)', 'Speed 7 (burrow); size 1S; stability +1. Your melee distance gains a +1 bonus.', 4],
+            ['Bear (5th)', '10 temporary Stamina; speed 5 (climb); size 2; stability +1; melee damage +2/+2/+2. Your melee distance gains a +1 bonus.', 5],
+            ['Giant bird (5th)', 'Speed 7 (fly); size 2; melee damage +1/+1/+1. After making a melee free strike, you can shift up to 3 squares as a free triggered action.', 5],
+            ['Giant salamander (6th)', '5 temporary Stamina; speed 5; size 1L; stability +3; melee damage +2/+2/+2. Your melee free strike deals fire damage. Additionally, you have fire immunity 3.', 6],
+            ['Giant spider (6th)', 'Speed 5 (climb); size 2; melee damage +0/+1/+2. You have a double edge on melee free strikes against creatures you are hidden from.', 6],
+            ['Giant snake (7th)', '5 temporary Stamina; speed 5; size 3; melee damage +0/+1/+2. Whenever you obtain a tier 2 or tier 3 outcome on a melee free strike, you can automatically grab the target. While grabbed this way, the target takes 2 damage at the start of each of their turns.', 7],
+            ['Kangaroo (7th)', 'Speed 7; size 1L; stability +1; melee damage +0/+0/+4. When you score a critical hit with a melee free strike, the target is dazed (save ends). When you take the Advance move action, you can high jump or long jump up to half your speed. This jump can allow you to move more squares than your speed.', 7],
+            ['Spiny armadillo (7th)', '10 temporary Stamina; speed 5; size 1M; stability +2. Whenever you take damage from an adjacent creature’s melee ability, that creature takes 3 damage.', 7],
+            ['Ostrich (8th)', 'Speed 10; size 2; melee damage +1/+1/+1. Your movement does not provoke opportunity attacks.', 8],
+            ['Shark (8th)', 'Speed 8 (swim only); size 2; melee damage +2/+2/+2. You can breathe in water but can’t breathe outside of it. Additionally, you gain an edge on strikes against targets who are bleeding or winded.', 8],
+            ['Giant octopus (9th)', '5 temporary Stamina; speed 5 (swim); size 3; stability +2. You can breathe in water. Additionally, you can target two creatures or objects with your melee free strike. Whenever you obtain a tier 2 or tier 3 outcome on a melee free strike, you can automatically grab the target. You can have up to eight creatures grabbed.', 9],
+            ['Rhinoceros (9th)', '10 temporary Stamina; speed 8; size 2; stability +5; melee damage +2/+2/+2. Whenever you make a melee free strike as part of the Charge action, that strike gains an edge.', 9],
+            ['King terror lizard (10th)', '20 temporary Stamina; speed 5; size 4; stability +3; melee damage +2/+2/+2. Your melee free strike is a 1 burst with the Area and Strike keywords.', 10],
+          ] } },
       ].filter(Boolean),
       autoAbilities: ({ sub }) => (sub === 'void' ? [
         ab('There Is No Space Between', { noBadge: true,
           flavor: 'Knowledge of the mystery reveals that two spaces are the same space.',
           keywords: ['Magic', 'Ranged', 'Void'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special',
-          effect: 'You open two size 1 portals in unoccupied spaces within distance, which last until you move beyond distance from any portal, end the effect as a maneuver, or are dying. Each portal must be placed at a height of no more than 1 square above the ground. When you or any ally touch a portal, that creature can choose to be instantly teleported to an unoccupied space of their choice adjacent to the other portal. If an enemy is force moved into a portal, their forced movement ends and they emerge from the other portal in an unoccupied space chosen by the creature who force moved them.\n\nAt the start of each of your turns while the portals are active, you can open a new portal connected to the others. If three or more por tals are present, you and your allies choose which portal to emerge from when entering a portal, and a creature who force moves an enemy into a portal chooses that enemy’s destination portal.',
+          effect: 'You open two size 1 portals in unoccupied spaces within distance, which last until you move beyond distance from any portal, end the effect as a maneuver, or are dying. Each portal must be placed at a height of no more than 1 square above the ground. When you or any ally touch a portal, that creature can choose to be instantly teleported to an unoccupied space of their choice adjacent to the other portal. If an enemy is force moved into a portal, their forced movement ends and they emerge from the other portal in an unoccupied space chosen by the creature who force moved them.\n\nAt the start of each of your turns while the portals are active, you can open a new portal connected to the others. If three or more portals are present, you and your allies choose which portal to emerge from when entering a portal, and a creature who force moves an enemy into a portal chooses that enemy’s destination portal.',
         }),
       ] : []),
       choices: [
@@ -623,7 +646,7 @@ const LEVELUP_DATA = {
           help: 'Choose one heroic ability that costs 5 essence to use.',
           kind: 'ability',
           options: () => [
-            ab('O Flower Aid, O Earth Defend', { cost: 5, resource: 'Essence', flavor: 'Revitalizing plants and jagged stones grow, helping allies and hinder ing foes.',
+            ab('O Flower Aid, O Earth Defend', { cost: 5, resource: 'Essence', flavor: 'Revitalizing plants and jagged stones grow, helping allies and hindering foes.',
               keywords: ['Area', 'Magic', 'Ranged', 'Earth', 'Green'], type: 'Maneuver', distance: '3 cube within 10', target: 'Special',
               effect: 'Until the start of your next turn, the area gains the following effects:\n\n- Once as a free maneuver at the start of your turn, you allow yourself and each ally in the area to spend any number of Recoveries.\n- The area is difficult terrain for enemies.\n- Each enemy who enters the area for the first time in a combat round or starts their turn there takes damage equal to your Reason score.\n\n**Persistent 1:** The area remains until the start of your next turn. As a maneuver, you can move the area up to 5 squares. This ability ends if the area is ever not within your line of effect.' }),
             ab('Subvert the Green Within', { effect: 'The target uses their signature ability against a creature of your choice. This signature ability can target the creature even if it usually wouldn’t. You then make a power roll against the target of this ability.', cost: 5, resource: 'Essence', flavor: 'Fungal spores sprout inside your enemy\u2019s brain, allowing you to control their actions.',
@@ -851,7 +874,7 @@ const CENSOR_ORDER_ABILITIES_6 = {
     ab('Intercede', { cost: 9, resource: 'Wrath', flavor: 'You take your ally\u2019s place.',
       keywords: ['Magic','Ranged'], type: 'Free triggered action', distance: 'Ranged 10', target: 'One ally',
       trigger: 'A creature makes a strike against the target.',
-      effect: 'The target is unaffected by the strike and you become the target instead, even if you aren’t a valid target for it. You take half the damage from the strike, and the target gains gains 3 surges.' }),
+      effect: 'The target is unaffected by the strike and you become the target instead, even if you aren’t a valid target for it. You take half the damage from the strike, and the target gains 3 surges.' }),
   ],
 };
 
@@ -865,8 +888,8 @@ const CENSOR_ORDER_ABILITIES_9 = {
   exorcist: [
     ab('Banish', { cost: 11, resource: 'Wrath', flavor: 'You sever the target\u2019s tenuous connection to the world.',
       keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
-      powerRoll: 'Might', tiers: [['\u226411','5 + M damage; P < WEAK, the target is banished (save ends)'],['12\u201316','8 + M; P<AVERAGE, banished (save)'],['17+','11 + M; P<STRONG, banished (save)']],
-      effect: 'This ability gains an edge against demons, devils, undead, and creatures not native to your current world. If you know the target’s true name, this ability has a double edge. While , the target is sent to another manifold in the timescape and removed from the encounter map. A banished target can do nothing but make saving throws, and takes 10 holy damage each time they do so. If the target is reduced to 0 Stamina while banished, they are lost to the timescape.' }),
+      powerRoll: 'Might', tiers: [['\u226411','5 + M damage; P < WEAK, the target is banished (save ends)'],['12\u201316','8 + M damage; P < AVERAGE, the target is banished (save ends)'],['17+','11 + M damage; P < STRONG, the target is banished (save ends)']],
+      effect: 'This ability gains an edge against demons, devils, undead, and creatures not native to your current world. If you know the target’s true name, this ability has a double edge. While banished, the target is sent to another manifold in the timescape and removed from the encounter map. A banished target can do nothing but make saving throws, and takes 10 holy damage each time they do so. If the target is reduced to 0 Stamina while banished, they are lost to the timescape.' }),
     ab('Terror Manifest', { cost: 11, resource: 'Wrath', flavor: 'I know what you fear.',
       keywords: ['Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
       powerRoll: 'Presence', tiers: [['\u226411','7 + P psychic damage; P < WEAK, frightened (save ends)'],['12\u201316','10 + P psychic damage; P < AVERAGE, frightened (save ends)'],['17+','13 + P psychic damage; P < STRONG, frightened (save ends)']],
@@ -905,7 +928,7 @@ const CENSOR_WRATH_7 = [
     effect: 'Until the end of the encounter or until you are dying, whenever a target makes a strike, they take holy damage equal to twice your Presence score. A target judged by you takes an extra 2d6 holy damage.' }),
   ab('Edict of Stillness', { cost: 7, resource: 'Wrath', flavor: 'The holy aura you project makes it painful for evil-doers to leave your reach.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
-    effect: 'Until the end of the encounter or until you are dying, when ever a target moves or is force moved out of the area, they take holy damage equal to twice your Presence score. A target judged by you who moves willingly takes an extra 2d6 holy damage.' }),
+    effect: 'Until the end of the encounter or until you are dying, whenever a target moves or is force moved out of the area, they take holy damage equal to twice your Presence score. A target judged by you who moves willingly takes an extra 2d6 holy damage.' }),
 ];
 
 const CENSOR_WRATH_9 = [
@@ -918,9 +941,9 @@ const CENSOR_WRATH_9 = [
     effect: 'A target can end one effect on them that is ended by a saving throw or that ends at the end of their turn, or a prone target can stand up.' }),
   ab('Righteous Judgment', { cost: 9, resource: 'Wrath', flavor: 'You amplify the power of your judgment.',
     keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
-    powerRoll: 'Might', tiers: [['\u226411','10+ M damage'],['12\u201316','14 + M damage'],['17+','20 + M damage']],
+    powerRoll: 'Might', tiers: [['\u226411','10 + M damage'],['12\u201316','14 + M damage'],['17+','20 + M damage']],
     effect: 'Until the end of the encounter, whenever any ally deals damage to a target judged by you, that ally gains 1 surge.' }),
-  ab('Shield of the Righteous', { effect: '10 temporary Stamina 15 temporary Stamina 20 temporary Stamina', cost: 9, resource: 'Wrath', flavor: 'You strike a foe and create a fleet of divine shields that protect your allies.',
+  ab('Shield of the Righteous', { cost: 9, resource: 'Wrath', flavor: 'You strike a foe and create a fleet of divine shields that protect your allies.',
     keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
     powerRoll: 'Might', tiers: [['\u226411','10 + M damage; you and each ally adjacent to you gain 10 temporary Stamina'],['12\u201316','14 + M damage; you and each ally adjacent to you gain 15 temporary Stamina'],['17+','20 + M damage; you and each ally adjacent to you gain 20 temporary Stamina']] }),
 ];
@@ -1130,7 +1153,7 @@ function collectLevelUpFeatures(character) {
     const stored = character.levelChoices[lvl];
     const auto = typeof dataForLvl.autoFeatures === 'function'
       ? dataForLvl.autoFeatures(ctx) : (dataForLvl.autoFeatures || []);
-    for (const f of auto) if (f && f.name) out.push({ level: lvl, name: f.name, text: f.text || '' });
+    for (const f of auto) if (f && f.name) out.push({ level: lvl, name: f.name, text: f.text || '', table: f.table });
     for (const ch of (dataForLvl.choices || [])) {
       if (ch.kind !== 'feature') continue;
       const p = stored && stored.picks && stored.picks[ch.id];

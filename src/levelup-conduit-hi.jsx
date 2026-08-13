@@ -30,7 +30,7 @@ const tr = (t1, t2, t3) => [['\u2264 11', t1], ['12\u201316', t2], ['17+', t3]];
 const pi = (n, name, flavor, effect, extra) => ({ name, cost: n, resource: 'Piety', flavor, type: 'Main action', keywords: ['Magic','Ranged'], distance: 'Ranged 10', target: 'One ally', effect, ...extra });
 
 const PI_9 = () => [
-  pi(9, 'Beacon of Grace', 'You ignite a foe with holy radiance, rewarding allies who attack them.', '', { keywords:['Magic','Ranged','Strike'], target:'One creature', powerRoll:'Intuition', tiers:tr('8 + I holy damage; I < WEAK','13 + I holy damage; I < AVERAGE','17 + I holy damage; I < STRONG') }),
+  pi(9, 'Beacon of Grace', 'You ignite a foe with holy radiance, rewarding allies who attack them.', 'Until the end of the encounter, whenever you or any ally damages the target using an ability, that creature can spend a Recovery. If the target is reduced to 0 Stamina before the end of the encounter, you can use a free triggered action to move this effect to another creature within distance.', { keywords:['Magic','Ranged','Strike'], target:'One creature', powerRoll:'Intuition', tiers:tr('8 + I holy damage; I < WEAK','13 + I holy damage; I < AVERAGE','17 + I holy damage; I < STRONG') }),
   pi(9, 'Penance', 'If you won’t kneel, the gods will make you.', '', { keywords:['Area','Magic','Ranged'], distance:'4 cube within 10', target:'Each enemy in the area', powerRoll:'Intuition', tiers:tr('4 corruption damage; I < WEAK, prone and can\'t stand (save ends)','7 corruption damage; I < AVERAGE, prone and can\'t stand (save ends)','11 corruption damage; I < STRONG, prone and can\'t stand (save ends)') }),
   pi(9, 'Sanctuary', 'You send yourself or an ally to a divine manifold to instantaneously regain health.', 'The target is removed from the encounter map until the start of their next turn and can spend any number of Recoveries. At the start of their turn, the target reappears in the space they left or the nearest unoccupied space of their choice.', { type: 'Maneuver', target:'Self or one ally' }),
   pi(9, 'Vessel of Retribution', 'You infuse yourself or an ally with the retributive energy of the gods, waiting to be unleashed.', 'The first time the target is dying or winded before the end of the encounter, each enemy within 5 squares of them takes 15 holy damage.', { type: 'Maneuver', target:'Self or one ally' }),
@@ -46,8 +46,6 @@ export const conduitHi = {
   5: {
     summary: 'Your domains bloom further, and heaven\u2019s power swells within you.',
     staminaGain: 6,
-    autoFeatures: () => [
-    ],
     choices: [
       { id: 'domain-feature-5', label: '5th-Level Domain Feature', help: 'Choose your other domain. You gain that domain\u2019s 4th-level feature.', kind: 'feature', options: domainFeatures(DOMAIN_4_FEATURES) },
       { id: 'piety-9', label: '9-Piety Ability', help: 'Choose one heroic ability that costs 9 piety.', kind: 'ability', options: PI_9 },
@@ -80,8 +78,6 @@ export const conduitHi = {
   8: {
     summary: 'Your domains reveal their deepest mysteries.',
     staminaGain: 6,
-    autoFeatures: () => [
-    ],
     choices: [
       { id: 'domain-feature-8', label: '8th-Level Domain Feature', help: 'Choose your other domain. You gain that domain\u2019s 7th-level feature.', kind: 'feature', options: domainFeatures(DOMAIN_7_FEATURES) },
       { id: 'perk-8', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
@@ -93,7 +89,7 @@ export const conduitHi = {
     staminaGain: 6,
     autoFeatures: () => [
       { name: 'Faith\u2019s Sword', text: 'Each respite, grant a willing hero ally the benefits of your Burgeoning Saint feature until your next respite.' },
-      { name: 'Ordained', text: 'Your characteristics are treated as 1 higher to resist potencies, and while you have 5+ Victories you speak with divine authority.' },
+      { name: 'Ordained', text: 'Your characteristic scores are treated as 1 higher for the purpose of resisting potencies. Additionally, while you have 5 or more Victories, you speak with the voice of your deity and have a double edge on Presence tests made to influence other creatures.' },
     ],
     choices: [
       { id: 'domain-ability-9', label: '9th-Level Domain Ability', help: 'Choose one of your domains. You gain that domain\u2019s 11-piety ability.', kind: 'ability', options: domainAbilities(DOMAIN_9_ABILITIES) },],
@@ -104,7 +100,7 @@ export const conduitHi = {
     autoCharacteristicIncrease: { Intuition: 5, max: true },
     autoFeatures: () => [
       { name: 'Characteristic Increase', text: 'Your Intuition increases to 5, and one other characteristic increases by 1 (to a max of 5).' },
-      { name: 'Avatar', text: 'You can be affected by up to three prayers at once (changeable on a respite) and gain further divine authority.' },
+      { name: 'Avatar', text: 'When you use your Prayer feature, you can be affected by up to three prayers at once, and you can change all those prayers and your ward as a respite activity. You can also use a maneuver to activate one of your domain effects without needing to pray. Additionally, whenever you take a respite, you can open a portal to rest in the presence of your deity and bring along any allies. When you do, you can ask your deity three questions, which the Director must answer honestly if your deity knows the answers. When you finish your respite, you and your allies can appear at any location in the timescape where someone worships your deity.' },
       { name: 'Divine Power', text: 'You gain the epic resource divine power equal to the XP you earn each respite, spendable as piety — even to use conduit abilities you don\u2019t have. It remains until spent.' },
       { name: 'Most Pious', text: 'When you roll for piety at the start of your turn and pray, you gain 1 additional piety.' },
     ],

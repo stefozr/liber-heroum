@@ -1,5 +1,5 @@
 import React from 'react';
-import { OrnDivider, GlyphRow, renderGlyph, renderRich, Pill, SavePill, Button, TopBar, H3, H4Meta, StatTile, Modal, AbilityCard } from './theme.jsx';
+import { OrnDivider, GlyphRow, renderGlyph, renderRich, Pill, SavePill, Button, TopBar, H3, H4Meta, StatTile, Modal, FeatureTable, AbilityCard } from './theme.jsx';
 import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, deleteLevelProgression } from './levelup.jsx';
@@ -628,12 +628,14 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                     <div className="trait-block" key={f.name}>
                       <div className="trait-name">{f.name}</div>
                       <div className="trait-text">{renderRich(f.text)}</div>
+                      {f.table && <FeatureTable table={f.table} level={character.level} />}
                     </div>
                   ))}
                   {levelUpFeatures.map((f, i) => (
                     <div className="trait-block" key={`lu-${f.level}-${f.name}-${i}`}>
                       <div className="trait-name">{f.name} <span className="perk-lvl-tag">LV {f.level}</span></div>
                       {f.text && <div className="trait-text">{renderRich(f.text)}</div>}
+                      {f.table && <FeatureTable table={f.table} level={character.level} />}
                     </div>
                   ))}
                 </Panel>

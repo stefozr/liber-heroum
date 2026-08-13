@@ -996,6 +996,23 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
 }
 .ability-card .ac-effect b { color: var(--gold-2); }
 
+/* Feature benefit tables (FeatureTable) — e.g. the Fury's Growing Ferocity.
+   Lives inside .trait-block / .orn-frame feature blocks, so it styles standalone
+   rather than under .ability-card. Column width matches .ac-roll's rationale but
+   stretches for labels like "12 (10th level)". */
+.feat-table {
+  margin-top: 8px; border-top: 1px dashed var(--line-2); padding-top: 8px;
+  display: grid; grid-template-columns: minmax(46px, max-content) 1fr; gap: 6px 12px;
+  align-items: baseline;
+}
+.feat-table .fth {
+  font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3);
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.feat-table .ftl { font-family: var(--mono); font-size: var(--fs-4); color: var(--gold); font-weight: 700; }
+.feat-table .ftv { font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.5; }
+.feat-table .ft-gated { opacity: 0.55; }
+
 /* Poster cards (ancestry + class pickers) — the artwork IS the card; name and
    the full untruncated blurb sit on a bottom scrim (2:3 leaves room for the
    longest blurb). Scrim text colors are fixed rather than --ink because the
@@ -1194,6 +1211,8 @@ ${MQ.phone} {
   .ability-card .ac-roll { grid-template-columns: 1fr; gap: 2px; }
   .ability-card .ac-roll .t { margin-top: 4px; }
   .kit-card .kit-roll { grid-template-columns: 1fr; gap: 2px; }
+  .feat-table { grid-template-columns: 1fr; gap: 2px; }
+  .feat-table .ftl { margin-top: 6px; }
   .ability-card .ac-row { flex-wrap: wrap; gap: 6px; }
 
   /* 5 point-buy stats over 2 rows; the odd one out spans the full width. */

@@ -1,4 +1,7 @@
 // data/kits.js — Draw Steel game data: DS_KITS. Split out of the former monolithic data.jsx.
+// Kits may carry an optional `features` array ({ name, text, table? }) for benefits the
+// kit grants beyond bonuses/signature — today only the stormwight kits use it, for their
+// per-kit Growing Ferocity tables. summarizeBenefits appends these to the hero's features.
 const DS_KITS = [
   { id: 'arcane-archer', name: 'Arcane Archer', armor: 'None', weapon: 'Bow',
     desc: 'Magic and ranged weapon strikes. Mobility-first; your arrows explode.',
@@ -98,21 +101,69 @@ const DS_KITS = [
     desc: 'Stormwight kit — bear form. Large, durable, imposing; pull foes instead of pushing. Primordial damage: cold.',
     bonuses: { sta_per: 9, stab: 2, melee: '+0/+0/+4' },
     sig: 'Bear Claws — melee 1; 2/5/7 + M.',
-    sigTiers: ['2 + M; M < WEAK, grabbed', '5 + M; M < AVERAGE, grabbed', '7 + M; M < STRONG, grabbed'] },
+    sigTiers: ['2 + M; M < WEAK, grabbed', '5 + M; M < AVERAGE, grabbed', '7 + M; M < STRONG, grabbed'],
+    features: [
+      { name: 'Growing Ferocity',
+        text: 'As your ferocity grows, you gain benefits as noted on the Boren Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+        table: { head: ['Ferocity', 'Benefit'], rows: [
+          ['2', 'You can have up to two creatures grabbed at a time. Additionally, whenever you make a strike against a creature you have grabbed, you gain 1 surge.'],
+          ['4', 'The first time you grab a creature on a turn, you gain 1 surge.'],
+          ['6', 'You gain an edge on the Grab and Knockback maneuvers.'],
+          ['8 (4th level)', 'The first time you grab a creature on a turn, you gain 2 surges instead of 1.', 4],
+          ['10 (7th level)', 'You have a double edge on the Grab and Knockback maneuvers.', 7],
+          ['12 (10th level)', 'Whenever you use a heroic ability, you gain 10 temporary Stamina. Additionally, whenever you have a creature grabbed, any ability roll made against that creature gains a bonus to its potency equal to your Might score.', 10],
+        ] } },
+    ] },
   { id: 'corven', name: 'Corven', armor: 'None', weapon: 'None', pool: 'stormwight',
     desc: 'Stormwight kit — crow form. Stealthy and quick; edge on hide and sneak. Primordial damage: fire.',
     bonuses: { sta_per: 3, spd: 3, melee: '+2/+2/+2', disengage: 1 },
-    sig: 'Wing Buffet — melee burst 1 (all enemies); 1/4/6 damage; you can shift up to 2 squares before or after the power roll.' },
+    sig: 'Wing Buffet — melee burst 1 (all enemies); 1/4/6 damage; you can shift up to 2 squares before or after the power roll.',
+    features: [
+      { name: 'Growing Ferocity',
+        text: 'As your ferocity grows, you gain benefits as noted on the Corven Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+        table: { head: ['Ferocity', 'Benefit'], rows: [
+          ['2', 'Whenever you use the Disengage move action, the distance you can shift gains a bonus equal to your Agility score.'],
+          ['4', 'The first time you shift on a turn, you gain 1 surge.'],
+          ['6', 'You gain an edge on Agility tests, the Escape Grab maneuver, and the Knockback maneuver.'],
+          ['8 (4th level)', 'The first time you shift on a turn, you gain 2 surges instead of 1.', 4],
+          ['10 (7th level)', 'You have a double edge on Agility tests, the Escape Grab maneuver, and the Knockback maneuver.', 7],
+          ['12 (10th level)', 'Whenever you use a heroic ability, you gain 10 temporary Stamina. Additionally, the potency of any effects targeting you is reduced by 2 for you.', 10],
+        ] } },
+    ] },
   { id: 'raden', name: 'Raden', armor: 'None', weapon: 'None', pool: 'stormwight',
     desc: 'Stormwight kit — rat form. Mobile and elusive; ignore difficult terrain. Primordial damage: corruption.',
     bonuses: { sta_per: 3, spd: 3, melee: '+2/+2/+2', disengage: 1 },
     sig: 'Driving Pounce — melee 1; 2/5/7 + A; you can shift up to as many squares as you pushed the target.',
-    sigTiers: ['2 + A', '5 + A; push 1', '7 + A; push 2'] },
+    sigTiers: ['2 + A', '5 + A; push 1', '7 + A; push 2'],
+    features: [
+      { name: 'Growing Ferocity',
+        text: 'As your ferocity grows, you gain benefits as noted on the Raden Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+        table: { head: ['Ferocity', 'Benefit'], rows: [
+          ['2', 'Whenever you use the Disengage move action, the distance you can shift gains a bonus equal to your Agility score.'],
+          ['4', 'The first time you shift on a turn, you gain 1 surge.'],
+          ['6', 'You gain an edge on Agility tests, the Escape Grab maneuver, and the Knockback maneuver.'],
+          ['8 (4th level)', 'The first time you shift on a turn, you gain 2 surges instead of 1.', 4],
+          ['10 (7th level)', 'You have a double edge on Agility tests, the Escape Grab maneuver, and the Knockback maneuver.', 7],
+          ['12 (10th level)', 'Whenever you use a heroic ability, you gain 10 temporary Stamina. Additionally, the potency of any effects targeting you is reduced by 2 for you.', 10],
+        ] } },
+    ] },
   { id: 'vuken', name: 'Vuken', armor: 'None', weapon: 'None', pool: 'stormwight',
     desc: 'Stormwight kit — wolf form. A fleet-footed pack hunter. Primordial damage: lightning.',
     bonuses: { sta_per: 9, spd: 2, melee: '+2/+2/+2', disengage: 1 },
     sig: 'Unbalancing Attack — melee 1; 2/5/7 + M.',
-    sigTiers: ['2 + M; A < WEAK, prone', '5 + M; A < AVERAGE, prone', '7 + M; A < STRONG, prone'] },
+    sigTiers: ['2 + M; A < WEAK, prone', '5 + M; A < AVERAGE, prone', '7 + M; A < STRONG, prone'],
+    features: [
+      { name: 'Growing Ferocity',
+        text: 'As your ferocity grows, you gain benefits as noted on the Vuken Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+        table: { head: ['Ferocity', 'Benefit'], rows: [
+          ['2', 'Whenever you use the Knockback maneuver, you can target one additional creature.'],
+          ['4', 'The first time on a turn that you push a creature or knock a creature prone, you gain 1 surge.'],
+          ['6', 'You gain an edge on Agility tests and the Knockback maneuver.'],
+          ['8 (4th level)', 'The first time on a turn that you push a creature or knock a creature prone, you gain 2 surges.', 4],
+          ['10 (7th level)', 'You have a double edge on Agility tests and the Knockback maneuver.', 7],
+          ['12 (10th level)', 'Whenever you use a heroic ability, you gain 10 temporary Stamina. Additionally, whenever you make a power roll that imposes forced movement on a target, the forced movement distance gains a bonus equal to your Agility score.', 10],
+        ] } },
+    ] },
 ];
 
 // Kits available to a class given its chosen subclass. Subclasses may scope the

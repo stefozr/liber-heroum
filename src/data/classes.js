@@ -218,7 +218,7 @@ const DS_CLASSES = [
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage'],['12–16','5 + I holy damage'],['17+','8 + I holy damage']],
-        effect: 'One ally within distance gains a number of surges equal to the tier outcome of your power roll.\n\ngains 1 surge gains 2 surges gains 3 surges.'
+        effect: 'One ally within distance gains a number of surges equal to the tier outcome of your power roll.'
       }),
       ab('Staggering Curse', { flavor: 'A blast of judgment disorients your foe.',
         keywords: ['Magic','Melee','Strike'], type: 'Main action',
@@ -301,7 +301,7 @@ const DS_CLASSES = [
         distance: '4 burst', target: 'Each ally in the area',
         effect: 'Each target can spend a Recovery. Additionally, each target can use a free triggered action to end one effect on them that is ended by a saving throw or that ends at the end of their turn, or to stand up if prone.'
       }),
-      ab('Faith Is Our Armor', { effect: 'You can target yourself instead of one ally with this ability.\n\n5 temporary Stamina 10 temporary Stamina 15 temporary Stamina', cost: 5, resource: 'Piety',
+      ab('Faith Is Our Armor', { effect: 'You can target yourself instead of one ally with this ability.', cost: 5, resource: 'Piety',
         flavor: 'The heroes’ armor glows with golden light, granting divine protection.',
         keywords: ['Magic','Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Four allies',
@@ -343,6 +343,16 @@ const DS_CLASSES = [
       { id: 'berserker',  name: 'Berserker',  tag: 'Might',   text: 'You channel ferocity into physical might, a living force shaping the world.', skill: 'Lift',
         features: [
           { name: 'Primordial Strength', text: 'Whenever you damage an object with a weapon strike, the strike deals extra damage equal to your Might score. Additionally, whenever you push another creature into an object, the creature takes extra damage equal to your Might score.\n\nAs your ferocity grows, you gain benefits as noted on the Berserker Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.' },
+          { name: 'Growing Ferocity',
+            text: 'You gain certain benefits in combat based on the amount of ferocity you have. These benefits last until the end of your turn, even if a benefit would become unavailable to you because of the amount of ferocity you spend during your turn. Benefits marked with a level can be used only once you reach that level.',
+            table: { head: ['Ferocity', 'Benefit'], rows: [
+              ['2', 'Whenever you use the Knockback maneuver, the forced movement distance gains a bonus equal to your Might score.'],
+              ['4', 'The first time you push a creature on a turn, you gain 1 surge.'],
+              ['6', 'You gain an edge on Might tests and the Knockback maneuver.'],
+              ['8 (4th level)', 'The first time you push a creature on a turn, you gain 2 surges.', 4],
+              ['10 (7th level)', 'You have a double edge on Might tests and the Knockback maneuver.', 7],
+              ['12 (10th level)', 'Whenever you use a heroic ability, you gain 10 temporary Stamina. Additionally, whenever you make a power roll that imposes forced movement on a target, the forced movement distance gains a bonus equal to your Might score.', 10],
+            ] } },
         ],
         abilities: [
           ab('Lines of Force', {
@@ -358,6 +368,16 @@ const DS_CLASSES = [
       { id: 'reaver',     name: 'Reaver',     tag: 'Cunning', text: 'You channel ferocity into instinct, challenging the order of civilization.', skill: 'Hide',
         features: [
           { name: 'Primordial Cunning', text: 'You are never surprised. Additionally, whenever you would push a target with forced movement, you can slide them instead.\n\nAs your ferocity grows, you gain benefits as noted on the Reaver Growing Ferocity table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.' },
+          { name: 'Growing Ferocity',
+            text: 'You gain certain benefits in combat based on the amount of ferocity you have. These benefits last until the end of your turn, even if a benefit would become unavailable to you because of the amount of ferocity you spend during your turn. Benefits marked with a level can be used only once you reach that level.',
+            table: { head: ['Ferocity', 'Benefit'], rows: [
+              ['2', 'Whenever you use the Knockback maneuver, the forced movement distance gains a bonus equal to your Agility score.'],
+              ['4', 'The first time you slide a creature on a turn, you gain 1 surge.'],
+              ['6', 'You gain an edge on Agility tests and the Knockback maneuver.'],
+              ['8 (4th level)', 'The first time you slide a creature on a turn, you gain 2 surges.', 4],
+              ['10 (7th level)', 'You have a double edge on Agility tests and the Knockback maneuver.', 7],
+              ['12 (10th level)', 'Whenever you use a heroic ability, you gain 10 temporary Stamina. Additionally, whenever you make a power roll that imposes forced movement on a target, the forced movement distance gains a bonus equal to your Agility score.', 10],
+            ] } },
         ],
         abilities: [
           ab('Unearthly Reflexes', {
@@ -390,7 +410,6 @@ const DS_CLASSES = [
     kitRequired: true,
     quickKit: 'Panther',
     features: [
-      { name: 'Growing Ferocity', text: 'Your aspect grants benefits at 2/4/6 ferocity — bigger Knockback distances, free surges, edges on Might tests, and more. Lost at end of turn.' },
       { name: 'Mighty Leap', text: 'You can\'t roll lower than a tier 2 outcome on Might tests made to jump.' },
     ],
     signatures: [
@@ -519,7 +538,7 @@ const DS_CLASSES = [
         abilities: [
           ab('Return to Formlessness', { noBadge: true, flavor: 'With the merest touch, you cause an object to turn to slag or ash.',
             keywords: ['Magic','Melee','Fire'], type: 'Main action', distance: 'Melee 1', target: 'One mundane object',
-            effect: 'You heat the target and cause it to melt or combust, destroy ing it. If the object is larger than 1 square, then only the square of the object you touch is destroyed.' }),
+            effect: 'You heat the target and cause it to melt or combust, destroying it. If the object is larger than 1 square, then only the square of the object you touch is destroyed.' }),
           ab('Explosive Assistance', { flavor: 'You add a little magic to an ally\u2019s aggression at just the right time.',
             keywords: ['Magic','Ranged','Fire'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target force moves a creature or object.', effect: 'The forced movement distance gains a bonus equal to your Reason score.',
@@ -592,7 +611,7 @@ const DS_CLASSES = [
       ab('Meteoric Introduction', { flavor: 'You give your enemy a gentle tap—like an asteroid impact.',
         keywords: ['Magic','Melee','Strike','Earth'], type: 'Main action', distance: 'Melee 1', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','3 + R damage; push 2'],['12–16','5 + R damage; push 3'],['17+','8 + R damage; push 4']] }),
-      ab('Unquiet Ground', { flavor: 'A sudden storm of detritus assaults your foes and leaves them strug gling to move.',
+      ab('Unquiet Ground', { flavor: 'A sudden storm of detritus assaults your foes and leaves them struggling to move.',
         keywords: ['Area','Magic','Ranged','Earth'], type: 'Main action', distance: '2 cube within 10', target: 'Each enemy in the area',
         powerRoll: 'Reason', tiers: [['≤11','2 damage'],['12–16','5 damage'],['17+','7 damage']],
         effect: 'The ground beneath the area is difficult terrain for enemies.' }),
@@ -621,7 +640,7 @@ const DS_CLASSES = [
         keywords: ['Area','Magic','Ranged','Void'], type: 'Main action', distance: '3 cube within 10', target: 'Each enemy in the area',
         powerRoll: 'Reason', tiers: [['≤11','2 psychic damage'],['12–16','4 psychic damage'],['17+','6 psychic damage']],
         effect: '**Persistent 1:** At the start of your turn, you can use a maneuver to use this ability again without spending essence.' }),
-      ab('Invigorating Growth', { cost: 3, resource: 'Essence', flavor: 'Mushrooms erupt from a foe, sapping their vitality to spread strength ening spores.',
+      ab('Invigorating Growth', { cost: 3, resource: 'Essence', flavor: 'Mushrooms erupt from a foe, sapping their vitality to spread strengthening spores.',
         keywords: ['Magic','Ranged','Strike','Green'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
         powerRoll: 'Reason', tiers: [['≤11','4 + R poison damage'],['12–16','7 + R poison damage'],['17+','11 + R poison damage']],
         effect: 'Mushrooms cover the target’s body. While the mushrooms are on the target, you and any ally adjacent to the target gains 1 surge whenever the target takes damage. The mushrooms can be removed by the target or an adjacent creature as a main action.' }),
@@ -675,17 +694,44 @@ const DS_CLASSES = [
     subclasses: [
       { id: 'chronokinetic', name: 'Chronokinetic', tag: 'Time', text: 'Your training unmoors you from temporal reality, using the flow of time as a dimension all things move through.', skillGroup: 'lore',
         features: [
-          { name: 'Chronokinetic Mastery', text: 'Whenever you use the Inertial Shield ability, you can use the Disengage move action as a free triggered action.\n\nAdditionally, as your discipline grows, your psionic mastery of your body intensifies, granting benefits from the Chronokinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.\n\n- 2 discipline: Whenever you use the Knockback maneuver, you can use the Disengage move action as a free triggered action either before or after the maneuver.\n- 4 discipline: The first time on a turn that you willingly move 1 or more squares as part of an ability, you gain 1 surge.\n- 6 discipline: You gain an edge on the Grab and Knockback maneuvers.\n- 8 discipline (4th level): The first time on a turn that you willingly move 1 or more squares as part of an ability, you gain 2 surges.\n- 10 discipline (7th level): You have a double edge on the Grab and Knockback maneuvers.\n- 12 discipline (10th level): Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.' },
+          { name: 'Chronokinetic Mastery',
+            text: 'Whenever you use the Inertial Shield ability, you can use the Disengage move action as a free triggered action.\n\nAdditionally, as your discipline grows, your psionic mastery of your body intensifies, granting benefits from the Chronokinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+            table: { head: ['Discipline', 'Benefit'], rows: [
+              ['2', 'Whenever you use the Knockback maneuver, you can use the Disengage move action as a free triggered action either before or after the maneuver.'],
+              ['4', 'The first time on a turn that you willingly move 1 or more squares as part of an ability, you gain 1 surge.'],
+              ['6', 'You gain an edge on the Grab and Knockback maneuvers.'],
+              ['8 (4th level)', 'The first time on a turn that you willingly move 1 or more squares as part of an ability, you gain 2 surges.', 4],
+              ['10 (7th level)', 'You have a double edge on the Grab and Knockback maneuvers.', 7],
+              ['12 (10th level)', 'Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.', 10],
+            ] } },
         ],
       },
       { id: 'cryokinetic',   name: 'Cryokinetic',   tag: 'Cold', text: 'You tap into absolute cold, the most essential energy of myriad manifolds, and manifest its effects in your body.', skillGroup: 'crafting',
         features: [
-          { name: 'Cryokinetic Mastery', text: 'Whenever you use your Inertial Shield ability, you can then use the Grab maneuver as a free triggered action.\n\nAdditionally, as your discipline grows, you strengthen the psionic power suffusing you, granting benefits from the Cryokinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.\n\n- 2 discipline: Whenever you use the Knockback maneuver, you can target one additional creature. Additionally, whenever you deal untyped damage with a psionic ability, you can change it to cold damage instead.\n- 4 discipline: The first time on a turn that you grab a creature or an enemy moves 1 or more squares in the area of your Null Field ability, you gain 1 surge.\n- 6 discipline: You gain an edge on the Grab and Knockback maneuvers.\n- 8 discipline (4th level): The first time on a turn that you grab a creature or an enemy moves 1 or more squares in the area of your Null Field ability, you gain 2 surges.\n- 10 discipline (7th level): You have a double edge on the Grab and Knockback maneuvers.\n- 12 discipline (10th level): Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.' },
+          { name: 'Cryokinetic Mastery',
+            text: 'Whenever you use your Inertial Shield ability, you can then use the Grab maneuver as a free triggered action.\n\nAdditionally, as your discipline grows, you strengthen the psionic power suffusing you, granting benefits from the Cryokinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+            table: { head: ['Discipline', 'Benefit'], rows: [
+              ['2', 'Whenever you use the Knockback maneuver, you can target one additional creature. Additionally, whenever you deal untyped damage with a psionic ability, you can change it to cold damage instead.'],
+              ['4', 'The first time on a turn that you grab a creature or an enemy moves 1 or more squares in the area of your Null Field ability, you gain 1 surge.'],
+              ['6', 'You gain an edge on the Grab and Knockback maneuvers.'],
+              ['8 (4th level)', 'The first time on a turn that you grab a creature or an enemy moves 1 or more squares in the area of your Null Field ability, you gain 2 surges.', 4],
+              ['10 (7th level)', 'You have a double edge on the Grab and Knockback maneuvers.', 7],
+              ['12 (10th level)', 'Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.', 10],
+            ] } },
         ],
       },
       { id: 'metakinetic',   name: 'Metakinetic',   tag: 'Self', text: 'You see through the illusions of the universe to more fully understand your body and its psionic potential.', skillGroup: 'exploration',
         features: [
-          { name: 'Metakinetic Mastery', text: 'Whenever you use your Inertial Shield ability, you can then use the Knockback maneuver as a free triggered action.\n\nAdditionally, as your discipline grows, your psionic potential is amplified, granting benefits from the Metakinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.\n\n- 2 discipline: Whenever you use the Knockback maneuver, the forced movement distance gains a bonus equal to your Intuition score.\n- 4 discipline: The first time in a combat round that you take damage or are force moved, you gain 1 surge, even if you resist the effect.\n- 6 discipline: You gain an edge on the Grab and Knockback maneuvers.\n- 8 discipline (4th level): The first time in a combat round that you take damage or are force moved, you gain 1 surge, even if you resist the effect.\n- 10 discipline (7th level): You have a double edge on the Grab and Knockback maneuvers.\n- 12 discipline (10th level): Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.' },
+          { name: 'Metakinetic Mastery',
+            text: 'Whenever you use your Inertial Shield ability, you can then use the Knockback maneuver as a free triggered action.\n\nAdditionally, as your discipline grows, your psionic potential is amplified, granting benefits from the Metakinetic Mastery table. Benefits are cumulative except where an improved benefit replaces a lesser benefit.',
+            table: { head: ['Discipline', 'Benefit'], rows: [
+              ['2', 'Whenever you use the Knockback maneuver, the forced movement distance gains a bonus equal to your Intuition score.'],
+              ['4', 'The first time in a combat round that you take damage or are force moved, you gain 1 surge, even if you resist the effect.'],
+              ['6', 'You gain an edge on the Grab and Knockback maneuvers.'],
+              ['8 (4th level)', 'The first time in a combat round that you take damage or are force moved, you gain 2 surges, even if you resist the effect.', 4],
+              ['10 (7th level)', 'You have a double edge on the Grab and Knockback maneuvers.', 7],
+              ['12 (10th level)', 'Whenever you force move a target, the forced movement distance gains a bonus equal to your Intuition score. Additionally, whenever you use a heroic ability, you gain 10 temporary Stamina.', 10],
+            ] } },
         ],
       },
     ],
@@ -1256,7 +1302,7 @@ const DS_CLASSES = [
         flavor: 'The force of your mind hurls enemies backward.',
         keywords: ['Area','Psionic','Telepathy'], type: 'Main action',
         distance: '1 burst', target: 'Each enemy in the area',
-        powerRoll: 'Reason', tiers: [['≤11','2 psychic damage;'],['12–16','5 psychic damage; push 1'],['17+','7 psychic damage; push 2']],
+        powerRoll: 'Reason', tiers: [['≤11','2 psychic damage'],['12–16','5 psychic damage; push 1'],['17+','7 psychic damage; push 2']],
         effect: 'The size of the burst increases by 2, and you are bleeding until the start of your next turn.'
       }),
       ab('Materialize', {
@@ -1424,7 +1470,17 @@ const DS_CLASSES = [
     quickKit: 'Swashbuckler',
     features: [
       { name: 'Drama', text: 'At the start of combat you gain drama equal to your Victories, then 1d3 each turn. You also gain drama from spectacle: 2 the first time 3+ heroes act on one turn, 2 the first time a hero is winded, 3 whenever a creature in your line of effect rolls a natural 19\u201320, and 10 when any hero dies. Lost at end of encounter.' },
-      { name: 'Routines', text: 'You enter battle with magical Performance abilities allies can share. At the start of each combat round (unless dazed, dead, or surprised) you can begin or maintain one performance. You start with Choreography (allies starting in a 5 aura gain +2 speed) and Revitalizing Limerick (allies can spend Recoveries); your class act grants more.' },
+      { name: 'Routines', text: 'You enter every battle with a set of performance abilities at the ready. Performances are magical presentations (such as songs, dances, poems, or gymnastic feats) that your allies can participate in. These abilities have the Performance keyword. At the start of each combat round, as long as you are not dazed, dead, or surprised, you can either choose a new performance or maintain your current performance (no action required). Your performance lasts until you are unable to maintain it or until the end of the encounter.\n\nYou start off with the Choreography and Revitalizing Limerick performance abilities. Your choice of class act grants you additional performances.' },
+      { name: 'Choreography', ability: ab('Choreography', {
+        flavor: 'Taps, kicks, steps. It’s all choreography.',
+        keywords: ['Area','Magic','Performance'], badge: 'PERFORMANCE',
+        distance: '5 aura', target: 'Self and each ally in the area',
+        effect: 'While this performance is active, each target who starts their turn in the area gains a +2 bonus to speed until the end of their turn.' }) },
+      { name: 'Revitalizing Limerick', ability: ab('Revitalizing Limerick', {
+        flavor: 'There once was a man from Capital...',
+        keywords: ['Area','Magic','Performance'], badge: 'PERFORMANCE',
+        distance: '5 aura', target: 'Self and each ally in the area',
+        effect: 'At the end of each of your turns while this performance is active, you can choose up to a number of targets equal to your Presence score. Each chosen target can spend a Recovery.' }) },
       { name: 'Scene Partner', text: 'On a successful interpersonal test with an NPC you can form a bond (up to your level). Bonded NPCs begin negotiations with +1 patience, and the first argument that would raise their interest raises it by 2 instead.' },
     ],
     sigCount: 1,

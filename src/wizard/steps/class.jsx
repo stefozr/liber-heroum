@@ -1,7 +1,7 @@
 // wizard/steps/class.jsx — ClassStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
@@ -113,6 +113,7 @@ function ClassStep({ character, update }) {
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
                       <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+                      {f.table && <FeatureTable table={f.table} />}
                       {(f.choose === 'prayerWard' || f.choose === 'enchantWard' || f.choose === 'augmentWard' || f.choose === 'augment' || f.choose === 'triggered') && <PrayerWardPicker character={character} update={update} cls={cls} feature={f} />}
                     </div>
                   );
@@ -135,6 +136,7 @@ function ClassStep({ character, update }) {
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
                       <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+                      {f.table && <FeatureTable table={f.table} />}
                     </div>
                   ))}
                   {(sub.abilities || []).map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
@@ -818,6 +820,15 @@ function ClassKitPicker({ character, update }) {
         {dual
           ? <KitGrid onPick={pickDual} dualSel />
           : <KitGrid selected={sel} onPick={setKit} />}
+        {/* Kit-granted features (stormwight Growing Ferocity tables) — shown for the
+            selected kit(s) below the grid so the selection cards stay compact. */}
+        {[sel, sel2].filter(Boolean).map(id => pool.find(k => k.id === id)).map(k => (k?.features || []).map(f => (
+          <div key={`${k.id}-${f.name}`} className="orn-frame" style={{padding:'14px 18px', marginTop: 14}}>
+            <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{k.name.toUpperCase()} — {f.name.toUpperCase()}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+            {f.table && <FeatureTable table={f.table} />}
+          </div>
+        )))}
       </div>
     </div>
   );
