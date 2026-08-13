@@ -49,9 +49,16 @@ create table if not exists public.characters (
   name          text,
   status        text,
   level         int,
+  visibility    text not null default 'private' check (visibility in ('private','public')),
   data          jsonb not null,
   updated_at    timestamptz not null default now()
 );
+
+-- Upgrade path for projects created before the visibility column existed
+-- (create table if not exists skips it); the default backfills every row.
+alter table public.characters
+  add column if not exists visibility text not null default 'private'
+  check (visibility in ('private','public'));
 
 create index if not exists characters_owner_idx    on public.characters (owner_id);
 create index if not exists characters_campaign_idx on public.characters (campaign_id);
@@ -237,8 +244,9 @@ create policy members_delete on public.campaign_members
 
 -- ─── Policies: characters ───────────────────────────────────────────────────
 -- SELECT: owner, or any member of the character's campaign (party can see sheets).
--- INSERT/UPDATE: owner, or the director of the character's campaign
---   (encodes the "Director has full edit" rule).
+-- INSERT: owner, or the director of the character's campaign.
+-- UPDATE: owner, the director (the "Director has full edit" rule), or — when the
+--   hero is marked public — any member of its campaign.
 -- DELETE: owner only.
 -- A superuser (is_admin) bypasses all of these — full read/write/delete everywhere.
 -- Everything additionally requires is_allowed() — the email whitelist (admins pass it).
@@ -256,13 +264,53 @@ create policy characters_insert on public.characters
 drop policy if exists characters_update on public.characters;
 create policy characters_update on public.characters
   for update to authenticated
-  using (public.is_allowed() and (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin()))
-  with check (public.is_allowed() and (owner_id = auth.uid() or public.is_director(campaign_id) or public.is_admin()));
+  using (public.is_allowed() and (
+    owner_id = auth.uid()
+    or public.is_director(campaign_id)
+    or (visibility = 'public' and public.is_member(campaign_id))
+    or public.is_admin()))
+  with check (public.is_allowed() and (
+    owner_id = auth.uid()
+    or public.is_director(campaign_id)
+    or (visibility = 'public' and public.is_member(campaign_id))
+    or public.is_admin()));
 
 drop policy if exists characters_delete on public.characters;
 create policy characters_delete on public.characters
   for delete to authenticated
   using (public.is_allowed() and (owner_id = auth.uid() or public.is_admin()));
+
+-- ─── Owner-only columns guard ─────────────────────────────────────────────────
+-- Non-owner editors (the Director, or a campaign member on a public hero) save
+-- the whole row blob, possibly from a stale local object. Coerce visibility and
+-- owner_id back to their stored values for them instead of raising, so a
+-- legitimate save never errors and never flips owner-only settings.
+-- campaign_id is deliberately NOT coerced: the Director rewrites it when kicking
+-- a member, and the on-delete-set-null FK rewrites it on campaign disband.
+-- auth.uid() is null for the service role / SQL editor — trusted, left untouched.
+create or replace function public.protect_character_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null
+     and auth.uid() is distinct from old.owner_id
+     and not public.is_admin() then
+    new.owner_id   := old.owner_id;
+    new.visibility := old.visibility;
+  end if;
+  -- The column is the source of truth; keep the jsonb copy from drifting.
+  new.data := jsonb_set(new.data, '{visibility}', to_jsonb(new.visibility));
+  return new;
+end;
+$$;
+
+drop trigger if exists characters_protect_columns on public.characters;
+create trigger characters_protect_columns
+  before update on public.characters
+  for each row execute function public.protect_character_columns();
 
 -- ─── RPC: create a campaign (campaign + director membership atomically) ──────
 

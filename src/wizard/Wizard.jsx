@@ -1,6 +1,6 @@
 // wizard/Wizard.jsx — the orchestrator: main Wizard + isStepValid + the step map.
 import React from 'react';
-import { DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CLASSES, DS_STEPS, kitPoolFor } from '../data.jsx';
+import { DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CLASSES, DS_STEPS, kitPoolFor, companionById } from '../data.jsx';
 import { Crest, SavePill, Button, TopBar, Modal } from '../theme.jsx';
 import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept, duplicateSkillPicks } from '../app.jsx';
 import { parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
@@ -101,7 +101,7 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
 
   // Warm the next chapter's backdrop so CONTINUE doesn't flash a bare gradient
   // while a fresh background streams in — and, one chapter ahead of Class, its
-  // nine poster cards, the only other image grid that pops in. (Inert under jsdom.)
+  // poster cards, the only other image grid that pops in. (Inert under jsdom.)
   useEffect(() => {
     const next = DS_STEPS[stepIndex + 1];
     if (next?.bg) { const img = new Image(); img.src = next.bg; }
@@ -380,8 +380,25 @@ function stepIssues(c, idx) {
       if (sigsGot < sigsRequired) {
         issues.push(sigsRequired === 1 ? 'Signature ability not chosen' : `Signature abilities: ${sigsGot} of ${sigsRequired} picked`);
       }
-      if (cls.deep && !c.cclass.heroic3) issues.push(`3-${cls.resource} heroic ability not chosen`);
-      if (cls.deep && !c.cclass.heroic5) issues.push(`5-${cls.resource} heroic ability not chosen`);
+      if (cls.deep && cls.heroic3?.length > 0 && !c.cclass.heroic3) issues.push(`3-${cls.resource} heroic ability not chosen`);
+      if (cls.deep && cls.heroic5?.length > 0 && !c.cclass.heroic5) issues.push(`5-${cls.resource} heroic ability not chosen`);
+      // Beastheart: a companion is a required 1st-level pick (plus any per-companion option).
+      if (cls.companionRequired && !c.cclass.companion) issues.push('Companion not chosen');
+      if (cls.companionRequired && c.cclass.companion) {
+        const comp = companionById(c.cclass.companion);
+        if (comp?.optionChoice && !(c.cclass.companionOptions || {})[comp.optionChoice.id]) {
+          issues.push(`${comp.optionChoice.label} not chosen`);
+        }
+      }
+      // Summoner: formation, quick command, and the 1st-level portfolio minion picks.
+      if (cls.formations && !c.cclass.formation) issues.push('Formation not chosen');
+      if (cls.quickCommands && !c.cclass.quickCommand) issues.push('Quick command not chosen');
+      if (cls.minionPicks && c.cclass.subclass) {
+        for (const [tier, need] of Object.entries(cls.minionPicks)) {
+          const got = ((c.cclass.minions || {})[tier] || []).length;
+          if (got < need) issues.push(`${tier === 'sig' ? 'Signature minions' : '3-essence minions'}: ${got} of ${need} picked`);
+        }
+      }
       // Kit picks must come from the pool the chosen subclass allows
       // (Fury's Stormwight is limited to stormwight kits).
       const kitPool = kitPoolFor(cls, c.cclass.subclass);

@@ -1,7 +1,7 @@
 // wizard/steps/review.jsx — ReviewStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, chosenFeatureOptions, collectDistanceBonuses, applyDistanceBonuses } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, normalizeAbilityTiers, resolvedAncestryTraits, ancestrySignatures } from '../helpers.js';
 import { DOMAIN_2_ABILITIES } from '../../data/conduit-domains.js';
@@ -286,7 +286,7 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
             {featureRows.map(f => (
               <div key={f.name} style={{padding:'8px 0'}}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55}}>{f.text}</div>
+                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
                 {f.table && <FeatureTable table={f.table} />}
               </div>
             ))}

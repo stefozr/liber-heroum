@@ -15,6 +15,8 @@ import { talent } from './levelup-talent.jsx';
 import { furyHi } from './levelup-fury-hi.jsx';
 import { conduitHi } from './levelup-conduit-hi.jsx';
 import { elementalistHi } from './levelup-elementalist-hi.jsx';
+import { summoner } from './levelup-summoner.jsx';
+import { beastheart } from './levelup-beastheart.jsx';
 // levelup.jsx — Level-up data + flow for Fury and Conduit, levels 1–4.
 // Exposes to window: LEVELUP_DATA, LevelUpFlow.
 
@@ -472,7 +474,7 @@ const LEVELUP_DATA = {
           kind: 'feature',
           options: ({ domains }) => domains.map(d => {
             const f = DOMAIN_1ST_FEATURES[d];
-            return f ? { id: d, name: `${d}: ${f.name}`, body: f.text } : null;
+            return f ? { id: d, name: `${d}: ${f.name}`, body: f.text, ability: f.ability } : null;
           }).filter(Boolean),
           condition: ({ domains }) => domains && domains.length >= 2,
         },
@@ -579,7 +581,7 @@ const LEVELUP_DATA = {
           kind: 'feature',
           options: ({ domains }) => domains.map(d => {
             const f = DOMAIN_4_FEATURES[d];
-            return f ? { id: d, name: `${d}: ${f.name}`, body: f.text } : null;
+            return f ? { id: d, name: `${d}: ${f.name}`, body: f.text, ability: f.ability } : null;
           }).filter(Boolean),
         },
       ],
@@ -760,7 +762,7 @@ const LEVELUP_DATA = {
 Object.assign(LEVELUP_DATA.fury, furyHi);
 Object.assign(LEVELUP_DATA.conduit, conduitHi);
 Object.assign(LEVELUP_DATA.elementalist, elementalistHi);
-Object.assign(LEVELUP_DATA, { troubadour, shadow, null: nul, tactician, talent });
+Object.assign(LEVELUP_DATA, { troubadour, shadow, null: nul, tactician, talent, summoner, beastheart });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The Mantle of Essence aura carries a second feature determined by your specialization.
@@ -793,7 +795,7 @@ function censorDomainFeatureOptions(ctx, featuresMap) {
   const domains = chosen ? [chosen] : ALL_CENSOR_DOMAINS;
   return domains.map(d => {
     const f = featuresMap[d];
-    return f ? { id: d, domain: d, name: `${d}: ${f.name}`, body: f.text } : null;
+    return f ? { id: d, domain: d, name: `${d}: ${f.name}`, body: f.text, ability: f.ability } : null;
   }).filter(Boolean);
 }
 
@@ -994,8 +996,16 @@ const CENSOR_DOMAIN_4 = {
   Nature:     { name: 'Wode Road',       text: 'As a main action, touch a living tree to add it to your transportation network (up to your Presence score of trees). Touch any tree in the network to teleport yourself and willing creatures within 10 squares to another tree on the same world.' },
   Protection: { name: 'Impervious Touch', text: 'As a maneuver, touch an object size \u2264 your Presence and give it immunity all to untyped damage. Maintain on a number of objects equal to your Presence, plus optionally one larger building or vehicle.' },
   Storm:      { name: 'Windwalk',        text: 'While you have 5 or more Victories, you can fly. If you can already fly, you gain a +2 bonus to speed while flying instead.' },
-  Sun:        { name: 'Light of Revelation', text: 'As a maneuver, shine brightly through any darkness in a 5-square radius until dismissed. Hidden creatures are revealed and none can hide; you gain an edge to notice hidden objects, entrances, and illusions.' },
-  Trickery:   { name: 'Blessing of Secrets', text: 'Maneuver: project a 3 aura. You and allies in it have a double edge on Hide and Sneak tests until you end it or a target harms a creature or object.' },
+  Sun:        { name: 'Light of Revelation',
+    ability: { name: 'Light of Revelation', noBadge: true,
+      flavor: 'Your inner light burns through every shadow.',
+      keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
+      effect: 'You shine brightly through any darkness in a 5-square radius until you dismiss the light (no action required). Hidden creatures in the area are automatically revealed and none can hide, and you gain an edge on tests to notice hidden objects, entrances, and illusions.' } },
+  Trickery:   { name: 'Blessing of Secrets',
+    ability: { name: 'Blessing of Secrets', noBadge: true,
+      flavor: 'You project an illusory aura that makes you and allies harder to notice.',
+      keywords: ['Magic'], type: 'Maneuver', distance: '3 aura', target: 'Self and each ally in the area',
+      effect: 'Each target has a double edge on tests made to hide or sneak. The aura lasts until you end it (no action required) or until a target harms or deals damage to a creature or object.' } },
   War:        { name: 'Improved Sanctified Weapon', text: 'The weapon improved by your Sanctified Weapon feature grants a +3 bonus to rolled damage instead of +1.' },
 };
 
@@ -1005,12 +1015,20 @@ const CENSOR_DOMAIN_7 = {
   Fate:       { name: 'Word of Fate Denied', text: 'When an ally within 10 squares takes damage that would leave them dying, you can use a free triggered action to make yourself or another willing creature within 10 squares the target instead. That damage can\u2019t be reduced.' },
   Knowledge:  { name: 'Gods\u2019 Library', text: 'You no longer need research materials for crafting and research projects and add your level to those project rolls. You gain all lore skills you lack, plus that many skills from other groups.' },
   Life:       { name: 'Font of Grace', text: 'Each time you use My Life for Yours, you gain 1 wrath usable only on that ability that turn, and the target gains 10 temporary Stamina.' },
-  Love:       { name: 'Covenant of the Heart', text: 'You can maintain Invocation of the Heart bonds with up to three creatures, and gain Guided to Your Side: a main action that teleports you and bonded allies to within 5 squares of a creature you are bonded to.' },
+  Love:       { name: 'Covenant of the Heart', text: 'You can maintain Invocation of the Heart bonds with up to three creatures.',
+    ability: { name: 'Guided to Your Side', noBadge: true,
+      flavor: 'You concentrate on a friend and teleport to them.',
+      keywords: ['Magic', 'Ranged'], type: 'Main action', distance: 'Ranged 10', target: 'Self and each ally',
+      effect: 'Each target is teleported to unoccupied spaces within 5 squares of a willing creature you are bonded to with your Invocation of the Heart feature. You don’t need line of effect to the bonded creature, but you must be on the same world.' } },
   Nature:     { name: 'Nature\u2019s Bounty', text: 'When you finish a respite, prepare a magic meal for companions who rested with you: choose two benefits (damage immunity equal to level, 20 temp Stamina, +1 speed, +1 saves, or an edge to influence) lasting until they finish another respite.' },
   Protection: { name: 'Blessing of Iron', text: 'While you are not dying, enemies take a bane on strikes against you or any ally within 3 squares of you.' },
   Storm:      { name: 'Ride the Lightning', text: 'Your rolled-damage abilities deal extra lightning damage equal to your Presence. Forced movement you cause gains a bonus equal to your Presence. While using Windwalk, you gain a bonus to flying speed equal to your Might.' },
   Sun:        { name: 'Light of the Burning Sun', text: 'Your rolled-damage abilities deal an extra 5 fire damage (15 vs. undead). You have fire immunity equal to your level, added to any other fire immunity.' },
-  Trickery:   { name: 'Trinity of Trickery', text: 'You gain the Trinity of Trickery ability (9 Wrath): create two illusory duplicates of a target that move on the target\u2019s turn; the target can swap places with one as a free triggered action when targeted, destroying the duplicate it switches with when it takes damage.' },
+  Trickery:   { name: 'Trinity of Trickery',
+    ability: { name: 'Trinity of Trickery', cost: 9, resource: 'Wrath',
+      flavor: 'Hey! I\u2019m over here. No, here, numbskull.',
+      keywords: ['Magic', 'Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally',
+      effect: 'You create two illusory duplicates of the target, which appear anywhere within distance and last until the end of the encounter. On each of their turns, the target can move each duplicate up to their speed. When the target is targeted by an ability, they can use a free triggered action to switch places with a duplicate in their line of effect, making the duplicate the target instead. When either duplicate takes damage, it is destroyed.' } },
   War:        { name: 'Your Triumphs Are Remembered', text: 'Whenever you finish a respite, you and any heroes who rested with you regain 1 Victory after Victories are converted to XP. This Victory isn\u2019t converted at a later respite.' },
 };
 
@@ -1067,11 +1085,14 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
   // Validate current step
   const currentChoice = choices.find(c => c.id === stepId);
   // Tiered picks (perks, skill groups) require both a category AND a specific item.
+  // Multi-picks (count > 1) require exactly `count` selections.
   const currentPick = currentChoice && picks[currentChoice.id];
   const canAdvance = !currentChoice ||
     ((currentChoice.kind === 'perk' || currentChoice.kind === 'skill-group')
       ? !!(currentPick && currentPick.chosen)
-      : !!currentPick);
+      : (currentChoice.count > 1)
+        ? Array.isArray(currentPick) && currentPick.length === currentChoice.count
+        : !!currentPick);
 
   const next = () => {
     if (!canAdvance) return;
@@ -1130,6 +1151,7 @@ function makeContext(character) {
     sub: character.cclass?.subclass || null,
     aspect: character.cclass?.subclass || null,
     domains: character.cclass?.domains || [],
+    companion: character.cclass?.companion || null,
     character,
     cls,
   };
@@ -1158,6 +1180,16 @@ function collectLevelUpFeatures(character) {
       if (ch.kind !== 'feature') continue;
       const p = stored && stored.picks && stored.picks[ch.id];
       if (!p) continue;
+      // Multi-picks (count > 1) collapse into one feature named after the choice,
+      // listing every selected option (e.g. Melodrama's two drama events).
+      if (Array.isArray(p)) {
+        const rows = p.filter(o => !(o.ability && !(o.body || o.text)));
+        if (rows.length) out.push({ level: lvl, name: ch.label || ch.id, text: rows.map(o => `${o.name} — ${o.body || o.text || ''}`).join('\n') });
+        continue;
+      }
+      // A pick that is purely an embedded ability lives on the combat sheet, not here;
+      // one that pairs passive text with an ability keeps only the text.
+      if (p.ability && !(p.body || p.text)) continue;
       out.push({ level: lvl, name: p.name || p.id, text: p.body || p.text || '' });
     }
   }
@@ -1198,6 +1230,12 @@ function applyLevelUp(character, nextLevel, picks, { isEditing = false } = {}) {
     if (!v) continue;
     if (ch.kind === 'ability') {
       learnedAtThisLevel.push(v);
+    } else if (ch.kind === 'feature') {
+      // Feature options may carry an embedded ability (e.g. a domain feature that
+      // grants a maneuver) — the payload lands on the combat sheet as a card.
+      for (const p of Array.isArray(v) ? v : [v]) {
+        if (p && p.ability) learnedAtThisLevel.push(p.ability);
+      }
     }
   }
   // Replace (not append) this level's abilities so edits don't duplicate.
@@ -1275,7 +1313,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
               {autoFeatures.map(f => (
                 <div key={f.name}>
                   <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{renderRich(f.text)}</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
                 </div>
               ))}
             </div>
@@ -1287,11 +1325,13 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
         <div>
           <H4Meta>Abilities Granted</H4Meta>
           <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: 'var(--fs-7)', color:'var(--ink-2)', lineHeight:1.55, marginTop:4, marginBottom:10}}>
-            You receive both of the following abilities automatically.
+            {autoAbilities.length === 1
+              ? 'You receive the following ability automatically.'
+              : 'You receive all of the following abilities automatically.'}
           </div>
           <div className="grid-2" style={{gap:10}}>
             {autoAbilities.map(a => (
-              <AbilityCard key={a.name} ability={a} kind="heroic" />
+              <AbilityCard key={a.name} ability={normalizeCardTiers(a)} kind="heroic" />
             ))}
           </div>
         </div>
@@ -1308,6 +1348,10 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
   const opts = typeof choice.options === 'function' ? choice.options(ctx) : choice.options;
   const isPerk = choice.kind === 'perk';
   const isSkill = choice.kind === 'skill-group';
+  // Multi-picks (count > 1): the pick is an array of options, toggled in and out,
+  // capped at `count` (a click past capacity is ignored, like the wizard's pickers).
+  const isMulti = choice.count > 1;
+  const multiPicked = isMulti ? (Array.isArray(pick) ? pick : []) : null;
   // Both perks and skill groups use a two-tier flow: pick a group, then a specific item.
   const isTiered = isPerk || isSkill;
   // For tiered picks: pick shape is { ...categoryOption, chosen: 'ItemName' }
@@ -1330,6 +1374,11 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
         {choice.help && (
           <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:4}}>{choice.help}</div>
         )}
+        {isMulti && (
+          <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color: multiPicked.length === choice.count ? 'var(--ink-3)' : 'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginTop:6}}>
+            {multiPicked.length} / {choice.count} chosen
+          </div>
+        )}
       </div>
 
       <div className="stack-12">
@@ -1339,11 +1388,12 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
           </div>
         )}
         {opts.map(opt => {
-          const selected = !!pick && (
-            (opt.name != null && pick.name === opt.name) ||
-            (opt.id != null && pick.id === opt.id) ||
-            pick === opt
+          const matches = (p) => !!p && (
+            (opt.name != null && p.name === opt.name) ||
+            (opt.id != null && p.id === opt.id) ||
+            p === opt
           );
+          const selected = isMulti ? multiPicked.some(matches) : matches(pick);
           return (
             <OptionCard
               key={opt.name || opt.id}
@@ -1351,7 +1401,10 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
               kind={choice.kind}
               selected={selected}
               onClick={() => {
-                if (isTiered) {
+                if (isMulti) {
+                  if (selected) onPick(multiPicked.filter(p => !matches(p)));
+                  else if (multiPicked.length < choice.count) onPick([...multiPicked, opt]);
+                } else if (isTiered) {
                   // Switching category resets the specific pick; clicking the same category clears it.
                   if (currentCategory === (opt.id || opt.name)) onPick(null);
                   else onPick({ ...opt, chosen: null });
@@ -1405,23 +1458,34 @@ function deriveGroupName(opt) {
   return null;
 }
 
+// AbilityCard needs tiers in [[label, text], \u2026] form plus a powerRoll header.
+function normalizeCardTiers(a) {
+  if (!a.tiers || Array.isArray(a.tiers)) return a;
+  return {
+    ...a,
+    tiers: [
+      ['\u2264 11', a.tiers.t1],
+      ['12\u201316', a.tiers.t2],
+      ['\u2265 17', a.tiers.t3],
+    ],
+    powerRoll: a.powerRoll || (a.resource === 'Piety' ? 'I' : 'M'),
+  };
+}
+
 function OptionCard({ opt, kind, selected, onClick }) {
   // For abilities, normalize tiers shape and render an AbilityCard.
   if (kind === 'ability') {
-    const normalized = opt.tiers && !Array.isArray(opt.tiers)
-      ? {
-          ...opt,
-          tiers: [
-            ['\u2264 11', opt.tiers.t1],
-            ['12\u201316', opt.tiers.t2],
-            ['\u2265 17', opt.tiers.t3],
-          ],
-          powerRoll: opt.powerRoll || (opt.resource === 'Piety' ? 'I' : 'M'),
-        }
-      : opt;
     return (
       <button type="button" aria-pressed={!!selected} className={`card-btn lvl-opt ${selected ? 'selected' : ''}`} onClick={onClick}>
-        <AbilityCard ability={normalized} kind="heroic" />
+        <AbilityCard ability={normalizeCardTiers(opt)} kind="heroic" />
+      </button>
+    );
+  }
+  // A feature option carrying only an embedded ability IS that ability \u2014 show the card.
+  if (opt.ability && !opt.body) {
+    return (
+      <button type="button" aria-pressed={!!selected} className={`card-btn lvl-opt ${selected ? 'selected' : ''}`} onClick={onClick}>
+        <AbilityCard ability={normalizeCardTiers(opt.ability)} kind="heroic" />
       </button>
     );
   }
@@ -1429,6 +1493,7 @@ function OptionCard({ opt, kind, selected, onClick }) {
     <button type="button" aria-pressed={!!selected} className={`card-btn lvl-opt simple ${selected ? 'selected' : ''}`} onClick={onClick}>
       <div className="lvl-opt-name">{opt.name}</div>
       {opt.body && <div className="lvl-opt-body">{renderRich(opt.body)}</div>}
+      {opt.ability && <div style={{marginTop: 10}}><AbilityCard ability={normalizeCardTiers(opt.ability)} kind="heroic" /></div>}
     </button>
   );
 }
@@ -1493,6 +1558,23 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
         <div className="stack-12">
           {otherPicks.filter(ch => ch.kind !== 'char-bonus').map(ch => {
             const pick = picks[ch.id];
+            if (Array.isArray(pick)) {
+              // Multi-pick (count > 1): every selected option inside the choice's frame.
+              return (
+                <div key={ch.id} className="orn-frame" style={{padding:'12px 16px'}}>
+                  <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:4}}>{ch.label}</div>
+                  <div className="stack-8">
+                    {pick.map(o => (
+                      <div key={o.name || o.id}>
+                        <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)'}}>{o.name}</div>
+                        {o.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{o.body}</div>}
+                        {o.ability && <div style={{marginTop:8}}><AbilityCard ability={normalizeCardTiers(o.ability)} kind="heroic" /></div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={ch.id} className="orn-frame" style={{padding:'12px 16px'}}>
                 <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:4}}>{ch.label}</div>
@@ -1503,6 +1585,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
                 </div>
                 {pick.chosen && pick.chosenText && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.chosenText}</div>}
                 {!pick.chosen && pick.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.body}</div>}
+                {pick.ability && <div style={{marginTop:8}}><AbilityCard ability={normalizeCardTiers(pick.ability)} kind="heroic" /></div>}
                 {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{pick.effect}</div>}
               </div>
             );
@@ -1516,7 +1599,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
           <H4Meta>Abilities Gained</H4Meta>
           <div className="grid-2" style={{gap:10, marginTop:8}}>
             {[...autoAbilities, ...pickedAbilities].map(a => (
-              <AbilityCard key={a.name} ability={a} kind="heroic" />
+              <AbilityCard key={a.name} ability={normalizeCardTiers(a)} kind="heroic" />
             ))}
           </div>
         </div>
@@ -1566,6 +1649,8 @@ const LEVELUP_CSS = `
 .lvl-opt-body {
   font-family: var(--serif); font-size: var(--fs-6); color: var(--ink-2);
   line-height: 1.55; margin-top: 6px;
+  /* Rules text carries real paragraph and bullet breaks — honour them. */
+  white-space: pre-line;
 }
 .skill-pick-grid {
   /* Skill names vary in length, so a bare 1fr would floor each track at the

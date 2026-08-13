@@ -48,7 +48,7 @@ function oracleChars(c: any) {
       if (ch.kind !== 'char-bonus') continue;
       const pick = c.levelChoices?.[l]?.picks?.[ch.id];
       const k = pick && (pick.id || pick.name || pick);
-      if (CHAR_KEYS.includes(k)) out[k] = Math.min(3, out[k] + 1);
+      if (CHAR_KEYS.includes(k)) out[k] = Math.min(ch.max || 3, out[k] + 1);
     }
   }
   return out;

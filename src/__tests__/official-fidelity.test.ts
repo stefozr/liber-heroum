@@ -172,8 +172,11 @@ function abilitiesOf(cls: any) {
       const resolve = (v: any) => (typeof v === 'function' ? v(ctx) : v) || [];
       for (const ab of resolve(entry.autoAbilities)) remember(ab, scope);
       for (const ch of levelChoicesFor(cls, level, ctx)) {
-        if (ch.kind !== 'ability') continue;
-        for (const ab of resolve(ch.options)) remember(ab, scope);
+        for (const o of resolve(ch.options)) {
+          if (ch.kind === 'ability') remember(o, scope);
+          // Feature options can carry an embedded ability payload — cover those too.
+          else if (o && o.ability) remember(o.ability, scope);
+        }
       }
     }
   }
@@ -207,8 +210,27 @@ const MANUALLY_VERIFIED: Record<string, string[]> = {
 const exempt = (name: string, field: string) =>
   divergences[name]?.fields.includes(field) || MANUALLY_VERIFIED[name]?.includes(field);
 
+/**
+ * Supplement classes (Summoner v1.0, The Beastheart v1.0) are not part of the
+ * Draw Steel: Heroes compendium, so there is nothing official to diff against.
+ * A guard test below asserts they stay absent from the compendium — the moment
+ * the Foundry system ships them, that test fails and these exemptions must go.
+ */
+const SUPPLEMENT_CLASSES = new Set(['summoner', 'beastheart']);
+const COMPENDIUM_CLASSES = (DS_CLASSES as any[]).filter((c) => !SUPPLEMENT_CLASSES.has(c.id));
+
+describe('official fidelity — supplement classes stay exempt only while absent', () => {
+  for (const id of SUPPLEMENT_CLASSES) {
+    it(`${id}: still has no compendium class document`, () => {
+      const cls: any = (DS_CLASSES as any[]).find((c) => c.id === id);
+      expect(cls, `${id} missing from DS_CLASSES`).toBeTruthy();
+      expect(findDoc('class', cls.name), `${cls.name} is now in the compendium — remove it from SUPPLEMENT_CLASSES and cover it`).toBeFalsy();
+    });
+  }
+});
+
 describe('official fidelity — every app ability exists in the compendium', () => {
-  for (const cls of DS_CLASSES as any[]) {
+  for (const cls of COMPENDIUM_CLASSES) {
     it(`${cls.id}: all abilities resolve`, () => {
       const unresolved: string[] = [];
       for (const [name, { scope }] of abilitiesOf(cls)) {
@@ -220,7 +242,7 @@ describe('official fidelity — every app ability exists in the compendium', () 
 });
 
 describe('official fidelity — ability mechanics', () => {
-  for (const cls of DS_CLASSES as any[]) {
+  for (const cls of COMPENDIUM_CLASSES) {
     it(`${cls.id}: keywords, power roll and tier values match`, () => {
       const problems: string[] = [];
       for (const [name, { ability, scope }] of abilitiesOf(cls)) {
@@ -260,7 +282,7 @@ describe('official fidelity — ability mechanics', () => {
 });
 
 describe('official fidelity — class chassis', () => {
-  for (const cls of DS_CLASSES as any[]) {
+  for (const cls of COMPENDIUM_CLASSES) {
     it(`${cls.id}: stamina, recoveries, resources and characteristics match`, () => {
       const doc = findDoc('class', cls.name);
       expect(doc, `no official class document for ${cls.name}`).toBeTruthy();
@@ -278,7 +300,7 @@ describe('official fidelity — class chassis', () => {
 });
 
 describe('official fidelity — level-up progression', () => {
-  for (const cls of DS_CLASSES as any[]) {
+  for (const cls of COMPENDIUM_CLASSES) {
     it(`${cls.id}: every official grant for levels 1-10 is reachable`, () => {
       const subs = (cls.subclasses || []).length ? cls.subclasses : [{ id: null, name: null }];
       const missing: string[] = [];
@@ -341,9 +363,11 @@ describe('official fidelity — level-up progression', () => {
         // picker groups them under a "Prayer / Ward" heading.
         for (const p of cls.prayers || []) noteName(`Prayer of ${p.name}`, 1);
         for (const w of cls.wards || []) noteName(`${w.name} Ward`, 1);
-        // The Censor's order benefit ships as judgmentOrder text merged into the
-        // Judgment card rather than a standalone feature.
-        if (sub.id && (cls as any).judgmentOrder?.[sub.id]) noteName(`${sub.name} Judgement Benefit`, 1);
+        // Per-subclass ability riders (e.g. the Censor's order benefit) ship as
+        // riderBySub text merged into the ability card rather than a standalone feature.
+        for (const f of cls.features || []) {
+          if (sub.id && (f as any).ability?.riderBySub?.[sub.id]) noteName(`${sub.name} Judgement Benefit`, 1);
+        }
 
         const table = (LEVELUP_DATA as any)[cls.id] || {};
         for (const { sub: ctxSub, ctx } of contextsFor(cls)) {
@@ -355,6 +379,9 @@ describe('official fidelity — level-up progression', () => {
             for (const f of resolve(entry.autoFeatures)) if (f?.name) noteName(f.name, level);
             for (const a of resolve(entry.autoAbilities)) if (a?.name) noteName(a.name, level);
             for (const ch of levelChoicesFor(cls, level, ctx)) {
+              // A choice can itself be the official feature (e.g. Melodrama), with
+              // its options being the feature's internal picks rather than grants.
+              if (ch.label) noteName(ch.label, level);
               for (const o of resolve(ch.options)) if (o?.name) noteName(o.name, level);
             }
           }

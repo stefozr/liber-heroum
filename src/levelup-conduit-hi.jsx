@@ -10,7 +10,7 @@ import {
 // A domain feature choice: one option per domain the character actually has.
 const domainFeatures = (table) => ({ domains }) => (domains || []).map(d => {
   const f = table[d];
-  return f ? { id: d, name: `${d}: ${f.name}`, body: f.text } : null;
+  return f ? { id: d, name: `${d}: ${f.name}`, body: f.text, ability: f.ability } : null;
 }).filter(Boolean);
 
 // A domain ability choice: the ability itself, badged with its domain.

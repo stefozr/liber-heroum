@@ -6,7 +6,7 @@ import { classDef, ancestryDef } from './app.jsx';
 import { wizardProgress } from './wizard.jsx';
 // roster.jsx — Character roster (multi-character) screen.
 
-function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, onCreate, onDelete, onAssign }) {
+function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, onCreate, onDelete, onAssign, onSetVisibility }) {
   const completed = characters.filter(c => c.status === 'complete');
   const inProgress = characters.filter(c => c.status !== 'complete');
   const campById = React.useMemo(
@@ -25,7 +25,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           <div className="glyphs-top"><GlyphRow>✠ · ❦ · ✦ · ❦ · ✠</GlyphRow></div>
           <h1>LIBER HEROUM</h1>
           <div className="sub">A Chronicle of Heroes, Drawn from Steel</div>
-          <div className="meta">A Draw Steel Character Manager · v 1.5</div>
+          <div className="meta">A Draw Steel Character Manager · v 1.6</div>
           <div style={{marginTop: 22, display:'flex', justifyContent:'center'}}>
             <RulesButton onClick={() => setRulesOpen(true)}>Rules Glossary</RulesButton>
           </div>
@@ -59,10 +59,10 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           )}
 
           {inProgress.map(c => (
-            <HeroCard key={c.id} character={c} campaignName={c.campaignId ? campById[c.campaignId] : null} onOpen={() => onOpen(c.id)} onAssign={() => setAssignFor(c)} onDelete={() => setPendingDelete(c)} />
+            <HeroCard key={c.id} character={c} campaignName={c.campaignId ? campById[c.campaignId] : null} onOpen={() => onOpen(c.id)} onAssign={() => setAssignFor(c)} onDelete={() => setPendingDelete(c)} onSetVisibility={onSetVisibility && ((v) => onSetVisibility(c.id, v))} />
           ))}
           {completed.map(c => (
-            <HeroCard key={c.id} character={c} campaignName={c.campaignId ? campById[c.campaignId] : null} onOpen={() => onOpen(c.id)} onAssign={() => setAssignFor(c)} onDelete={() => setPendingDelete(c)} />
+            <HeroCard key={c.id} character={c} campaignName={c.campaignId ? campById[c.campaignId] : null} onOpen={() => onOpen(c.id)} onAssign={() => setAssignFor(c)} onDelete={() => setPendingDelete(c)} onSetVisibility={onSetVisibility && ((v) => onSetVisibility(c.id, v))} />
           ))}
         </div>
 
@@ -80,10 +80,13 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
       <RulesGlossary open={rulesOpen} onClose={() => setRulesOpen(false)} />
 
       <AssignToCampaignModal
-        character={assignFor}
+        // Look the hero up fresh so the visibility chips reflect a flip immediately
+        // (assignFor is the object captured when the modal opened).
+        character={assignFor ? characters.find(c => c.id === assignFor.id) || assignFor : null}
         campaigns={userCampaigns}
         onClose={() => setAssignFor(null)}
         onAssign={(charId, campId) => { onAssign(charId, campId); setAssignFor(null); }}
+        onSetVisibility={onSetVisibility}
       />
 
       <Modal
@@ -110,7 +113,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
   );
 }
 
-function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
+function HeroCard({ character, campaignName, onOpen, onAssign, onDelete, onSetVisibility }) {
   const c = character;
   const cls = classDef(c);
   const anc = ancestryDef(c);
@@ -150,6 +153,14 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
           padding:'4px 9px', maxWidth:'70%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
         }} title={campaignName}>✦ {campaignName}</div>
       )}
+      {campaignName && c.visibility === 'public' && (
+        <div style={{
+          position:'absolute', top:38, left:12, zIndex:2,
+          fontFamily:'var(--mono)', fontSize: '0.5625rem', letterSpacing:'0.16em', textTransform:'uppercase',
+          color:'var(--gold-2)', background:'rgba(8,8,10,0.82)', border:'1px solid var(--gold-deep)',
+          padding:'4px 9px',
+        }} title="Every member of this campaign may edit this hero">⚭ PUBLIC</div>
+      )}
       <div className="hc-body">
         <div className="hc-name">{heroName}</div>
         <div className="hc-meta">{meta}</div>
@@ -163,6 +174,17 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
             title={campaignName ? 'Move to another campaign' : 'Add to a campaign'}>
             {campaignName ? '⚚ move' : '✦ campaign'}
           </button>
+          {/* Visibility only matters once the hero sits at a table. */}
+          {c.campaignId && onSetVisibility && (
+            <button
+              className="hc-camp"
+              onClick={(e) => { e.stopPropagation(); onSetVisibility(c.visibility === 'public' ? 'private' : 'public'); }}
+              title={c.visibility === 'public'
+                ? 'The whole party may edit this hero — make it private'
+                : 'Only you and the Director may edit this hero — make it public'}>
+              {c.visibility === 'public' ? '⚭ public' : '🗝 private'}
+            </button>
+          )}
           <button className="hc-del" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
             ✦ remove
           </button>
@@ -175,10 +197,28 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete }) {
 // ───────── Add / move a hero to one of your campaigns ─────────
 // Lists the campaigns you belong to; the one the hero already sits in is shown
 // as "Already here" and cannot be re-picked.
-function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign }) {
+function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign, onSetVisibility }) {
   if (!character) return null;
   const name = character.identity?.name || character.name || 'this hero';
   const current = character.campaignId || null;
+  const visibility = character.visibility || 'private';
+  const visChip = (value, label) => {
+    const on = visibility === value;
+    return (
+      <button
+        type="button"
+        onClick={() => { if (!on) onSetVisibility(character.id, value); }}
+        style={{
+          fontFamily: 'var(--mono)', fontSize: '0.625rem', letterSpacing: '0.14em', textTransform: 'uppercase',
+          padding: '7px 12px', cursor: on ? 'default' : 'pointer',
+          color: on ? 'var(--gold-2)' : 'var(--ink-2)',
+          background: on ? 'rgba(8,8,10,0.82)' : 'transparent',
+          border: `1px solid ${on ? 'var(--gold-deep)' : 'var(--line-2)'}`,
+        }}>
+        {label}
+      </button>
+    );
+  };
 
   return (
     <Modal
@@ -200,6 +240,16 @@ function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign })
         Choose a table to bring <b style={{ color: 'var(--gold-2)', fontStyle: 'normal' }}>{name}</b> to.
         A hero sits at one table at a time.
       </div>
+
+      {onSetVisibility && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: '0.5625rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+            Who may edit this sheet
+          </span>
+          {visChip('private', '🗝 Just me & the Director')}
+          {visChip('public', '⚭ The whole party')}
+        </div>
+      )}
 
       {campaigns.length === 0 ? (
         <div style={{ border: '1px dashed var(--line-2)', padding: '28px 20px', textAlign: 'center' }}>

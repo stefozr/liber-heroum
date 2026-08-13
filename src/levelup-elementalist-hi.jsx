@@ -45,8 +45,16 @@ const SPEC_FEAT_5 = {
   green: [{ name: 'Hide of Tenfold Shields', text: 'Entering an animal form in combat grants temporary Stamina equal to your level; an ally can pet you to transfer your temporary Stamina to them.' }],
   void: [{ name: 'Pierce the Veil of Substance', text: 'Thin mundane barriers no longer block your senses or line of effect; using a void ability lets you or an ally teleport up to your Reason.' }],
 };
+const SPEC_ABILITY_AUTO_8 = {
+  earth: [
+    { name: 'Summon Source of Earth', noBadge: true,
+      flavor: 'The ground rumbles as an elemental bursts forth, ready to serve.',
+      keywords: ['Earth', 'Magic', 'Ranged'], type: 'Main action', distance: 'Ranged 10', target: 'Special',
+      effect: 'A Source of Earth emerges from an unoccupied space within distance. The source takes their turn immediately after you, moving up to their speed and either taking a main action or a maneuver. The source is dismissed at the start of your next turn.\n\nThe source starts an encounter at full Stamina, but maintains their current Stamina throughout the encounter, even if they are dismissed and you use this ability again. They can’t regain Stamina during the encounter. When the source’s Stamina is reduced to 0, you can’t use this ability again until you earn 1 or more Victories.\n\n**Persistent 2**: The source takes another turn. They are dismissed at the start of your next turn.' },
+  ],
+};
 const SPEC_FEAT_8 = {
-  earth: [{ name: 'Summon Source of Earth', text: 'The ground rumbles as an elemental bursts forth, ready to serve. You gain the Summon Source of Earth ability (Earth, Magic, Ranged main action; Ranged 10; Target: Special): a Source of Earth emerges from an unoccupied space within distance. The source takes their turn immediately after you, moving up to their speed and either taking a main action or a maneuver. The source is dismissed at the start of your next turn.\n\nThe source starts an encounter at full Stamina, but maintains their current Stamina throughout the encounter, even if they are dismissed and you use this ability again. They can’t regain Stamina during the encounter. When the source’s Stamina is reduced to 0, you can’t use this ability again until you earn 1 or more Victories.\n\n**Persistent 2**: The source takes another turn. They are dismissed at the start of your next turn.' }],
+  earth: [],
   fire: [{ name: 'The Flame Primordial', text: 'You produce a fire that entrances the fates, distracting them from aiding your foes. Whenever you deal fire damage to a creature or object, they take an extra 1d6 fire damage. If you deal fire damage to a mundane object, you can use a free triggered action to target it with your Return to Formlessness ability instead.\n\nAdditionally, any enemy who starts their turn adjacent to you has fire weakness equal to your Reason score until the start of their next turn. This increases to twice your Reason score if the enemy is made of or is wearing mostly metal.' }],
   green: [{ name: 'Chimeric Manifestation', text: 'Enter/exit animal form as a free maneuver, and combine two animal forms (levels totaling 12 or less), taking the best of both.' }],
   void: [{ name: 'Black Hole Star', text: 'At the end of each turn, vertical-pull a creature/object up to 5 (min 2). Your Mantle reduces enemies\u2019 and objects\u2019 stability by your level.' }],
@@ -89,6 +97,7 @@ export const elementalistHi = {
     summary: 'Your specialization reaches its fullest expression.',
     staminaGain: 6,
     autoFeatures: ({ sub }) => SPEC_FEAT_8[sub] || [],
+    autoAbilities: ({ sub }) => SPEC_ABILITY_AUTO_8[sub] || [],
     choices: [
       { id: 'perk-8', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
       { id: 'essence-11', label: '11-Essence Ability', help: 'Choose one heroic ability that costs 11 essence.', kind: 'ability', options: ES_11 },

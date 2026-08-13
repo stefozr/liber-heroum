@@ -37,6 +37,9 @@ describe('level-up walk 2→10', () => {
               } else if (ch.kind === 'skill-group') {
                 const group = (DS_SKILL_GROUPS as any)[opt.id] || [];
                 pick = { ...opt, chosen: group[0], chosenText: '' };
+              } else if (ch.count > 1) {
+                // Multi-pick: this option plus first-others up to count.
+                pick = [opt, ...opts.filter((o: any) => o !== opt).slice(0, ch.count - 1)];
               }
               const next = applyLevelUp(c, l, { ...canonical, [ch.id]: pick });
               expect(next.level, `${cls.id}/${sub} L${l} did not advance`).toBe(l);
@@ -45,12 +48,23 @@ describe('level-up walk 2→10', () => {
                 expect(ALL_PERKS.has(stored.chosen), `${cls.id}/${sub} L${l} ${ch.id} stored unknown perk "${stored.chosen}"`).toBe(true);
               } else if (ch.kind === 'skill-group') {
                 expect(ALL_SKILLS.has(stored.chosen), `${cls.id}/${sub} L${l} ${ch.id} stored unknown skill "${stored.chosen}"`).toBe(true);
+              } else if (ch.count > 1) {
+                expect(stored, `${cls.id}/${sub} L${l} ${ch.id} stored ${ch.count} picks`).toHaveLength(ch.count);
+                expect(stored, `${cls.id}/${sub} L${l} ${ch.id} stored pick`).toContainEqual(opt);
               } else {
                 expect(stored, `${cls.id}/${sub} L${l} ${ch.id} stored pick`).toEqual(opt);
               }
               if (ch.kind === 'ability') {
                 expect(next.cclass.levelAbilities[l].some((a: any) => a.name === opt.name),
                   `${cls.id}/${sub} L${l} ability "${opt.name}" not in levelAbilities`).toBe(true);
+              }
+              // Feature picks carrying an embedded ability land it on the combat sheet.
+              if (ch.kind === 'feature') {
+                for (const p of (Array.isArray(pick) ? pick : [pick])) {
+                  if (!p?.ability) continue;
+                  expect(next.cclass.levelAbilities[l].some((a: any) => a.name === p.ability.name),
+                    `${cls.id}/${sub} L${l} embedded ability "${p.ability.name}" not in levelAbilities`).toBe(true);
+                }
               }
               // The derived pipeline stays consistent for every substituted pick.
               expect(Number.isFinite(computeDerived(next).staminaMax)).toBe(true);

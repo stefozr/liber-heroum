@@ -6,10 +6,10 @@
 import { describe, it, expect } from 'vitest';
 import { LEVELUP_DATA } from '../levelup.jsx';
 
-const ALL_CLASSES = ['censor', 'conduit', 'elementalist', 'fury', 'null', 'shadow', 'tactician', 'talent', 'troubadour'];
+const ALL_CLASSES = ['beastheart', 'censor', 'conduit', 'elementalist', 'fury', 'null', 'shadow', 'summoner', 'tactician', 'talent', 'troubadour'];
 
 describe('LEVELUP_DATA', () => {
-  it('registers all nine classes', () => {
+  it('registers all eleven classes', () => {
     expect(Object.keys(LEVELUP_DATA).sort()).toEqual(ALL_CLASSES);
   });
 

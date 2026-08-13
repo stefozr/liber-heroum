@@ -1,7 +1,8 @@
 // wizard/steps/class.jsx — ClassStep (split out of the former wizard.jsx).
 import React from 'react';
-import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
+import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor, BEASTHEART_COMPANIONS, companionById, SUMMONER_PORTFOLIOS } from '../../data.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
+import { SheetStyles, StatblockCard } from '../../theme/sheet.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
@@ -32,6 +33,7 @@ function ClassStep({ character, update }) {
       skills: [], skillPicks: {}, skillSwaps: {},
       levelAbilities: {},
       prayer: null, ward: null, enchantment: null, triggeredAction: null,
+      companion: null, companionOptions: {}, formation: null, quickCommand: null, minions: { sig: [], t3: [] },
     },
     // Reset all play-state resources to their defaults (Heroic Resource is class-specific).
     play: {
@@ -43,6 +45,9 @@ function ClassStep({ character, update }) {
       surges: 0,
       heroTokens: 0,
       conditions: {},
+      companionStamina: null,
+      rampage: 0,
+      squads: [],
     },
   };
     });
@@ -55,6 +60,7 @@ function ClassStep({ character, update }) {
         {DS_CLASSES.map(c => (
           <SelCard key={c.id} className={`poster-card${sel && sel !== c.id ? ' dim' : ''}`} selected={sel === c.id} onClick={() => setCls(c.id)}>
             <div className="pc-art" style={{backgroundImage:`url(${c.cardImg})`}} />
+            {c.wip && <span className="pc-wip">WIP</span>}
             <div className="pc-scrim">
               <div className="pc-name-row">
                 <div className="pc-name">{c.name}</div>
@@ -88,6 +94,12 @@ function ClassStep({ character, update }) {
           {/* Subclass picker */}
           <ClassSubclassPicker character={character} update={update} />
 
+          {/* Beastheart companion picker */}
+          <CompanionPicker character={character} update={update} />
+
+          {/* Summoner portfolio minion picker */}
+          <PortfolioPicker character={character} update={update} />
+
           {/* Censor domain picker */}
           <CensorDomainPicker character={character} update={update} />
 
@@ -103,18 +115,18 @@ function ClassStep({ character, update }) {
               <H3>Class Features</H3>
               <div className="stack-12" style={{marginTop: 10}}>
                 {cls.features.map(f => {
-                  // Censor: the Judgment card carries an order-specific benefit once an order is chosen.
-                  const ability = (f.ability && cls.id === 'censor' && f.name === 'Judgment' && cls.judgmentOrder?.[character.cclass.subclass])
-                    ? { ...f.ability, orderBenefit: cls.judgmentOrder[character.cclass.subclass] }
-                    : f.ability;
+                  // An ability with per-subclass rider text (Censor's Judgment, Beastheart's
+                  // Feral Strike) carries the chosen subclass's benefit on its card.
+                  const rider = f.ability?.riderBySub?.[character.cclass.subclass];
+                  const ability = rider ? { ...f.ability, orderBenefit: rider } : f.ability;
                   return ability ? (
                     <AbilityCard key={f.name} ability={ability} kind="sig" />
                   ) : (
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
-                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
                       {f.table && <FeatureTable table={f.table} />}
-                      {(f.choose === 'prayerWard' || f.choose === 'enchantWard' || f.choose === 'augmentWard' || f.choose === 'augment' || f.choose === 'triggered') && <PrayerWardPicker character={character} update={update} cls={cls} feature={f} />}
+                      {PW_CONFIG[f.choose] && <PrayerWardPicker character={character} update={update} cls={cls} feature={f} />}
                     </div>
                   );
                 })}
@@ -135,7 +147,7 @@ function ClassStep({ character, update }) {
                   {textFeats.map(f => (
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
-                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
                       {f.table && <FeatureTable table={f.table} />}
                     </div>
                   ))}
@@ -157,16 +169,127 @@ function ClassStep({ character, update }) {
 }
 
 
+// Beastheart: choose one of the 14 wild companions. The pick also resets any
+// per-companion option (e.g. the drake's attuned damage type).
+function CompanionPicker({ character, update }) {
+  const cls = classDef(character);
+  if (!cls?.companionRequired) return null;
+  const chosen = character.cclass.companion;
+  const comp = companionById(chosen);
+  const setCompanion = (id) => update(c => ({
+    ...c,
+    cclass: { ...c.cclass, companion: c.cclass.companion === id ? null : id, companionOptions: {} },
+  }));
+  const setOption = (optId, val) => update(c => ({
+    ...c,
+    cclass: { ...c.cclass, companionOptions: { ...(c.cclass.companionOptions || {}), [optId]: val } },
+  }));
+  return (
+    <div>
+      <SheetStyles />
+      <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+        <H3>Companion</H3>
+        <Pill kind="gold">{chosen ? 1 : 0} / 1 CHOSEN</Pill>
+      </div>
+      <div className="grid-2" style={{marginTop:12}}>
+        {BEASTHEART_COMPANIONS.map(b => (
+          <SelCard
+            key={b.id}
+            selected={chosen === b.id}
+            dimmed={!!chosen && chosen !== b.id}
+            onClick={() => setCompanion(b.id)}
+            style={{textAlign:'left', padding:0}}>
+            <StatblockCard block={b} level={character.level || 1} staminaNote={'= yours'} />
+          </SelCard>
+        ))}
+      </div>
+      {comp?.optionChoice && (
+        <div className="sig-option-row">
+          <span className="sig-option-label">{comp.optionChoice.label}</span>
+          <select
+            className="sig-option-select"
+            value={(character.cclass.companionOptions || {})[comp.optionChoice.id] || ''}
+            onChange={(e) => setOption(comp.optionChoice.id, e.target.value)}>
+            <option value="" disabled>Choose…</option>
+            {comp.optionChoice.options.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Summoner: pick the 1st-level portfolio minions from the chosen circle
+// (cls.minionPicks maps tier → count, e.g. { sig: 2, t3: 2 }).
+const MINION_TIERS = { sig: ['signature', 'Signature Minions'], t3: ['t3', '3-Essence Minions'] };
+function PortfolioPicker({ character, update }) {
+  const cls = classDef(character);
+  if (!cls?.minionPicks) return null;
+  const sub = character.cclass.subclass;
+  const portfolio = SUMMONER_PORTFOLIOS[sub];
+  if (!portfolio) {
+    return (
+      <div>
+        <H3>Portfolio</H3>
+        <Deck>Choose your summoner circle first — it decides the portfolio of minions you can summon.</Deck>
+      </div>
+    );
+  }
+  const chosen = character.cclass.minions || { sig: [], t3: [] };
+  const toggle = (tier, id, need) => update(c => {
+    const cur = (c.cclass.minions || {})[tier] || [];
+    let next;
+    if (cur.includes(id)) next = cur.filter(x => x !== id);
+    else if (cur.length < need) next = [...cur, id];
+    else return c;
+    return { ...c, cclass: { ...c.cclass, minions: { ...(c.cclass.minions || { sig: [], t3: [] }), [tier]: next } } };
+  });
+  return (
+    <div className="stack-22">
+      <SheetStyles />
+      {Object.entries(cls.minionPicks).map(([tier, need]) => {
+        const [listKey, label] = MINION_TIERS[tier] || [tier, tier];
+        const options = portfolio[listKey] || [];
+        const got = chosen[tier] || [];
+        return (
+          <div key={tier}>
+            <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
+              <H3>{portfolio.label} — {label}</H3>
+              <Pill kind="gold">{got.length} / {need} CHOSEN</Pill>
+            </div>
+            <div className="grid-2" style={{marginTop:12}}>
+              {options.map(m => (
+                <SelCard
+                  key={m.id}
+                  selected={got.includes(m.id)}
+                  dimmed={got.length >= need && !got.includes(m.id)}
+                  onClick={() => toggle(tier, m.id, need)}
+                  style={{textAlign:'left', padding:0}}>
+                  <StatblockCard block={m} level={character.level || 1} />
+                </SelCard>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Config per feature.choose: [ [label, classArrayKey, stateKey], ... ]
+// Keep in sync with CLASS_CHOICE_SLOTS in app.jsx and CHOOSE_SLOTS in foundry-export.js.
+const PW_CONFIG = {
+  prayerWard: [['Prayer', 'prayers', 'prayer'], ['Conduit Ward', 'wards', 'ward']],
+  triggered: [['Triggered Action', 'triggereds', 'triggeredAction']],
+  enchantWard: [['Enchantment', 'enchantments', 'enchantment'], ['Elementalist Ward', 'wards', 'ward']],
+  augmentWard: [['Augmentation', 'enchantments', 'enchantment'], ['Talent Ward', 'wards', 'ward']],
+  augment: [['Augmentation', 'enchantments', 'enchantment']], // Null: augmentation only, no ward
+  formation: [['Formation', 'formations', 'formation']],       // Summoner
+  quickCommand: [['Quick Command', 'quickCommands', 'quickCommand']], // Summoner
+};
+
 function PrayerWardPicker({ character, update, cls, feature }) {
-  // Config per feature.choose: [ [label, classArrayKey, stateKey], ... ]
-  const CONFIG = {
-    prayerWard: [['Prayer', 'prayers', 'prayer'], ['Conduit Ward', 'wards', 'ward']],
-    triggered: [['Triggered Action', 'triggereds', 'triggeredAction']],
-    enchantWard: [['Enchantment', 'enchantments', 'enchantment'], ['Elementalist Ward', 'wards', 'ward']],
-    augmentWard: [['Augmentation', 'enchantments', 'enchantment'], ['Talent Ward', 'wards', 'ward']],
-    augment: [['Augmentation', 'enchantments', 'enchantment']], // Null: augmentation only, no ward
-  };
-  const groups = CONFIG[feature?.choose] || CONFIG.prayerWard;
+  const groups = PW_CONFIG[feature?.choose] || PW_CONFIG.prayerWard;
   const setKey = (stateKey, name) => update(c => ({ ...c, cclass: { ...c.cclass, [stateKey]: c.cclass[stateKey] === name ? null : name } }));
 
   const Group = ({ label, options, current, onPick }) => (
@@ -222,7 +345,9 @@ function ClassSubclassPicker({ character, update }) {
     // Duplicate-grant swaps only survive for skills the new subclass still grants.
     const grants = classGrantedSkills(cls, newSub);
     const skillSwaps = Object.fromEntries(Object.entries(c.cclass.skillSwaps || {}).filter(([s]) => grants.includes(s)));
-    return { ...c, cclass: { ...c.cclass, subclass: id, skills, skillPicks, skillSwaps }, kit: keep(c.kit), kit2: keep(c.kit2) };
+    // Summoner: the circle IS the portfolio — minion picks don't carry across circles.
+    const minions = cls.minionPicks ? { sig: [], t3: [] } : c.cclass.minions;
+    return { ...c, cclass: { ...c.cclass, subclass: id, skills, skillPicks, skillSwaps, minions }, kit: keep(c.kit), kit2: keep(c.kit2) };
   });
   const toggleDomain = (name) => update(c => {
     const cur = c.cclass.domains || [];
@@ -284,7 +409,7 @@ function ClassSubclassPicker({ character, update }) {
                   <SelCard key={d} selected={on} dimmed={!!curFeature && !on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
                     <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{f.text}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
                   </SelCard>
                 );
               })}
@@ -674,6 +799,7 @@ function AbilityPicker({ character, update }) {
       </div>
       ) : null}
 
+      {(cls.heroic3?.length > 0) && (
       <div>
         <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
           <H3>3-{cls.resource} Heroic Ability</H3>
@@ -692,7 +818,9 @@ function AbilityPicker({ character, update }) {
           ))}
         </div>
       </div>
+      )}
 
+      {(cls.heroic5?.length > 0) && (
       <div>
         <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
           <H3>5-{cls.resource} Heroic Ability</H3>
@@ -711,6 +839,7 @@ function AbilityPicker({ character, update }) {
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -825,7 +954,7 @@ function ClassKitPicker({ character, update }) {
         {[sel, sel2].filter(Boolean).map(id => pool.find(k => k.id === id)).map(k => (k?.features || []).map(f => (
           <div key={`${k.id}-${f.name}`} className="orn-frame" style={{padding:'14px 18px', marginTop: 14}}>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{k.name.toUpperCase()} — {f.name.toUpperCase()}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{f.text}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
             {f.table && <FeatureTable table={f.table} />}
           </div>
         )))}

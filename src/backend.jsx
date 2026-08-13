@@ -63,6 +63,7 @@ function hydrateChar(row) {
     campaignId: row.campaign_id,
     status: row.status,
     level: row.level,
+    visibility: row.visibility || 'private',
   };
 }
 function charRow(c) {
@@ -73,6 +74,7 @@ function charRow(c) {
     name: (c.identity && c.identity.name) || c.name || null,
     status: c.status,
     level: c.level,
+    visibility: c.visibility || 'private',
     data: c,
     updated_at: new Date().toISOString(),
   };

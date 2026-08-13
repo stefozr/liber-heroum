@@ -4,6 +4,7 @@ import { newCharacter, classDef, collectSkillPicks, collectPerkPicks } from '../
 
 import {
   DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_SKILL_GROUPS, DS_LANGUAGES, DS_COMPLICATIONS, kitPoolFor,
+  BEASTHEART_COMPANIONS, companionById, SUMMONER_PORTFOLIOS,
 } from '../../data.jsx';
 import {
   parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, defaultFlexValues, PERKS,
@@ -48,6 +49,8 @@ export function firstPickFor(choice: any, ctx: any, character: any = null) {
     }
     return null;
   }
+  // Multi-picks (count > 1) store an array of options.
+  if (choice.count > 1) return opts.slice(0, choice.count);
   return opts[0];
 }
 
@@ -231,6 +234,29 @@ export function buildValidCharacter(spec: any = {}) {
   if (cls.wards?.length) c.cclass.ward = spec.ward || cls.wards[0].name;
   if (cls.enchantments?.length) c.cclass.enchantment = spec.enchantment || cls.enchantments[0].name;
   if (cls.triggereds?.length) c.cclass.triggeredAction = spec.triggeredAction || cls.triggereds[0].name;
+
+  // Master-class picks: Summoner formation / quick command / portfolio minions,
+  // Beastheart companion (+ its option choice, e.g. the drake's attunement).
+  if (cls.formations?.length) c.cclass.formation = spec.formation || cls.formations[0].name;
+  if (cls.quickCommands?.length) c.cclass.quickCommand = spec.quickCommand || cls.quickCommands[0].name;
+  if (cls.companionRequired) {
+    c.cclass.companion = spec.companion || (BEASTHEART_COMPANIONS as any)[0].id;
+    const comp: any = companionById(c.cclass.companion);
+    c.cclass.companionOptions = spec.companionOptions ? { ...spec.companionOptions } : {};
+    if (comp?.optionChoice && !c.cclass.companionOptions[comp.optionChoice.id]) {
+      c.cclass.companionOptions[comp.optionChoice.id] = comp.optionChoice.options[0];
+    }
+  }
+  if (cls.minionPicks) {
+    const pf: any = (SUMMONER_PORTFOLIOS as any)[c.cclass.subclass] || {};
+    const tierList: any = { sig: 'signature', t3: 't3' };
+    c.cclass.minions = Object.fromEntries(
+      Object.entries(cls.minionPicks).map(([tier, n]: any) => [
+        tier,
+        (spec.minions?.[tier] as string[] | undefined) || (pf[tierList[tier] || tier] || []).slice(0, n).map((m: any) => m.id),
+      ]),
+    );
+  }
 
   // Class skills: granted are implicit (reserved above); fill every pick group (incl. the subclass's).
   c.cclass.skills = [];

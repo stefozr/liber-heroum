@@ -4,8 +4,9 @@
 // never mounts PlayStyles, can render them styled.
 import React from 'react';
 import { MQ } from './breakpoints.js';
+import { AbilityCard } from './primitives.jsx';
 import { DS_ANCESTRIES } from '../data.jsx';
-import { parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures } from '../wizard/helpers.js';
+import { parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, normalizeAbilityTiers } from '../wizard/helpers.js';
 
 const SHEET_CSS = `
 .trait-block { padding: 10px 0; border-bottom: 1px dashed var(--line); }
@@ -21,7 +22,11 @@ const SHEET_CSS = `
   text-transform: uppercase; font-weight: 500;
 }
 .cost-tag { border-color: var(--line-2); color: var(--ink-3); }
-.trait-text { font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.55; margin-top: 6px; }
+.trait-text {
+  font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.55; margin-top: 6px;
+  /* Rules text carries real paragraph and bullet breaks — honour them. */
+  white-space: pre-line;
+}
 .sig-option-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .sig-option-label { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
 .sig-option-select {
@@ -37,6 +42,22 @@ const SHEET_CSS = `
 .kv-row .k { color: var(--ink-3); letter-spacing: 0.18em; font-size: var(--fs-3); text-transform: uppercase; }
 .kv-row .v { color: var(--ink); }
 
+/* Creature stat blocks (Beastheart companions, Summoner minions). */
+.statblock { border: 1px solid var(--line); padding: 12px 14px; }
+.sb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.sb-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; margin-top: 10px;
+}
+.sb-stat { border: 1px solid var(--line); padding: 5px 6px; text-align: center; }
+.sb-stat .lbl { font-family: var(--mono); font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.16em; text-transform: uppercase; }
+.sb-stat .val { font-family: var(--display-2); font-size: var(--fs-7); font-weight: 700; color: var(--ink); margin-top: 2px; }
+.sb-chars { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.sb-char { text-align: center; font-family: var(--mono); }
+.sb-char .lbl { font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; }
+.sb-char .val { font-size: var(--fs-6); color: var(--gold-2); font-weight: 700; }
+.statblock .kv-row { margin-top: 8px; }
+.sb-adv-gated { opacity: 0.55; }
+
 ${MQ.rail} {
   /* At 1024 the play sheet's right column is only ~390px. */
   .kv-row { grid-template-columns: 90px 1fr; }
@@ -45,6 +66,7 @@ ${MQ.rail} {
 ${MQ.phone} {
   .kv-row, .kv-row.kv-src { grid-template-columns: 1fr; gap: 2px 0; }
   .kv-row .k { margin-top: 6px; }
+  .sb-chars { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
 }
 `;
 
@@ -167,4 +189,78 @@ function KitDetails({ kit, divider = false }) {
   );
 }
 
-export { SHEET_CSS, SheetStyles, AncestryTraitsList, KitDetails };
+// One creature stat block (Beastheart companion / Summoner minion), shared by the
+// wizard pickers, the Review step, and the play sheet. `block` is an entry from
+// beastheart-companions.js / summoner-minions.js. `level` gates advancement rows
+// (below-level ones render dimmed); `costLabel` overrides the derived cost tag;
+// `staminaNote` replaces the Stamina tile's value (companions: '= yours').
+// Display-only — pickers wrap it in SelCard for selection chrome.
+function StatblockCard({ block, costLabel, level, staminaNote, children }) {
+  if (!block) return null;
+  const b = block;
+  const cost = costLabel != null ? costLabel
+    : b.cost ? `${b.cost.essence} ESSENCE${b.cost.count > 1 ? ` · ${b.cost.count} MINIONS` : ''}`
+    : null;
+  const chars = b.characteristics || {};
+  const fmt = (n) => (n > 0 ? `+${n}` : `${n}`);
+  const stamina = staminaNote != null ? staminaNote : b.stamina;
+  return (
+    <div className="statblock">
+      <div className="sb-head">
+        <span className="trait-name">{b.name}</span>
+        <span style={{ display: 'flex', gap: 6 }}>
+          {b.role && <span className="sig-tag">{b.role}</span>}
+          {cost && <span className="cost-tag">{cost}</span>}
+        </span>
+      </div>
+      {b.keywords?.length > 0 && <div className="kit-meta-line">{b.keywords.join(' · ')}</div>}
+      {b.flavor && <div className="trait-text" style={{ fontStyle: 'italic' }}>{b.flavor}</div>}
+      <div className="sb-stats">
+        <div className="sb-stat"><div className="lbl">Size</div><div className="val">{b.size}</div></div>
+        <div className="sb-stat"><div className="lbl">Speed</div><div className="val">{b.speed}</div></div>
+        {stamina != null && <div className="sb-stat"><div className="lbl">Stamina</div><div className="val">{stamina}</div></div>}
+        <div className="sb-stat"><div className="lbl">Stability</div><div className="val">{b.stability}</div></div>
+        <div className="sb-stat"><div className="lbl">Free Strike</div><div className="val">{b.freeStrike}{b.freeStrikeType ? ` ${b.freeStrikeType}` : ''}</div></div>
+      </div>
+      <div className="sb-chars">
+        {['Might', 'Agility', 'Reason', 'Intuition', 'Presence'].map((k) => (
+          <div className="sb-char" key={k}>
+            <div className="lbl">{k.slice(0, 3)}</div>
+            <div className="val">{chars[k] != null ? fmt(chars[k]) : '—'}</div>
+          </div>
+        ))}
+      </div>
+      {(b.immunity || b.weakness || b.movement || b.skills?.length > 0) && (
+        <div className="kv-row kv-src">
+          {b.immunity && <><span className="k">Immunity</span><span className="v">{b.immunity}</span></>}
+          {b.weakness && <><span className="k">Weakness</span><span className="v">{b.weakness}</span></>}
+          {b.movement && <><span className="k">Movement</span><span className="v">{b.movement}</span></>}
+          {b.skills?.length > 0 && <><span className="k">Skills</span><span className="v">{b.skills.join(', ')}</span></>}
+        </div>
+      )}
+      {(b.abilities || []).map((a) => (
+        <div key={a.name} style={{ marginTop: 10 }}>
+          <AbilityCard ability={normalizeAbilityTiers(a)} />
+        </div>
+      ))}
+      {(b.traits || []).map((t) => (
+        <div className="trait-block" key={t.name}>
+          <div className="trait-name">{t.name}</div>
+          <div className="trait-text">{t.text}</div>
+        </div>
+      ))}
+      {b.advancements && Object.entries(b.advancements).map(([lvl, adv]) => {
+        const gated = level != null && level < Number(lvl);
+        return (
+          <div className={`trait-block${gated ? ' sb-adv-gated' : ''}`} key={lvl}>
+            <div className="trait-name">{adv.name} <span className="cost-tag">LV {lvl}</span></div>
+            <div className="trait-text">{adv.text}</div>
+          </div>
+        );
+      })}
+      {children}
+    </div>
+  );
+}
+
+export { SHEET_CSS, SheetStyles, AncestryTraitsList, KitDetails, StatblockCard };

@@ -2,6 +2,28 @@
 // Extends window.LEVELUP_DATA after levelup.jsx has loaded.
 // Class Acts: Auteur / Duelist / Virtuoso · Resource: Drama · staminaPer 6.
 
+// 4th-level Melodrama: pick two — new drama-gaining events, or boosts to base events.
+const MELODRAMA_4 = [
+  { id: 'nat-2',              name: 'Natural 2 on a Power Roll',
+    body: 'Whenever a creature rolls a natural 2 on a power roll, you gain 2 drama.' },
+  { id: 'villain-malice',     name: 'Damage from a Villain Action or Malice',
+    body: 'The first time the Director deals damage to a hero using a villain action or an ability that costs Malice, you gain 2 drama.' },
+  { id: 'big-fall',           name: 'An Unwilling Fall of 5+ Squares',
+    body: 'The first time a hero unwillingly falls 5 or more squares, you gain 2 drama.' },
+  { id: 'three-surges',       name: 'Damage Dealt with 3 Surges',
+    body: 'The first time a hero deals damage with 3 surges, you gain 2 drama.' },
+  { id: 'last-recovery',      name: 'A Hero’s Last Recovery',
+    body: 'Whenever a hero spends their last Recovery, you gain 2 drama.' },
+  { id: 'boost-three-heroes', name: 'Boost: 3+ Heroes Act on One Turn',
+    body: 'The first time three or more heroes use an ability on the same turn now grants you 3 drama (instead of 2).' },
+  { id: 'boost-winded',       name: 'Boost: First Hero Winded',
+    body: 'The first time a hero is winded now grants you 3 drama (instead of 2).' },
+  { id: 'boost-nat-19-20',    name: 'Boost: Natural 19–20',
+    body: 'A creature in your line of effect rolling a natural 19–20 now grants you 4 drama (instead of 3).' },
+  { id: 'boost-death',        name: 'Boost: A Hero Dies',
+    body: 'A hero dying now grants you 11 drama (instead of 10).' },
+];
+
 // 4th-level Zeitgeist: pick one of three respite benefits.
 const ZEITGEIST = [
   { id: 'foreshadowing', name: 'Foreshadowing',
@@ -34,9 +56,21 @@ const SKILL_ANY = [
 ];
 const t = (t1, t2, t3) => [['\u2264 11', t1], ['12\u201316', t2], ['17+', t3]];
 
+// Performance abilities share one chassis (see the level-1 Routines feature): a 5 aura
+// with the Performance keyword, switched at the start of a combat round (no action).
+const perf = (name, flavor, effect, target = 'Self and each ally in the area') => ({
+  name, flavor, badge: 'PERFORMANCE',
+  keywords: ['Area', 'Magic', 'Performance'],
+  distance: '5 aura', target, effect,
+});
+
 // ── Subclass-keyed choice tables ──
 const INVOCATION_2 = [
-  { name: 'Allow Me to Introduce Tonight\u2019s Players', body: 'When you take the first turn of a combat, use a main action to introduce the party: each ally shifts up to their speed, rolls against them have a double bane until the end of the round, and surprised enemies are no longer surprised.' },
+  { name: 'Allow Me to Introduce Tonight\u2019s Players',
+    ability: { name: 'Allow Me to Introduce Tonight\u2019s Players', noBadge: true,
+      flavor: 'The stage is set; the players take their places.',
+      type: 'Main action', distance: 'Self', target: 'Self and each ally',
+      effect: 'Usable only when you take the first turn of a combat. You introduce the party: each ally shifts up to their speed, power rolls made against the introduced heroes have a double bane until the end of the round, and surprised enemies are no longer surprised.' } },
   { name: 'Formal Introductions', body: 'As a respite activity, scribe a notice of your arrival to an enemy. When they receive it they become alarmed; the Director gains +1 Malice per round in their encounters, but the heroes start each such encounter with 2 extra hero tokens.' },
   { name: 'My Reputation Precedes Me', body: 'At the start of a social interaction with strangers, auto-bond one NPC (counts against your Scene Partner limit). While bonded, all heroes treat Renown as 2 higher when entering negotiation with them.' },
 ];
@@ -59,21 +93,43 @@ const ACT_FEATURE_3 = {
   duelist: [{ name: 'Foil', text: 'At the start of an encounter choose a creature in line of effect. You and it each have a double edge on power rolls made against or competing with the other. If it drops to 0, pick a new foil next round.' }],
   virtuoso: [
     { name: 'Second Album', text: 'You add two new performances to your repertoire, which you can use with your Routines feature.' },
-    { name: '“Fire Up the Night”', text: '5 aura, self and each ally in the area. While this performance is active, each target who starts their turn in the area doesn’t take a bane on strikes against creatures with concealment. Once during their turn, they can search for hidden creatures as a free maneuver.' },
-    { name: '“Never-Ending Hero”', text: '5 aura, self and each ally in the area. While this performance is active, each target who starts their turn dying while in the area gains an edge on power rolls and ignores the effects of bleeding until the end of their turn.' },
+  ],
+};
+const ACT_ABILITY_AUTO_3 = {
+  virtuoso: [
+    perf('“Fire Up the Night”', 'A song to shine through the dark of night.',
+      'While this performance is active, each target who starts their turn in the area doesn’t take a bane on strikes against creatures with concealment. Once during their turn, they can search for hidden creatures as a free maneuver.'),
+    perf('“Never-Ending Hero”', 'An anthem for those who refuse to fall.',
+      'While this performance is active, each target who starts their turn dying while in the area gains an edge on power rolls and ignores the effects of bleeding until the end of their turn.'),
   ],
 };
 const ACT_FEATURE_5 = {
   auteur: [
-    { name: 'Fix It in Post', body: 'Once per turn, free maneuver: change one condition (bleeding, frightened, prone, slowed, taunted) on a creature within your Dramatic Monologue distance into another of those, keeping its duration & origin.' },
-    { name: 'Take Two!', body: 'New performance: allies starting their turn in the 5 aura can reroll the first tier-2 power roll they make that turn (must use the new roll).' },
+    { name: 'Fix It in Post',
+      ability: { name: 'Fix It in Post', noBadge: true,
+        flavor: 'A snip here, a splice there \u2014 the scene plays out differently.',
+        type: 'Free maneuver', distance: 'Dramatic Monologue distance', target: 'One creature',
+        effect: 'Once per turn, you can change one condition (bleeding, frightened, prone, slowed, or taunted) affecting the target into another condition from that list, keeping its duration and origin.' } },
+    { name: 'Take Two!',
+      ability: perf('Take Two!', 'One more, with feeling this time.',
+        'While this performance is active, each target who starts their turn in the area can reroll the first power roll they make that turn that obtains a tier 2 outcome. They must use the new roll.') },
   ],
   duelist: [
-    { name: 'Verbal Duel', body: 'Once per turn while your Foil is adjacent, free maneuver: opposed Presence test; the winner makes a free strike that deals psychic damage instead of its usual type.' },
-    { name: 'We Can\u2019t Be Upstaged!', body: 'New performance: allies starting their turn in the 5 aura gain a bonus to shift distance equal to your Presence until end of turn.' },
+    { name: 'Verbal Duel',
+      ability: { name: 'Verbal Duel', noBadge: true,
+        flavor: 'Wit cuts deeper than steel.',
+        type: 'Free maneuver', distance: 'Melee 1', target: 'Your Foil',
+        effect: 'Usable once per turn while your Foil is adjacent to you. You and the Foil make an opposed Presence test; the winner makes a free strike that deals psychic damage instead of its usual damage type.' } },
+    { name: 'We Can\u2019t Be Upstaged!',
+      ability: perf('We Can\u2019t Be Upstaged!', 'The whole troupe moves as one.',
+        'While this performance is active, each target who starts their turn in the area gains a bonus to the distance they can shift equal to your Presence score until the end of their turn.') },
   ],
   virtuoso: [
-    { name: 'Bolstering Banter', body: 'Once per turn, free maneuver: a target of your current performance can spend a Recovery to gain temporary Stamina equal to their recovery value.' },
+    { name: 'Bolstering Banter',
+      ability: { name: 'Bolstering Banter', noBadge: true,
+        flavor: 'A word of encouragement between the verses.',
+        type: 'Free maneuver', distance: 'Special', target: 'One target of your current performance',
+        effect: 'Once per turn, the target can spend a Recovery to gain temporary Stamina equal to their recovery value instead of regaining Stamina.' } },
     { name: 'Medley', body: 'You can maintain two performances at a time with your Routines feature.' },
   ],
 };
@@ -92,12 +148,26 @@ const ACT_ABILITY_6 = {
   ],
 };
 const ACT_FEATURE_8 = {
-  auteur: [{ name: 'Deleted Scene', text: 'When a creature within your Dramatic Monologue distance makes a power roll, spend 1 drama as a free triggered action to use Dramatic Monologue against just that creature.' }],
+  auteur: [],
   duelist: [{ name: 'Masterwork', text: 'Name one signature ability after yourself; you always have it (even from a swapped kit). When you use it you gain an edge and 1 surge usable only on it. If it\u2019s your last ability of an encounter, trigger Hear Ye, Hear Ye! afterward.' }],
   virtuoso: [
     { name: 'Crowd Favorites', text: 'You add two more performances to your repertoire, which you can use with your Routines feature.' },
-    { name: 'Moonlight Sonata', text: '5 aura, each ally in the area. While this performance is active, each target who is dead can choose to continue taking turns after death. On each of their turns, a target can move and use either a main action or a maneuver, but can’t spend Recoveries or use triggered actions.' },
-    { name: 'Radical Fantasia', text: '5 aura, self and each ally in the area. While this performance is active, each target who starts their turn in the area ignores difficult terrain, and any ability they use that imposes forced movement gains a +2 bonus to the forced movement distance until the end of their turn. Additionally, once per combat round, each target can use a triggered action.' },
+  ],
+};
+const ACT_ABILITY_AUTO_8 = {
+  auteur: [
+    { name: 'Deleted Scene', cost: 1, resource: 'Drama',
+      flavor: 'That take never happened. Roll it again.',
+      type: 'Free triggered action', distance: 'Dramatic Monologue distance', target: 'The triggering creature',
+      trigger: 'A creature within your Dramatic Monologue distance makes a power roll.',
+      effect: 'You use Dramatic Monologue against just the triggering creature.' },
+  ],
+  virtuoso: [
+    perf('Moonlight Sonata', 'The music plays on, even for the fallen.',
+      'While this performance is active, each target who is dead can choose to continue taking turns after death. On each of their turns, a target can move and use either a main action or a maneuver, but can’t spend Recoveries or use triggered actions.',
+      'Each ally in the area'),
+    perf('Radical Fantasia', 'A crescendo that carries the whole company forward.',
+      'While this performance is active, each target who starts their turn in the area ignores difficult terrain, and any ability they use that imposes forced movement gains a +2 bonus to the forced movement distance until the end of their turn. Additionally, once per combat round, each target can use a triggered action as a free triggered action.'),
   ],
 };
 const ACT_ABILITY_9 = {
@@ -152,6 +222,7 @@ export const troubadour = {
     summary: 'Your art deepens; the stage bends further to your performance.',
     staminaGain: 6,
     autoFeatures: ({ sub }) => ACT_FEATURE_3[sub] || [],
+    autoAbilities: ({ sub }) => ACT_ABILITY_AUTO_3[sub] || [],
     choices: [
       { id: 'drama-7', label: '7-Drama Ability', help: 'Choose one heroic ability that costs 7 drama.', kind: 'ability', options: DRAMA_7 },
     ],
@@ -162,10 +233,10 @@ export const troubadour = {
     autoCharacteristicIncrease: { Agility: 3, Presence: 3, max: true },
     autoFeatures: () => [
       { name: 'Characteristic Increase', text: 'Your Agility and Presence scores each increase to 3.' },
-      { name: 'Melodrama', text: 'Choose two new events that grant you drama in battle (e.g. a natural 2 on a power roll; a hero winded by Malice; a hero falling 5+ squares; a hero dealing damage with 3 surges; a hero spending their last Recovery). Or boost one event you already have by +1 drama.' },
       { name: 'Zeitgeist', text: 'You have your finger on the pulse of the world. Whenever you start or finish a respite, you gain the benefit of one Zeitgeist option of your choice.' },
     ],
     choices: [
+      { id: 'melodrama-4', label: 'Melodrama', help: 'Choose two new events that grant you drama in battle — or spend a pick boosting an event you already have by +1 drama.', kind: 'feature', count: 2, options: MELODRAMA_4 },
       { id: 'zeitgeist-4', label: 'Zeitgeist', help: 'Choose the Zeitgeist option you take whenever you start or finish a respite.', kind: 'feature', options: ZEITGEIST },
       { id: 'perk-4', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
       { id: 'skill-4', label: 'Skill', help: 'Choose any skill from any group.', kind: 'skill-group', options: SKILL_ANY },
@@ -182,8 +253,9 @@ export const troubadour = {
   6: {
     summary: 'The spotlight finds you, and the crowd lends you its power.',
     staminaGain: 6,
-    autoFeatures: () => [
-      { name: 'Spotlight', text: 'New performance: each ally who starts their turn in the 5 aura gains 1 Heroic Resource, which vanishes at the end of their turn if unspent.' },
+    autoAbilities: () => [
+      perf('Spotlight', 'All eyes on you — give them a show.',
+        'While this performance is active, each target who starts their turn in the area gains 1 Heroic Resource, which disappears at the end of their turn if they don’t spend it.'),
     ],
     choices: [
       { id: 'perk-6', label: 'Perk', help: 'Choose one interpersonal, lore, or supernatural perk.', kind: 'perk', options: PERK_ILS },
@@ -207,6 +279,7 @@ export const troubadour = {
     summary: 'Your class act entrusts you with its highest craft.',
     staminaGain: 6,
     autoFeatures: ({ sub }) => ACT_FEATURE_8[sub] || [],
+    autoAbilities: ({ sub }) => ACT_ABILITY_AUTO_8[sub] || [],
     choices: [
       { id: 'perk-8', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
       { id: 'drama-11', label: '11-Drama Ability', help: 'Choose one heroic ability that costs 11 drama.', kind: 'ability', options: DRAMA_11 },

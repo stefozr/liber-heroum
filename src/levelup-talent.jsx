@@ -52,15 +52,29 @@ const TRAD_FEAT_5 = {
 const TRAD_FEAT_8 = {
   chronopathy: [
     { name: 'Doubling the Hours', text: 'While you have 5+ Victories, you can take an extra respite activity.' },
-    { name: 'Stasis Shield', text: 'Triggered (3 clarity): when a target takes damage, teleport them adjacent to you, negating the damage if it moves them out of harm.' },
   ],
   telekinesis: [
-    { name: 'Levitation Field', text: 'Maneuver: allies in a 3 burst can fly until your next turn and shift their speed (5 clarity: lasts 1 hour).' },
     { name: 'Low Gravity', text: 'You ignore difficult terrain and don\u2019t spend extra movement while prone.' },
   ],
   telepathy: [
     { name: 'Mindlink', text: 'On a respite, link creatures up to your Reason; when one linked creature spends Recoveries, each other can spend one too.' },
     { name: 'Universal Connection', text: 'Your Telepathic Speech reaches anywhere on the same world.' },
+  ],
+};
+const TRAD_ABILITY_AUTO_8 = {
+  chronopathy: [
+    { name: 'Stasis Shield', cost: 3, resource: 'Clarity',
+      flavor: 'You freeze time just long enough to pull the victim to safety.',
+      keywords: ['Psionic', 'Ranged'], type: 'Triggered', distance: 'Ranged 10', target: 'Self, or one creature or object',
+      trigger: 'The target takes damage.',
+      effect: 'The target is teleported to an unoccupied space adjacent to you, taking no damage and suffering no additional effects if this movement gets them out of harm\u2019s way. While strained, you can\u2019t target yourself, and you take the damage and any additional effects instead of the target.' },
+  ],
+  telekinesis: [
+    { name: 'Levitation Field', noBadge: true,
+      flavor: 'You lift the air itself, and your allies with it.',
+      keywords: ['Area', 'Psionic'], type: 'Maneuver', distance: '3 burst', target: 'Each ally in the area',
+      effect: 'Each target can fly until the start of your next turn and can immediately shift up to their speed; you can also shift up to your speed. While flying this way, a target\u2019s stability is reduced to 0 and can\u2019t be increased.',
+      spendCost: 5, spend: 'The effects last for 1 hour instead.' },
   ],
 };
 const TRAD_ABILITY_2 = {
@@ -132,9 +146,14 @@ export const talent = {
     autoCharacteristicIncrease: { Reason: 3, Presence: 3, max: true },
     autoFeatures: () => [
       { name: 'Characteristic Increase', text: 'Your Reason and Presence scores each increase to 3.' },
-      { name: 'Mind Projection', text: 'Maneuver: project your mind (size 1T, concealed, passes through matter) while your body lies unconscious. Damage to either hits your Stamina; any damage snaps your mind back.' },
       { name: 'Mind Recovery', text: 'When you spend a Recovery while strained, you can forgo the Stamina to gain 3 clarity. The first time each round a creature is force moved, you gain 2 clarity instead of 1.' },
       { name: 'Suspensor Field', text: 'You can fly (stability 0 while flying); if you already fly, +2 speed while flying.' },
+    ],
+    autoAbilities: () => [
+      { name: 'Mind Projection', noBadge: true,
+        flavor: 'Your consciousness slips free and drifts where your body cannot.',
+        keywords: ['Psionic'], type: 'Maneuver', distance: 'Self', target: 'Self',
+        effect: 'You project your mind outside your body as a size 1T form that has concealment and can pass through solid matter, while your body lies unconscious. Damage dealt to either your body or your projection is taken from your Stamina, and any damage immediately snaps your mind back to your body.' },
     ],
     choices: [
       { id: 'perk-4', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
@@ -188,6 +207,7 @@ export const talent = {
     summary: 'Your tradition reveals two of its deepest secrets.',
     staminaGain: 6,
     autoFeatures: ({ sub }) => TRAD_FEAT_8[sub] || [],
+    autoAbilities: ({ sub }) => TRAD_ABILITY_AUTO_8[sub] || [],
     choices: [
       { id: 'perk-8', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
       { id: 'clarity-11', label: '11-Clarity Ability', help: 'Choose one heroic ability that costs 11 clarity.', kind: 'ability', options: CL_11 },

@@ -470,9 +470,13 @@ function CampaignDetail({
                 <span className="pg-line"></span>
               </div>
               <div className="party-grid">
-                {g.heroes.map(c => (
-                  <PartyHeroCard key={c.id} character={c} canEdit={canEdit} editLabel={isMe ? 'Edit' : 'Edit · Director'} onOpen={() => onOpenHero(c.id)} />
-                ))}
+                {g.heroes.map(c => {
+                  // Everyone viewing this screen is a member, so a public hero is
+                  // editable by them too — not just the owner and the Director.
+                  const heroCanEdit = canEdit || c.visibility === 'public';
+                  const editLabel = isMe ? 'Edit' : isGM ? 'Edit · Director' : 'Edit · Public';
+                  return <PartyHeroCard key={c.id} character={c} canEdit={heroCanEdit} editLabel={editLabel} onOpen={() => onOpenHero(c.id)} />;
+                })}
                 {isMe && (
                   <button type="button" className="card-btn add-hero-card" onClick={() => (myUnassigned.length ? setAssignOpen(true) : onCreateHero(campaign.id))}>
                     <div>

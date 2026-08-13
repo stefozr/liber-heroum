@@ -589,6 +589,13 @@ function characterToFoundryHero(c, officialIndex = null) {
     augment: [
       { field: 'enchantment', options: 'enchantments', candidates: (n) => [n] },
     ],
+    // Summoner: formation + quick command (no official docs yet — generated fallback).
+    formation: [
+      { field: 'formation', options: 'formations', candidates: (n) => [n] },
+    ],
+    quickCommand: [
+      { field: 'quickCommand', options: 'quickCommands', candidates: (n) => [n] },
+    ],
   };
   const expandedComposites = new Set();
   for (const f of (cls?.features || [])) {

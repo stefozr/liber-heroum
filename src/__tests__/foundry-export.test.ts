@@ -598,6 +598,11 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     'feature :: Domains',                  // chosen-domain summary (conduit)
     'feature :: Discipline Mastery',       // null: summary of the mastery table inside official Discipline
   ]);
+  // Supplement classes (Summoner, Beastheart) have no compendium docs at all — their
+  // whole export is app-generated, so the unmatched check is meaningless for them.
+  // The presence assertions below still run. Mirrors SUPPLEMENT_CLASSES in
+  // official-fidelity.test.ts, which guards that the compendium still lacks them.
+  const SUPPLEMENT_CLASSES = new Set(['summoner', 'beastheart']);
   it('every class × subclass build exports with zero unexpected unmatched items', () => {
     for (const cls of DS_CLASSES as any[]) {
       const subs = (cls.subclasses || [null]).map((s: any) => s && (s.id || s.name));
@@ -608,7 +613,7 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
           .filter((i: any) => !/^(icons|systems|assets)\//.test(i.img || ''))
           .map((i: any) => `${i.type} :: ${i.name}`)
           .filter((k: string) => !INTENTIONALLY_GENERATED.has(k));
-        expect(unmatched, `${cls.id}/${sub} unmatched items`).toEqual([]);
+        if (!SUPPLEMENT_CLASSES.has(cls.id)) expect(unmatched, `${cls.id}/${sub} unmatched items`).toEqual([]);
         // Presence: expected picks must actually appear (a dropped item passes the
         // unmatched check above, so absence has to be pinned separately).
         const names = doc.items.map((i: any) => i.name);

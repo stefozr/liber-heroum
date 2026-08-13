@@ -126,6 +126,11 @@ describe('level-up data completeness', () => {
             const opts = (typeof ch.options === 'function' ? ch.options(ctx) : ch.options) || [];
             // The bug class: an empty option list makes the flow's CONTINUE button dead.
             expect(opts.length, `${cls.id} L${l} ${ch.id} has NO options for subclass ${ctx.sub}`).toBeGreaterThan(0);
+            // Multi-picks (count > 1) must be satisfiable: enough distinct options.
+            if (ch.count != null) {
+              expect(typeof ch.count === 'number' && ch.count >= 2, `${cls.id} L${l} ${ch.id} has invalid count "${ch.count}"`).toBe(true);
+              expect(opts.length, `${cls.id} L${l} ${ch.id} has fewer options than its count`).toBeGreaterThanOrEqual(ch.count);
+            }
             if (ch.kind === 'perk') {
               for (const opt of opts) {
                 const group = (PERKS as any)[deriveGroupName(opt)];

@@ -171,13 +171,17 @@ describe('class step options', () => {
       };
       if (cls.subclasses) breakField(x => { x.cclass.subclass = null; }, 'subclass');
       if ((cls.sigCount ?? 1) > 0) breakField(x => { x.cclass.signatures = []; }, 'signatures');
-      if (cls.deep) breakField(x => { x.cclass.heroic3 = null; }, 'heroic3');
-      if (cls.deep) breakField(x => { x.cclass.heroic5 = null; }, 'heroic5');
+      if (cls.deep && cls.heroic3?.length) breakField(x => { x.cclass.heroic3 = null; }, 'heroic3');
+      if (cls.deep && cls.heroic5?.length) breakField(x => { x.cclass.heroic5 = null; }, 'heroic5');
       if (cls.kitRequired) breakField(x => { x.kit = { id: null }; }, 'kit');
       if (cls.kit2Required) breakField(x => { x.kit2 = { id: null }; }, 'kit2');
       if (cls.prayers?.length) breakField(x => { x.cclass.prayer = null; }, 'prayer');
       if (cls.wards?.length) breakField(x => { x.cclass.ward = null; }, 'ward');
       if (cls.enchantments?.length) breakField(x => { x.cclass.enchantment = null; }, 'enchantment');
+      if (cls.companionRequired) breakField(x => { x.cclass.companion = null; }, 'companion');
+      if (cls.formations?.length) breakField(x => { x.cclass.formation = null; }, 'formation');
+      if (cls.quickCommands?.length) breakField(x => { x.cclass.quickCommand = null; }, 'quickCommand');
+      if (cls.minionPicks) breakField(x => { x.cclass.minions = { sig: [], t3: [] }; }, 'minions');
       if (cls.pickTwoDomains) {
         breakField(x => { x.cclass.domains = []; }, 'domains');
         breakField(x => { x.cclass.domainFeature = null; }, 'domainFeature');

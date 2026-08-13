@@ -1012,6 +1012,9 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
 .feat-table .ftl { font-family: var(--mono); font-size: var(--fs-4); color: var(--gold); font-weight: 700; }
 .feat-table .ftv { font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.5; }
 .feat-table .ft-gated { opacity: 0.55; }
+/* Row currently in effect (live meter at/above the row's threshold — e.g. rampage). */
+.feat-table .ftl.ft-active { color: var(--rubric); }
+.feat-table .ftv.ft-active { color: var(--ink-1); }
 
 /* Poster cards (ancestry + class pickers) — the artwork IS the card; name and
    the full untruncated blurb sit on a bottom scrim (2:3 leaves room for the
@@ -1048,6 +1051,14 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
 .poster-card .pc-desc {
   font-family: var(--serif); font-size: var(--fs-6); color: rgba(236,228,210,0.85);
   margin-top: 8px; line-height: 1.45;
+}
+/* In-development classes (cls.wip) carry a corner tag so players know the
+   content may still shift. Top-left — the selection stamp owns the top-right. */
+.poster-card .pc-wip {
+  position: absolute; top: 10px; left: 10px; z-index: 1;
+  font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.22em;
+  color: var(--gold-2); background: rgba(5,5,8,0.78);
+  border: 1px solid var(--line-2); border-radius: 2px; padding: 3px 6px 2px 8px;
 }
 /* Stamps sit over artwork here — the glyph joins the name row instead of
    floating top-right, and both get a shadow to stay legible on light art. */

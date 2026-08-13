@@ -69,6 +69,22 @@ const CREST_ICONS = {
       <rect x="4.3" y="11.4" width="3.2" height="3.6" rx="1.6" />
     </g>
   ),
+  paw: (
+    <g fill="currentColor">
+      <ellipse cx="7" cy="8.2" rx="2" ry="2.6" />
+      <ellipse cx="17" cy="8.2" rx="2" ry="2.6" />
+      <ellipse cx="3.9" cy="12.6" rx="1.8" ry="2.3" />
+      <ellipse cx="20.1" cy="12.6" rx="1.8" ry="2.3" />
+      <path d="M12 10.2 c2.9 0 5.6 2.5 6.1 5.5 .3 1.9 -.8 3.7 -2.8 4 -1.2 .2 -2.3 -.3 -3.3 -.3 -1 0 -2.1 .5 -3.3 .3 -2 -.3 -3.1 -2.1 -2.8 -4 .5 -3 3.2 -5.5 6.1 -5.5 Z" />
+    </g>
+  ),
+  sigil: (
+    <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9.2" />
+      <path d="M12 4.6 L18.4 15.7 H5.6 Z" />
+      <circle cx="12" cy="12.9" r="1.6" fill="currentColor" stroke="none" />
+    </g>
+  ),
 };
 
 function renderGlyph(glyph) {
@@ -243,17 +259,22 @@ function PowerRoll({ rows }) {
 // table = { head: ['Ferocity','Benefit'], rows: [[label, text, minLevel?], ...] }.
 // When a level is given, rows above it render dimmed; the label still carries the
 // "(4th level)" annotation, so surfaces without a level lose nothing.
-function FeatureTable({ table, level }) {
+// `reached` (a live resource/meter value, e.g. the Beastheart's rampage) highlights
+// every non-gated row whose numeric label is at or below it.
+function FeatureTable({ table, level, reached }) {
   if (!table || !table.rows || !table.rows.length) return null;
   return (
     <div className="feat-table">
       {(table.head || []).map((h, i) => <span key={`h${i}`} className="fth">{h}</span>)}
       {table.rows.map(([label, text, minLevel], i) => {
         const gated = level != null && minLevel != null && level < minLevel;
+        const num = parseInt(label, 10);
+        const active = !gated && reached != null && Number.isFinite(num) && num <= reached;
+        const mod = `${gated ? ' ft-gated' : ''}${active ? ' ft-active' : ''}`;
         return (
           <React.Fragment key={i}>
-            <span className={`ftl${gated ? ' ft-gated' : ''}`}>{label}</span>
-            <span className={`ftv${gated ? ' ft-gated' : ''}`}>{renderRich(text)}</span>
+            <span className={`ftl${mod}`}>{label}</span>
+            <span className={`ftv${mod}`}>{renderRich(text)}</span>
           </React.Fragment>);
 
       })}
@@ -309,6 +330,7 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
           <PowerRoll rows={a.tiers} />
         </>
       }
+      {a.special && <div className="ac-effect"><b>Special.</b> {renderRich(a.special)}</div>}
       {a.effect && <div className="ac-effect"><b>Effect.</b> {renderRich(a.effect)}</div>}
       {a.spend && <div className="ac-effect"><b>Spend {a.spendCost || 1} {a.resource || ''}.</b> {renderRich(a.spend)}</div>}
       {a.orderBenefit && <div className="ac-effect"><b>Order Benefit.</b> {renderRich(a.orderBenefit)}</div>}

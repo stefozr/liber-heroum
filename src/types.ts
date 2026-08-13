@@ -30,6 +30,7 @@ export interface Character {
   campaignId: string | null;
   status: 'in-progress' | 'complete';
   level: number;
+  visibility?: 'private' | 'public';  // who may edit; absent = 'private'
   name?: string;
   identity?: { name?: string };
   portrait?: string;

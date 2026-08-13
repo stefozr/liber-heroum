@@ -1,5 +1,5 @@
 import React from 'react';
-import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES, DS_STEPS } from './data.jsx';
+import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES, DS_STEPS, companionById, minionById, collectMinionIds } from './data.jsx';
 import { ThemeStyles, Pill, Button } from './theme.jsx';
 import { DS } from './backend.jsx';
 import { AccountStyles, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, Masthead } from './auth.jsx';
@@ -49,14 +49,32 @@ function navToHash({ view, activeId, activeCampaignId }) {
 }
 
 // Pure editability rule (mirrors the characters_update RLS policy): a hero may be edited
-// by its owner, the director of its campaign, or a global admin. Everyone else may only
-// view. Exported for unit testing; the App wraps it in a useCallback over current state.
+// by its owner, the director of its campaign, a global admin — or, when the hero is
+// marked public, any member of its campaign. Everyone else may only view. Exported for
+// unit testing; the App wraps it in a useCallback over current state.
 function canEditCharacterFor(ch, user, campaigns) {
   if (!ch || !user) return false;
   if (ch.ownerId === user.id) return true;
   if (user.isAdmin) return true;
   const camp = ch.campaignId ? (campaigns || []).find(c => c.id === ch.campaignId) : null;
-  return !!(camp && camp.gmId === user.id);
+  if (!camp) return false;
+  if (camp.gmId === user.id) return true;
+  return ch.visibility === 'public' && (camp.memberIds || []).includes(user.id);
+}
+
+// Who may flip a hero between private and public (and delete it): the owner or a
+// global admin — deliberately not the Director. Mirrors the characters_delete RLS
+// policy and the protect_character_columns trigger.
+function canSetVisibilityFor(ch, user) {
+  return !!(ch && user && (ch.ownerId === user.id || user.isAdmin));
+}
+
+// Should a realtime row be ignored? Only when it's the hero the user has open AND they
+// have a local edit debouncing or in flight for it — the own-save-echo / mid-typing
+// clobber case. An idle open sheet applies remote edits, so two people sharing an
+// editable (public) hero stay in sync. Exported for unit testing.
+function shouldSkipRealtimeMerge(rowId, activeId, pendingId, inFlightId) {
+  return rowId === activeId && (rowId === pendingId || rowId === inFlightId);
 }
 
 function uid() {
@@ -73,6 +91,7 @@ function newCharacter(ownerId = null, campaignId = null) {
     lastModified: Date.now(),
     status: 'in-progress',
     level: 1,
+    visibility: 'private', // 'public' lets every campaign member edit, not just view
     wizardStep: 0,
 
     name: '',
@@ -81,7 +100,10 @@ function newCharacter(ownerId = null, campaignId = null) {
     ancestry: { id: null, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} },
     culture: { language: 'Caelian', environment: null, organization: null, upbringing: null, archetype: null, skills: {} },
     career: { id: null, incident: '', taken: '', languages: [], skills: [], perk: '' },
-    cclass: { id: null, subclass: null, domains: [], characteristics: {}, charArrayIndex: 0, signatures: [], heroic3: null, heroic5: null, skills: [], deity: '', charModel: 'v2' },
+    cclass: { id: null, subclass: null, domains: [], characteristics: {}, charArrayIndex: 0, signatures: [], heroic3: null, heroic5: null, skills: [], deity: '', charModel: 'v2',
+      // Master-class picks: Beastheart companion (+ per-companion options, e.g. the
+      // drake's attuned type); Summoner formation / quick command / portfolio minions.
+      companion: null, companionOptions: {}, formation: null, quickCommand: null, minions: { sig: [], t3: [] } },
     kit: { id: null },
     kit2: { id: null },
     complication: { id: null, custom: '', skills: {}, languages: [] },
@@ -101,6 +123,10 @@ function newCharacter(ownerId = null, campaignId = null) {
       xp: 0,         // grows when a respite converts victories
       conditions: {},
       notes: '',
+      // Master-class trackers (read defensively — older characters lack these).
+      companionStamina: null, // Beastheart companion's current Stamina (null = full; max = hero's)
+      rampage: 0,             // Beastheart companion's rampage this encounter
+      squads: [],             // Summoner: [{ id, minionId, stamina }] — alive count is derived
     },
   };
 }
@@ -120,6 +146,8 @@ function complicationDef(c) { return c.complication.id ? DS_COMPLICATIONS.find(x
 const CHAR_KEYS = ['Might', 'Agility', 'Reason', 'Intuition', 'Presence'];
 // Characteristics picked via any char-bonus choice recorded at level l. Choice ids vary
 // by class and level (char-bonus-4 today), so match on the choice's kind, not its id.
+// Each entry is { key, max }: the cap defaults to 3 (the 4th-level rule) but a choice
+// can carry its own `max` (the Summoner's 10th-level increase allows up to 5).
 function charBonusPicksAt(d, c, l) {
   const picks = c.levelChoices && c.levelChoices[l] && c.levelChoices[l].picks;
   if (!d || !picks) return [];
@@ -129,7 +157,7 @@ function charBonusPicksAt(d, c, l) {
     const pick = picks[ch.id];
     if (!pick) continue;
     const k = pick.id || pick.name || pick;
-    if (CHAR_KEYS.includes(k)) out.push(k);
+    if (CHAR_KEYS.includes(k)) out.push({ key: k, max: ch.max || 3 });
   }
   return out;
 }
@@ -154,7 +182,7 @@ function levelCharBonuses(c) {
       const { delta, max } = d.autoCharIncreaseAll;
       for (const k of CHAR_KEYS) total[k] = Math.min(max, total[k] + delta);
     }
-    for (const k of charBonusPicksAt(d, c, l)) total[k] = Math.min(3, total[k] + 1);
+    for (const { key, max } of charBonusPicksAt(d, c, l)) total[key] = Math.min(max, total[key] + 1);
   }
   for (const k of CHAR_KEYS) out[k] = total[k] - base[k];
   return out;
@@ -186,7 +214,7 @@ function migrateCharacterChars(c) {
         const d = data[l];
         if (!d) continue;
         if (d.autoCharIncreaseAll) b += d.autoCharIncreaseAll.delta;
-        if (charBonusPicksAt(d, c, l).includes(k)) b += 1;
+        if (charBonusPicksAt(d, c, l).some(p => p.key === k)) b += 1;
       }
       base[k] = (baked[k] || 0) - b;
     }
@@ -370,20 +398,37 @@ function App() {
 
   useEffect(() => { localStorage.setItem(LS_VIEW, view); }, [view]);
 
+  // Admin-only testing aid: force the open sheet into the genuine read-only rendering.
+  // Session-only, and dropped when the open hero changes.
+  const [adminPreview, setAdminPreview] = useState(false);
+  useEffect(() => { setAdminPreview(false); }, [activeId]);
+
   const active = useMemo(() => characters.find(c => c.id === activeId) || null, [characters, activeId]);
   const activeCampaign = useMemo(() => campaigns.find(c => c.id === activeCampaignId) || null, [campaigns, activeCampaignId]);
 
-  // A hero is editable by its owner, the director of its campaign, or a global admin.
-  // The party may still VIEW each other's sheets read-only (RLS allows select); only
-  // these three may write (mirrors the characters_update RLS policy).
+  // A hero is editable by its owner, the director of its campaign, a global admin, or —
+  // when the hero is public — any member of its campaign. The party may still VIEW
+  // each other's sheets read-only (RLS allows select); everyone else may not write
+  // (mirrors the characters_update RLS policy).
   const canEditCharacter = useCallback(
     (ch) => canEditCharacterFor(ch, currentUser, campaigns),
     [currentUser, campaigns]
+  );
+  const canSetVisibility = useCallback(
+    (ch) => canSetVisibilityFor(ch, currentUser),
+    [currentUser]
   );
 
   // Ref mirror of activeId so the realtime callback isn't stale without resubscribing.
   const activeIdRef = React.useRef(activeId);
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  // Save-in-progress markers, declared up here because the realtime merge below
+  // consults them. pendingSave holds the debouncing edit (see queueSave);
+  // inFlightSaveId is the hero whose upsert is currently on the wire.
+  const saveTimer = React.useRef(null);
+  const pendingSave = React.useRef(null);
+  const inFlightSaveId = React.useRef(null);
 
   // ── boot + auth lifecycle ──
   // Loads the RLS-scoped store on boot and on a fresh sign-in. A token refresh
@@ -421,14 +466,18 @@ function App() {
   }, [refreshStore]);
 
   // ── live sync: merge other clients' character changes in realtime ──
-  // A player viewing the Director's edits (or vice-versa) sees them within ~1s. We skip the
-  // hero the user is actively EDITING so an echo of their own save can't clobber in-progress
-  // local state; everything else (incl. a hero we're only viewing read-only) is applied.
+  // A player viewing the Director's edits (or vice-versa) sees them within ~1s. We skip
+  // the open hero only while the user has an unsaved local edit for it (debouncing or in
+  // flight), so an echo of their own save can't clobber in-progress state; everything
+  // else — including the open sheet while idle — is applied, which is what lets two
+  // members share a public hero live. (An own-save echo arriving while idle re-applies
+  // identical content: a no-op.) Truly simultaneous edits remain last-write-wins.
   useEffect(() => {
     if (booting || !currentUser || !currentUser.isAllowed) return;
     const off = DS.subscribeCharacters(
       (row) => setCharacters(prev => {
-        if (row.id === activeIdRef.current && canEditCharacter(row)) return prev;
+        if (shouldSkipRealtimeMerge(row.id, activeIdRef.current,
+              pendingSave.current ? pendingSave.current.id : null, inFlightSaveId.current)) return prev;
         const merged = normalizeSkills(normalizeLanguages(migrateCharacterChars(row)));
         const i = prev.findIndex(c => c.id === row.id);
         return i === -1 ? [...prev, merged] : prev.map(c => (c.id === row.id ? merged : c));
@@ -436,7 +485,7 @@ function App() {
       (id) => setCharacters(prev => prev.filter(c => c.id !== id)),
     );
     return off;
-  }, [booting, currentUser, canEditCharacter]);
+  }, [booting, currentUser]);
 
   // ── warm the wizard's opening art while the app idles ──
   // The twelve ancestry posters and the chapter-one backdrop are static and
@@ -458,15 +507,15 @@ function App() {
   // ── debounced per-character save (replaces the old whole-array write-through) ──
   // saveState drives the wizard's save pill: 'pending' while an edit is debouncing
   // or in flight, 'saved' (+timestamp) once Supabase confirms, 'error' on failure.
-  const saveTimer = React.useRef(null);
-  const pendingSave = React.useRef(null);
+  // (saveTimer / pendingSave / inFlightSaveId are declared above the realtime effect.)
   const [saveState, setSaveState] = useState({ status: 'saved', at: null });
   // The character that most recently failed to save, kept for a user-driven retry.
   const lastFailedSave = React.useRef(null);
   const runSave = useCallback((ch) => {
+    inFlightSaveId.current = ch.id;
     DS.upsertCharacter(ch)
-      .then(() => { lastFailedSave.current = null; setSaveState({ status: 'saved', at: Date.now() }); })
-      .catch(e => { console.error('Save failed', e); lastFailedSave.current = ch; setSaveState({ status: 'error', at: Date.now() }); });
+      .then(() => { inFlightSaveId.current = null; lastFailedSave.current = null; setSaveState({ status: 'saved', at: Date.now() }); })
+      .catch(e => { inFlightSaveId.current = null; console.error('Save failed', e); lastFailedSave.current = ch; setSaveState({ status: 'error', at: Date.now() }); });
   }, []);
   const retrySave = useCallback(() => {
     if (lastFailedSave.current) runSave(lastFailedSave.current);
@@ -510,9 +559,10 @@ function App() {
       if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
       // If the page survives (tab switch rather than close), reflect the outcome
       // in the pill; if it's truly unloading these callbacks simply never run.
+      inFlightSaveId.current = ch.id;
       DS.upsertCharacterKeepalive(ch)
-        .then(() => { lastFailedSave.current = null; setSaveState({ status: 'saved', at: Date.now() }); })
-        .catch(e => { console.error('Save failed', e); lastFailedSave.current = ch; setSaveState({ status: 'error', at: Date.now() }); });
+        .then(() => { inFlightSaveId.current = null; lastFailedSave.current = null; setSaveState({ status: 'saved', at: Date.now() }); })
+        .catch(e => { inFlightSaveId.current = null; console.error('Save failed', e); lastFailedSave.current = ch; setSaveState({ status: 'error', at: Date.now() }); });
     };
     const onVisibility = () => { if (document.visibilityState === 'hidden') flushKeepalive(); };
     window.addEventListener('pagehide', flushKeepalive);
@@ -590,6 +640,21 @@ function App() {
       console.error('Assign failed', e);
       reportSyncError('COULD NOT MOVE HERO — CHANGE UNDONE');
       setCharacters(prev => prev.map(c => (c.id === charId ? { ...c, campaignId: before.campaignId ?? null } : c)));
+    });
+  }, [characters, reportSyncError]);
+
+  // Flip a hero between private and public. Fire-and-forget like assignCharacter —
+  // deliberately not routed through queueSave: the flip must commit immediately and
+  // also work from the roster, where nothing is "active".
+  const setCharacterVisibility = useCallback((charId, visibility) => {
+    const before = characters.find(c => c.id === charId);
+    if (!before || (before.visibility || 'private') === visibility) return;
+    const next = { ...before, visibility, lastModified: Date.now() };
+    setCharacters(prev => prev.map(c => (c.id === charId ? next : c)));
+    DS.upsertCharacter(next).catch(e => {
+      console.error('Visibility change failed', e);
+      reportSyncError('COULD NOT CHANGE VISIBILITY — CHANGE UNDONE');
+      setCharacters(prev => prev.map(c => (c.id === charId ? { ...c, visibility: before.visibility || 'private' } : c)));
     });
   }, [characters, reportSyncError]);
 
@@ -837,6 +902,7 @@ function App() {
                   onCreate={() => createCharacter(null, { view: 'roster' })}
                   onDelete={deleteCharacter}
                   onAssign={assignCharacter}
+                  onSetVisibility={setCharacterVisibility}
                 />
               )}
               {view === 'campaigns' && (
@@ -895,7 +961,10 @@ function App() {
           />
         ) : view === 'play' && active ? (
           (() => {
-            const editable = canEditCharacter(active);
+            // A previewing admin gets the genuine read-only wiring — the exact
+            // rendering (and no-op mutations) a real viewer gets.
+            const previewing = currentUser.isAdmin && adminPreview;
+            const editable = canEditCharacter(active) && !previewing;
             return (
               <PlayView
                 character={active}
@@ -905,6 +974,12 @@ function App() {
                 canEdit={editable}
                 saveState={editable ? saveState : null}
                 owner={users.find(u => u.id === active.ownerId) || null}
+                isOwner={active.ownerId === currentUser.id}
+                canSetVisibility={canSetVisibility(active) && !previewing}
+                onSetVisibility={(v) => setCharacterVisibility(active.id, v)}
+                canPreviewReadonly={currentUser.isAdmin}
+                previewReadonly={previewing}
+                onTogglePreviewReadonly={() => setAdminPreview(p => !p)}
                 onError={reportSyncError}
               />
             );
@@ -940,6 +1015,8 @@ const CLASS_CHOICE_SLOTS = {
   enchantWard: [['Enchantment', 'enchantments', 'enchantment'], ['Ward', 'wards', 'ward']],
   augmentWard: [['Augmentation', 'enchantments', 'enchantment'], ['Ward', 'wards', 'ward']],
   augment:     [['Augmentation', 'enchantments', 'enchantment']],
+  formation:    [['Formation', 'formations', 'formation']],
+  quickCommand: [['Quick Command', 'quickCommands', 'quickCommand']],
 };
 
 // Chosen options for one choice-bearing class feature → [{ label, name, text }].
@@ -1086,10 +1163,11 @@ function summarizeBenefits(c) {
       for (const f of cls.features) {
         if (f.ability) {
           // Active class abilities are surfaced in the Abilities panel, not as text.
+          // riderBySub appends the chosen subclass's benefit (Censor's Judgment,
+          // Beastheart's Feral Strike) to the card.
           let ability = f.ability;
-          if (cls.id === 'censor' && f.name === 'Judgment' && cls.judgmentOrder?.[c.cclass?.subclass]) {
-            ability = { ...ability, orderBenefit: cls.judgmentOrder[c.cclass.subclass] };
-          }
+          const rider = ability.riderBySub?.[c.cclass?.subclass];
+          if (rider) ability = { ...ability, orderBenefit: rider };
           classAbilities.push(ability);
         } else if (CLASS_CHOICE_SLOTS[f.choose]) {
           // Chosen options surface as their own entries with full rules text
@@ -1115,6 +1193,23 @@ function summarizeBenefits(c) {
     // Kit-granted features (e.g. the stormwight kits' per-kit Growing Ferocity tables).
     for (const kd of [kitDef(c), kit2Def(c)]) {
       if (kd?.features) for (const kf of kd.features) features.push({ name: kf.name, text: kf.text, table: kf.table });
+    }
+    // Beastheart companion + Summoner portfolio picks — summarized as features so
+    // the Review step and the Foundry export carry them without bespoke handling.
+    if (cls.companionRequired && c.cclass?.companion) {
+      const comp = companionById(c.cclass.companion);
+      if (comp) {
+        const opts = Object.entries(c.cclass.companionOptions || {}).map(([, v]) => v).filter(Boolean);
+        const traits = (comp.traits || []).map(t => `**${t.name}:** ${t.text}`).join('\n\n');
+        features.push({ name: `Companion — ${comp.name}`, text: `${comp.flavor ? comp.flavor + '\n\n' : ''}${traits}${opts.length ? `\n\nChosen: ${opts.join(', ')}` : ''}` });
+        for (const a of comp.abilities || []) classAbilities.push(a);
+      }
+    }
+    if (cls.minionPicks && c.cclass?.minions) {
+      // Named distinctly from the class's own "Portfolio" prompt feature — both
+      // render in the same features list, keyed by name.
+      const names = collectMinionIds(c).map(id => minionById(id)?.name).filter(Boolean);
+      if (names.length) features.push({ name: 'Chosen Minions', text: names.join(' · ') });
     }
     if (cls.pickTwoDomains && (c.cclass?.domains?.length)) {
       features.push({ name: 'Domains', text: c.cclass.domains.join(', ') });
@@ -1406,6 +1501,6 @@ export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectSkillEntries, duplicateSkillPicks, normalizeSkills };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
-export { canEditCharacterFor };
+export { canEditCharacterFor, canSetVisibilityFor, shouldSkipRealtimeMerge };
 export { parseHash, navToHash };
 export { App };

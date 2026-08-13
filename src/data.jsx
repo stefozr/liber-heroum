@@ -7,6 +7,8 @@ import { DS_ANCESTRIES } from './data/ancestries.js';
 import { DS_CULTURES } from './data/cultures.js';
 import { DS_CAREERS } from './data/careers.js';
 import { DS_CLASSES } from './data/classes.js';
+import { BEASTHEART_COMPANIONS, companionById } from './data/beastheart-companions.js';
+import { SUMMONER_PORTFOLIOS, SUMMONER_WARDS, minionById, collectMinionIds } from './data/summoner-minions.js';
 import { DS_KITS, kitPoolFor } from './data/kits.js';
 import { DS_COMPLICATIONS } from './data/complications.js';
 import { DS_LEVEL_BONUSES } from './data/level-bonuses.js';
@@ -19,4 +21,6 @@ Object.assign(window, {
 export {
   DS_LANGUAGES, DS_DEAD_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS,
   DS_LEVEL_BONUSES, kitPoolFor,
+  BEASTHEART_COMPANIONS, companionById,
+  SUMMONER_PORTFOLIOS, SUMMONER_WARDS, minionById, collectMinionIds,
 };

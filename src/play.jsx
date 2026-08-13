@@ -5,8 +5,9 @@ import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, deleteLevelProgression } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
+import { companionById, minionById, collectMinionIds } from './data.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
-import { SheetStyles, AncestryTraitsList, KitDetails } from './theme/sheet.jsx';
+import { SheetStyles, AncestryTraitsList, KitDetails, StatblockCard } from './theme/sheet.jsx';
 import { Tabs, TabPanel, TabsStyles } from './theme/tabs.jsx';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
 import { DS } from './backend.jsx';
@@ -32,6 +33,32 @@ const CONDITIONS = DS_RULES.find(s => s.id === 'conditions')?.entries || [];
 // The only conditions with a flat numeric effect: a speed cap ("has speed 0" /
 // "has speed 2 unless their speed is already lower"). The rest are roll
 // mechanics (banes, edges, action economy) the tooltip explains instead.
+// ── Summoner squad math — pure, exported for tests ──
+// A squad pools its minions' Stamina; the alive count is always derived from the
+// pool (never stored), so summon/dismiss/damage are plain pool arithmetic.
+function perMinionStamina(minion, character) {
+  const base = parseInt(minion?.stamina, 10) || 1;
+  const elite = String(character?.cclass?.formation || '').startsWith('Elite') ? 3 : 0;
+  return base + elite;
+}
+function minionMax(character) {
+  return 8 + (String(character?.cclass?.formation || '').startsWith('Horde') ? 4 : 0);
+}
+function squadAlive(squad, per) {
+  return Math.max(0, Math.ceil((squad?.stamina || 0) / Math.max(1, per)));
+}
+// One minion dies per per-minion-Stamina chunk removed from the pool; damage
+// beyond the pool is reported as excess (the summoner takes 2 + level, unless
+// Leader formation) but never auto-applied to the hero.
+function applySquadDamage(squad, dmg, per) {
+  const pool = squad?.stamina || 0;
+  const hit = Math.max(0, Math.floor(dmg) || 0);
+  const stamina = Math.max(0, pool - hit);
+  const before = squadAlive(squad, per);
+  const after = Math.max(0, Math.ceil(stamina / Math.max(1, per)));
+  return { stamina, deaths: before - after, excess: Math.max(0, hit - pool) };
+}
+
 const CONDITION_SPEED = { Grabbed: 0, Restrained: 0, Slowed: 2 };
 function conditionedSpeed(speed, conditions) {
   let s = speed;
@@ -82,7 +109,7 @@ function TopBarMenu({ items }) {
   );
 }
 
-function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState = null, owner = null, onError = () => {} }) {
+function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState = null, owner = null, isOwner = true, canSetVisibility = false, onSetVisibility = null, canPreviewReadonly = false, previewReadonly = false, onTogglePreviewReadonly = null, onError = () => {} }) {
   const cls = classDef(character);
   const anc = ancestryDef(character);
   const kit = kitDef(character);
@@ -172,7 +199,17 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
 
   const adjStamina = (delta) => setPlay(p => ({ ...p, stamina: Math.max(-derived.winded, Math.min(derived.staminaMax, (p.stamina ?? derived.staminaMax) + delta)) }));
   const setStamina = (val) => setPlay(p => ({ ...p, stamina: Math.max(0, Math.min(derived.staminaMax, Math.floor(val))) }));
-  const adjResource = (delta) => setPlay(p => ({ ...p, resource: Math.max(0, (p.resource || 0) + delta) }));
+  // Beastheart: ferocity spent by either partner becomes companion rampage, so the
+  // stepper's actual clamped decrease auto-feeds the meter. The type-in editor
+  // (setResource) is the correction channel and deliberately leaves rampage alone.
+  const isBeastheart = cls?.id === 'beastheart';
+  const isSummoner = cls?.id === 'summoner';
+  const adjResource = (delta) => setPlay(p => {
+    const cur = p.resource || 0;
+    const next = Math.max(0, cur + delta);
+    const spent = cur - next;
+    return { ...p, resource: next, ...(isBeastheart && spent > 0 ? { rampage: (p.rampage || 0) + spent } : {}) };
+  });
   const setResource = (val) => setPlay(p => ({ ...p, resource: Math.max(0, Math.floor(val)) }));
   const adjVictories = (delta) => setPlay(p => ({ ...p, victories: Math.max(0, (p.victories || 0) + delta) }));
   const adjSurges = (delta) => setPlay(p => ({ ...p, surges: Math.max(0, (p.surges || 0) + delta) }));
@@ -198,6 +235,10 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       recoveriesUsed: 0,
       xp: (p.xp || 0) + (p.victories || 0),
       victories: 0,
+      // Master-class trackers reset with the encounter/day.
+      companionStamina: null,
+      rampage: 0,
+      squads: [],
     }));
     setRespiteOpen(false);
   };
@@ -278,7 +319,8 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       const p = stored.picks?.[ch.id];
       if (!p) continue;
       let value;
-      if (p.chosen) value = `${p.chosen} (${typeof p.name === 'string' ? p.name.replace(/\s*(Perk|Skill)$/i, '') : p.chosen})`;
+      if (Array.isArray(p)) value = p.map(o => o.name || o.id).join(' · ');
+      else if (p.chosen) value = `${p.chosen} (${typeof p.name === 'string' ? p.name.replace(/\s*(Perk|Skill)$/i, '') : p.chosen})`;
       else value = p.name || p.id || String(p);
       out.push({ label: ch.label, value, kind: ch.kind, text: p.chosenText || null });
     }
@@ -341,6 +383,23 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
     { id: 'rules', label: 'RULES', onClick: () => setRulesOpen(true) },
     { id: 'export', label: 'EXPORT', onClick: exportFoundry,
       title: 'Download as a FoundryVTT (Draw Steel system) actor file' },
+    // Admin testing aid — listed regardless of canEdit so the preview can be exited.
+    canPreviewReadonly && onTogglePreviewReadonly && {
+      id: 'preview',
+      label: previewReadonly ? 'EXIT READ-ONLY' : 'VIEW READ-ONLY',
+      title: previewReadonly
+        ? 'Return to the editable sheet'
+        : 'Preview this sheet exactly as a read-only viewer sees it',
+      onClick: onTogglePreviewReadonly,
+    },
+    canSetVisibility && onSetVisibility && {
+      id: 'visibility',
+      label: character.visibility === 'public' ? 'MAKE PRIVATE' : 'MAKE PUBLIC',
+      title: character.visibility === 'public'
+        ? 'The whole party can edit this sheet — restrict it to you and the Director'
+        : 'Let every member of this campaign edit this sheet',
+      onClick: () => onSetVisibility(character.visibility === 'public' ? 'private' : 'public'),
+    },
     canEdit && onEdit && { id: 'edit', label: 'EDIT', onClick: onEdit },
     { id: 'exit', label: '◂ ROSTER', onClick: onExit },
   ].filter(Boolean);
@@ -369,8 +428,13 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
         right={<>
           <SavePill saveState={saveState} />
           {!canEdit && (
-            <span className="play-readonly-tag" title="Only the owner or Director can edit this hero">
+            <span className="play-readonly-tag" title="This sheet is private — only the owner or Director can edit it">
               👁 Viewing{owner?.displayName ? ` · kept by ${owner.displayName}` : ''}
+            </span>
+          )}
+          {canEdit && !isOwner && character.visibility === 'public' && owner?.displayName && (
+            <span className="play-readonly-tag" title="This sheet is public — every campaign member may edit it">
+              ⚭ Party-editable · kept by {owner.displayName}
             </span>
           )}
           {/* Rendered twice on purpose: as buttons for wide viewports and as menu
@@ -505,6 +569,10 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
           <div className="play-grid">
             {/* LEFT column */}
             <div className="play-col-l">
+              {/* Master-class trackers — the most-touched combat surface for these classes */}
+              {isBeastheart && <CompanionPanel character={character} derived={derived} canEdit={canEdit} setPlay={setPlay} />}
+              {isSummoner && <MinionsPanel character={character} derived={derived} canEdit={canEdit} setPlay={setPlay} showTip={showTip} hideTip={hideTip} />}
+
               {/* Abilities, grouped by where they come from */}
               <Panel title="Abilities" collapsible>
                 {abilityGroups.map(g => (
@@ -798,6 +866,8 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
           <li>Convert <strong>{character.play.victories || 0} {(character.play.victories || 0) === 1 ? 'Victory' : 'Victories'}</strong> into XP{(character.play.victories || 0) > 0 && <> — XP becomes <strong>{(character.play.xp || 0) + (character.play.victories || 0)}</strong></>}</li>
           <li>Restore Stamina to <strong>{derived.staminaMax}</strong></li>
           <li>Regain all <strong>{derived.recoveries}</strong> Recoveries</li>
+          {isBeastheart && <li>Companion Stamina restored, Rampage cleared</li>}
+          {isSummoner && <li>All minions dismissed</li>}
         </ul>
       </Modal>
 
@@ -993,6 +1063,188 @@ function CounterBox({ label, value, total, onPlus, onMinus }) {
         <button disabled={!onMinus} onClick={onMinus}>−</button>
         <button disabled={!onPlus} onClick={onPlus}>+</button>
       </div>
+    </div>
+  );
+}
+
+// ── Beastheart: the companion is a second creature — its own Stamina gauge
+// (max = the hero's), a Rampage meter feeding the threshold table, and the
+// full stat block with level-gated advancements. ──
+function CompanionPanel({ character, derived, canEdit, setPlay }) {
+  const comp = companionById(character.cclass?.companion);
+  const cls = classDef(character);
+  if (!comp) return null;
+  const play = character.play || {};
+  const rampage = play.rampage || 0;
+  const value = play.companionStamina ?? derived.staminaMax;
+  const rampageTable = (cls?.features || []).find(f => f.name === 'Rampage')?.table;
+  const attuned = Object.values(character.cclass?.companionOptions || {}).filter(Boolean);
+  const adjComp = canEdit ? (delta) => setPlay(p => ({ ...p, companionStamina: Math.max(-derived.winded, Math.min(derived.staminaMax, (p.companionStamina ?? derived.staminaMax) + delta)) })) : null;
+  const setComp = canEdit ? (val) => setPlay(p => ({ ...p, companionStamina: Math.max(0, Math.min(derived.staminaMax, Math.floor(val))) })) : null;
+  const adjRampage = canEdit ? (d) => setPlay(p => ({ ...p, rampage: Math.max(0, (p.rampage || 0) + d) })) : null;
+  const endEncounter = canEdit ? () => setPlay(p => ({ ...p, resource: 0, rampage: 0 })) : null;
+  return (
+    <Panel title={`Companion — ${comp.name}`} collapsible>
+      <div className="stack-12">
+        <VitalGauge
+          label="Companion Stamina"
+          value={value}
+          max={derived.staminaMax}
+          winded={derived.winded}
+          accent="var(--tier3-t)"
+          onAdj={adjComp}
+          onSet={setComp}
+        />
+        {value <= 0 && (
+          <div className="empty-note">
+            {value <= -derived.winded
+              ? 'Your companion is dead — Heart of the Beast (5 ferocity) can restore them to life.'
+              : 'Your companion is dying.'}
+          </div>
+        )}
+        <div className="mc-row">
+          <CounterBox label="Rampage" value={rampage} onPlus={adjRampage ? () => adjRampage(1) : null} onMinus={adjRampage ? () => adjRampage(-1) : null} />
+          {rampage >= 8 && <Pill kind="rubric">RAMPAGING</Pill>}
+          <div style={{ flex: 1 }}></div>
+          <Button kind="ghost" small onClick={endEncounter} disabled={!endEncounter} title="End of encounter: ferocity and rampage are lost">END ENCOUNTER ✕</Button>
+        </div>
+        {rampageTable && <FeatureTable table={rampageTable} level={character.level || 1} reached={rampage} />}
+        <StatblockCard block={comp} level={character.level || 1} staminaNote="= yours">
+          {attuned.length > 0 && (
+            <div className="kit-meta-line">Attuned: {attuned.join(', ')}</div>
+          )}
+        </StatblockCard>
+      </div>
+    </Panel>
+  );
+}
+
+// ── Summoner: up to two squads of same-name minions with pooled Stamina.
+// Summon/dismiss move whole per-minion chunks; the damage entry runs the
+// chunk-death math and reports excess without auto-applying it to the hero. ──
+function MinionsPanel({ character, derived, canEdit, setPlay, showTip, hideTip }) {
+  const cls = classDef(character);
+  const play = character.play || {};
+  const squads = play.squads || [];
+  // Squad-able minions the character knows (signature + picked tiers); fixtures
+  // and champions have no essence cost and are not squads.
+  const known = collectMinionIds(character).map(id => minionById(id)).filter(m => m && m.cost);
+  const max = minionMax(character);
+  const totalAlive = squads.reduce((s, sq) => s + squadAlive(sq, perMinionStamina(minionById(sq.minionId), character)), 0);
+  const formation = character.cclass?.formation || '—';
+  const quickCommand = character.cclass?.quickCommand || '—';
+  const formationDef = (cls?.formations || []).find(f => f.name === formation);
+  const qcDef = (cls?.quickCommands || []).find(f => f.name === quickCommand);
+  const freePerTurn = String(formation).startsWith('Horde') ? 4 : 3;
+  const setSquads = (fn) => setPlay(p => ({ ...p, squads: fn(p.squads || []) }));
+  const addSquad = canEdit ? () => setSquads(sqs => sqs.length >= 2 ? sqs : [
+    ...sqs,
+    { id: `sq-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, minionId: known[0]?.id || null, stamina: 0 },
+  ]) : null;
+  const endEncounter = canEdit ? () => setPlay(p => ({ ...p, resource: 0, squads: [] })) : null;
+  const squadTypes = [...new Set(squads.map(sq => sq.minionId).filter(Boolean))];
+  return (
+    <Panel title="Minions" collapsible>
+      <div className="stack-12">
+        <div className="mc-stats">
+          <StatTile label="Summoner’s Range" value={5 + (derived.chars?.Reason || 0)} />
+          <StatTile label="Minions" value={totalAlive} sub={` / ${max}`} />
+          <span onMouseEnter={formationDef ? showTip(formationDef.name, formationDef.text) : undefined} onMouseLeave={hideTip}>
+            <StatTile label="Formation" value={String(formation).replace(/ Formation$/, '')} />
+          </span>
+          <span onMouseEnter={qcDef ? showTip(qcDef.name, qcDef.text) : undefined} onMouseLeave={hideTip}>
+            <StatTile label="Quick Command" value={quickCommand} />
+          </span>
+        </div>
+        <div className="empty-note">
+          Start of combat: 2 free signature minions · start of turn: +2 essence, {freePerTurn} free signature minions.
+        </div>
+        {squads.map(sq => (
+          <SquadRow
+            key={sq.id}
+            squad={sq}
+            character={character}
+            known={known}
+            canEdit={canEdit}
+            canSummon={totalAlive < max}
+            onChange={(next) => setSquads(sqs => sqs.map(x => x.id === sq.id ? next : x))}
+            onRemove={() => setSquads(sqs => sqs.filter(x => x.id !== sq.id))}
+          />
+        ))}
+        <div className="mc-row">
+          <Button kind="ghost" small onClick={addSquad} disabled={!addSquad || squads.length >= 2}>ADD SQUAD ✚</Button>
+          <div style={{ flex: 1 }}></div>
+          <Button kind="ghost" small onClick={endEncounter} disabled={!endEncounter} title="End of combat: minions are dismissed and essence is lost">END ENCOUNTER ✕</Button>
+        </div>
+        {squadTypes.map(id => {
+          const m = minionById(id);
+          return m ? (
+            <details className="sb-details" key={id}>
+              <summary>{m.name} — stat block</summary>
+              <StatblockCard block={m} level={character.level || 1} />
+            </details>
+          ) : null;
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+function SquadRow({ squad, character, known, canEdit, canSummon, onChange, onRemove }) {
+  const minion = minionById(squad.minionId);
+  const per = perMinionStamina(minion, character);
+  const alive = squadAlive(squad, per);
+  const [dmg, setDmg] = useState('');
+  const [note, setNote] = useState(null);
+  const leader = String(character.cclass?.formation || '').startsWith('Leader');
+  const summon = canEdit && canSummon && minion && alive < 8 ? () => onChange({ ...squad, stamina: (squad.stamina || 0) + per }) : null;
+  const dismiss = canEdit && alive > 0 ? () => onChange({ ...squad, stamina: Math.max(0, (squad.stamina || 0) - per) }) : null;
+  const applyDamage = () => {
+    const n = parseInt(dmg, 10);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const r = applySquadDamage(squad, n, per);
+    onChange({ ...squad, stamina: r.stamina });
+    const bits = [];
+    if (r.deaths > 0) bits.push(`${r.deaths} ${r.deaths === 1 ? 'minion dies' : 'minions die'}`);
+    if (r.excess > 0 && !leader) bits.push(`excess ${r.excess} — you take ${2 + (character.level || 1)}`);
+    if (r.excess > 0 && leader) bits.push('excess ignored (Leader Formation)');
+    setNote(bits.length ? bits.join(' · ') : 'the squad holds');
+    setDmg('');
+  };
+  return (
+    <div className="squad-row">
+      <div className="mc-row">
+        <select
+          className="sig-option-select"
+          value={squad.minionId || ''}
+          disabled={!canEdit || (squad.stamina || 0) > 0}
+          title={(squad.stamina || 0) > 0 ? 'Dismiss the squad before changing its minion type' : undefined}
+          onChange={(e) => onChange({ ...squad, minionId: e.target.value, stamina: 0 })}>
+          <option value="" disabled>Choose minion…</option>
+          {known.map(m => <option key={m.id} value={m.id}>{m.name} · {m.cost.essence} essence</option>)}
+        </select>
+        <button type="button" className="icon-btn" disabled={!onRemove || !canEdit} onClick={onRemove} title="Disband this squad">✕</button>
+      </div>
+      <div className="mc-row">
+        <span className="sq-fig">⛊ {alive} / 8</span>
+        <span className="sq-fig muted">pool {squad.stamina || 0}{minion ? ` (${per}/minion)` : ''}</span>
+        <div className="cnt-ctl">
+          <button disabled={!dismiss} onClick={dismiss} title="Dismiss / lose one minion">−1</button>
+          <button disabled={!summon} onClick={summon} title="Summon one minion">+1</button>
+        </div>
+        <input
+          className="sq-dmg"
+          type="number"
+          min="1"
+          placeholder="dmg"
+          value={dmg}
+          disabled={!canEdit || alive === 0}
+          onChange={(e) => setDmg(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') applyDamage(); }}
+        />
+        <Button kind="ghost" small onClick={applyDamage} disabled={!canEdit || alive === 0}>APPLY</Button>
+      </div>
+      {note && <div className="empty-note">{note}</div>}
     </div>
   );
 }
@@ -1224,6 +1476,28 @@ button.hb-stat-num:hover { color: var(--gold); text-decoration-color: var(--gold
    underlying update is already a no-op; this makes the controls look non-interactive. */
 .play-readonly .vitals button,
 .play-readonly .vitals input { pointer-events: none; opacity: 0.5; }
+.play-readonly .squad-row button,
+.play-readonly .squad-row input,
+.play-readonly .squad-row select,
+.play-readonly .mc-row button { pointer-events: none; opacity: 0.5; }
+
+/* Master-class trackers (Beastheart companion, Summoner minion squads). */
+.mc-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.squad-row { border: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 8px; }
+.sq-fig { font-family: var(--mono); font-size: var(--fs-5); color: var(--ink); }
+.sq-fig.muted { color: var(--ink-3); font-size: var(--fs-3); }
+.sq-dmg {
+  width: 64px; font-family: var(--mono); font-size: var(--fs-5); color: var(--ink);
+  background: transparent; border: 1px solid var(--line-2); padding: 5px 8px;
+}
+.sq-dmg:focus { outline: none; border-color: var(--gold); }
+.sb-details summary {
+  font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3);
+  letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; padding: 4px 0;
+}
+.sb-details[open] summary { color: var(--gold-2); }
+.sb-details > .statblock { margin-top: 8px; }
 .play-readonly-tag {
   font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 3px;
@@ -1569,4 +1843,4 @@ ${MQ.touch} {
 const PlayStyles = () => React.createElement('style', {}, PLAY_CSS);
 
 Object.assign(window, { PlayView });
-export { PlayView, conditionedSpeed };
+export { PlayView, conditionedSpeed, perMinionStamina, minionMax, squadAlive, applySquadDamage };

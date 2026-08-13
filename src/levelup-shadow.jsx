@@ -42,9 +42,18 @@ const COLLEGE_FEAT_5 = {
   'caustic-alchemy': [{ name: 'Volatile Reagents', text: 'When you take damage, each adjacent enemy takes fire/acid/poison damage (your choice) equal to your Agility. Your Defensive Roll now shifts up to 5 squares (including vertically).' }],
   'harlequin-mask': [{ name: 'Harlequin Gambit', text: 'When you reduce an adjacent non-minion to 0 Stamina, free maneuver: use I\u2019m No Threat then move your speed. Same-size victims can be disguised as without spending insight.' }],
 };
+const COLLEGE_ABILITY_AUTO_8 = {
+  'caustic-alchemy': [
+    { name: 'Time Bomb', noBadge: true,
+      flavor: 'The longer it cooks, the bigger the boom.',
+      keywords: ['Area', 'Ranged'], type: 'Free maneuver', distance: '2 cube within 10', target: 'Each enemy in the area',
+      effect: 'Each target takes acid, fire, or poison damage (your choice) equal to your Agility score. For each combat round that has passed since this ability was last used in the encounter, the area increases by 1 and you gain 1 surge that must be used with this ability. The area and surges reset after use or at the end of the encounter.',
+      spendCost: '2+', spend: 'For every 2 insight spent, the cube’s size increases by 1 and you gain 1 surge usable only with this ability.' },
+  ],
+};
 const COLLEGE_FEAT_8 = {
   'black-ash': [{ name: 'Cinder Step', text: 'Whenever you willingly move, you can teleport; this counts as a shadow ability for Burning Ash and Trail of Cinders.' }],
-  'caustic-alchemy': [{ name: 'Time Bomb', text: 'You gain area-damage immunity equal to your Agility, plus the once-per-round Time Bomb free maneuver — a growing cube dealing acid/fire/poison damage equal to your Agility.' }],
+  'caustic-alchemy': [{ name: 'Time Bomb', text: 'You have damage immunity equal to your Agility score against abilities with the Area keyword. You also gain the Time Bomb ability.' }],
   'harlequin-mask': [{ name: 'Parkour', text: 'Your movement no longer provokes opportunity attacks, and you can use Harlequin Gambit as a free triggered action when Clever Trick drops a creature to 0.' }],
 };
 const COLLEGE_ABILITY_2 = {
@@ -103,8 +112,11 @@ export const shadow = {
   3: {
     summary: 'A moment of focus leaves your foes firmly in your sights.',
     staminaGain: 6,
-    autoFeatures: () => [
-      { name: 'Careful Observation', text: 'Maneuver (Ranged 20): assess one creature. As long as you keep distance and line of effect and strike no one else first, you gain an edge and 1 surge on your next strike against them.' },
+    autoAbilities: () => [
+      { name: 'Careful Observation', noBadge: true,
+        flavor: 'A moment of focus leaves a foe firmly in your sights.',
+        keywords: ['Ranged'], type: 'Maneuver', distance: 'Ranged 20', target: 'One creature',
+        effect: 'You assess the target. As long as you remain within distance, keep line of effect, and strike no other creature first, you gain an edge and 1 surge usable only on your next strike against them.' },
     ],
     choices: [
       { id: 'insight-7', label: '7-Insight Ability', help: 'Choose one heroic ability that costs 7 insight.', kind: 'ability', options: INS_7 },
@@ -136,8 +148,11 @@ export const shadow = {
   6: {
     summary: 'You learn to slip into your umbral form — a shadow creature dripping with ash.',
     staminaGain: 6,
-    autoFeatures: () => [
-      { name: 'Umbral Form', text: 'Maneuver: become a shadow creature until end of encounter, dying, or an hour\u2019s focus. You climb at full speed, ignore enemies\u2019 difficult terrain (dealing corruption when passing through), auto-hide with cover, gain 1 surge per turn and corruption immunity 5 + level — but enemies gain an edge against you and you take a bane on Presence tests.' },
+    autoAbilities: () => [
+      { name: 'Umbral Form', noBadge: true,
+        flavor: 'You dissolve into living shadow, ash trailing from your silhouette.',
+        keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
+        effect: 'You become a shadow creature until the end of the encounter, until you are dying, or until you revert with an hour’s focus. In this form you climb at full speed, ignore enemies’ difficult terrain (dealing corruption damage when passing through their spaces), automatically hide when you have cover, gain 1 surge at the start of each of your turns, and have corruption immunity equal to 5 + your level — but enemies gain an edge on power rolls against you and you take a bane on Presence tests.' },
     ],
     choices: [
       { id: 'perk-6', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
@@ -162,6 +177,7 @@ export const shadow = {
     summary: 'Your college entrusts you with its highest technique.',
     staminaGain: 6,
     autoFeatures: ({ sub }) => COLLEGE_FEAT_8[sub] || [],
+    autoAbilities: ({ sub }) => COLLEGE_ABILITY_AUTO_8[sub] || [],
     choices: [
       { id: 'perk-8', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
       { id: 'insight-11', label: '11-Insight Ability', help: 'Choose one heroic ability that costs 11 insight.', kind: 'ability', options: INS_11 },
