@@ -2,9 +2,9 @@
 
 exports[`game data tables > DS_ANCESTRIES is present and unchanged 1`] = `
 {
-  "bytes": 37412,
+  "bytes": 37261,
   "count": 12,
-  "hash": "195d754c",
+  "hash": "705c5d53",
 }
 `;
 
@@ -18,25 +18,25 @@ exports[`game data tables > DS_CAREERS is present and unchanged 1`] = `
 
 exports[`game data tables > DS_CLASSES is present and unchanged 1`] = `
 {
-  "bytes": 178571,
+  "bytes": 185837,
   "count": 11,
-  "hash": "23ef5dd",
+  "hash": "fcdd8a29",
 }
 `;
 
 exports[`game data tables > DS_COMPLICATIONS is present and unchanged 1`] = `
 {
-  "bytes": 49251,
+  "bytes": 49724,
   "count": 100,
-  "hash": "62512333",
+  "hash": "31baec1",
 }
 `;
 
 exports[`game data tables > DS_CULTURES is present and unchanged 1`] = `
 {
-  "bytes": 8752,
+  "bytes": 8823,
   "count": 4,
-  "hash": "4b83d1a8",
+  "hash": "86ee3861",
 }
 `;
 

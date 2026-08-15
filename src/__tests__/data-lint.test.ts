@@ -9,7 +9,7 @@
 //      and leaked straight-quote enricher tokens ('"Damage Immunity 5"' fragments).
 //   4. Features whose text points the reader at a table that isn't in the data.
 import { describe, it, expect } from 'vitest';
-import { DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS } from '../data.jsx';
+import { DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, SUMMONER_PORTFOLIOS, BEASTHEART_COMPANIONS } from '../data.jsx';
 import { LEVELUP_DATA } from '../levelup.jsx';
 import { DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, DOMAIN_6_ABILITIES, DOMAIN_7_FEATURES, DOMAIN_9_ABILITIES } from '../data/conduit-domains.js';
 
@@ -42,6 +42,10 @@ const TABLES: Array<[string, any]> = [
   ['DS_KITS', DS_KITS],
   ['DS_COMPLICATIONS', DS_COMPLICATIONS],
   ['CONDUIT_DOMAINS', { DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, DOMAIN_6_ABILITIES, DOMAIN_7_FEATURES, DOMAIN_9_ABILITIES }],
+  // Statblock text ships on the sheet like any other rules text, and the same content
+  // pipeline writes it — it belongs under the same guards.
+  ['SUMMONER_PORTFOLIOS', SUMMONER_PORTFOLIOS],
+  ['BEASTHEART_COMPANIONS', BEASTHEART_COMPANIONS],
 ];
 
 const allStrings: Array<[string, string]> = [];
@@ -98,6 +102,68 @@ describe('data lint (H3)', () => {
     const bad = allStrings.filter(([, s]) =>
       /"(Damage|Acid|Cold|Corruption|Fire|Holy|Lightning|Poison|Psychic|Sonic)\b/.test(s));
     expect(bad.map(([p, s]) => `${p}: ${s.slice(0, 100)}`)).toEqual([]);
+  });
+
+  // ─── Truncation damage from the unified-data apply pass (v1.7) ───
+  // The unified repo stores an ability's structured effect as only its lead-in sentence
+  // ("Choose one of the following effects:") and keeps the options in metadata.content,
+  // so a pass that read the structured field shipped instructions with nothing to follow.
+  // These four guards describe what that damage looks like from the outside.
+
+  it('no prose ends on a dangling lead-in colon', () => {
+    // The options list belongs in the same string. The exception is a field whose choices
+    // are structured data the picker renders itself.
+    const STRUCTURED_CHOICES = ['Choose one skill from the following:'];
+    const bad = allStrings.filter(([, s]) =>
+      /:\s*$/.test(s) && !STRUCTURED_CHOICES.includes(s.trim()));
+    expect(bad.map(([p, s]) => `${p}: ${s.slice(-80)}`)).toEqual([]);
+  });
+
+  it('long prose ends in terminal punctuation', () => {
+    // Catches text cut mid-sentence ("…Many bureaucratic communities") and fields
+    // overwritten with a stat fragment ("Stamina: Your maximum Stamina"). Short strings
+    // are labels, names and tier fragments, which legitimately end bare. Scoped to prose
+    // fields: a power-roll tier is a sentence fragment by design ("…as a free triggered
+    // action") and a quote ends in its attribution.
+    const PROSE = /\.(desc|text|effect|flavor|benefit|drawback|special|strained)$/;
+    const bad = allStrings.filter(([p, s]) => {
+      const t = s.trim();
+      return PROSE.test(p) && t.length > 120 && !/[.!?)"'’”*\]]$/.test(t);
+    });
+    expect(bad.map(([p, s]) => `${p}: …${s.trim().slice(-70)}`)).toEqual([]);
+  });
+
+  it('no duplicated single-letter words', () => {
+    // The duplicate-word rule above needs 2+ letters, so "a a size 1M object" slips past.
+    const bad = allStrings.filter(([, s]) => /\b([aAI])\s+\1\b/.test(s));
+    expect(bad.map(([p, s]) => `${p}: ${s.slice(0, 100)}`)).toEqual([]);
+  });
+
+  it('an ability with a trigger field does not repeat the trigger in its effect', () => {
+    // The card renders `trigger` on its own line; a "**Trigger:**" inside the effect text
+    // means the effect was overwritten with the whole card and now prints twice.
+    const offenders: string[] = [];
+    const walk = (node: any, path: string, subs?: string[]) => {
+      if (typeof node === 'function' && subs) {
+        for (const sub of subs.length ? subs : [undefined]) {
+          try { walk(node({ sub }), `${path}(${sub})`, subs); } catch { /* needs fuller ctx */ }
+        }
+        return;
+      }
+      if (Array.isArray(node)) { node.forEach((v, i) => walk(v, `${path}[${i}]`, subs)); return; }
+      if (node && typeof node === 'object') {
+        if (typeof node.trigger === 'string' && node.trigger
+          && typeof node.effect === 'string' && /\*\*Trigger:?\*\*/i.test(node.effect)) {
+          offenders.push(`${path}: ${node.name || '(unnamed)'}`);
+        }
+        for (const [k, v] of Object.entries(node)) walk(v, `${path}.${k}`, subs);
+      }
+    };
+    for (const [name, table] of TABLES) walk(table, name);
+    for (const [clsId, levels] of Object.entries(LEVELUP_DATA as Record<string, any>)) {
+      walk(levels, `LEVELUP_DATA.${clsId}`, SUBS_BY_CLASS[clsId] || []);
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('features that cite a table carry table data', () => {

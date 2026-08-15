@@ -47,7 +47,7 @@ const COLLEGE_ABILITY_AUTO_8 = {
     { name: 'Time Bomb', noBadge: true,
       flavor: 'The longer it cooks, the bigger the boom.',
       keywords: ['Area', 'Ranged'], type: 'Free maneuver', distance: '2 cube within 10', target: 'Each enemy in the area',
-      effect: 'Each target takes acid, fire, or poison damage (your choice) equal to your Agility score.',
+      effect: 'Each target takes acid, fire, or poison damage (your choice) equal to your Agility score. For each combat round that has passed since this ability was last used in the encounter, the area increases by 1 and you gain 1 surge that must be used with this ability. The area and surges reset after use or at the end of the encounter.',
       spendCost: '2+', spend: 'For every 2 insight spent, you increase the cube\'s size by 1 and gain 1 surge that can be used only with this ability.' },
   ],
 };
@@ -76,7 +76,7 @@ const COLLEGE_ABILITY_6 = {
     ins(9, 'Cinderstorm', 'You teleport your friends in a burst of ash and fire.', 'Each target can teleport up to 5 squares. For each target in addition to you who teleports away from or into a space adjacent to an enemy, that enemy takes fire damage equal to your Agility score. Additionally, a target who ends this movement in concealment or cover can use the Hide maneuver even if they are observed.', { type:'Maneuver', keywords:['Magic'], distance:'4 burst', target:'Self and each ally in the area' }),
   ],
   'caustic-alchemy': [
-    ins(9, 'One Vial Makes You Better', 'A well-timed throw of a potion will keep your allies in the fight.', 'You ready, hand, or lob a potion to each target, who can immediately quaff the potion (no action required). If they don\'t drink the potion right away, they must use the Use Consumable maneuver to consume it later. The potion loses its potency at the end of the encounter.', { type:'Maneuver', keywords:['Ranged'], distance:'Ranged 10', target:'Three creatures' }),
+    ins(9, 'One Vial Makes You Better', 'A well-timed throw of a potion will keep your allies in the fight.', 'You ready, hand, or lob a potion to each target, who can immediately quaff the potion (no action required). If they don’t drink the potion right away, they must use the Use Consumable maneuver to consume it later. The potion loses its potency at the end of the encounter.\n\nA creature who drinks the potion can spend up to 2 Recoveries, and has acid immunity, fire immunity, or poison immunity (their choice) equal to your level until the end of the encounter.', { type:'Maneuver', keywords:['Ranged'], distance:'Ranged 10', target:'Three creatures' }),
     ins(9, 'One Vial Makes You Faster', 'Each ally who catches a potion you throw can take the battle to the next level.', 'You ready, hand, or lob a potion to each target, who can immediately quaff the potion (no action required). If they don\'t drink the potion right away, they must use the Use Consumable maneuver to consume it later. The potion loses its potency at the end of the encounter.', { keywords:['Ranged'], distance:'Ranged 10', target:'Three creatures', powerRoll:'Agility', tiers:t('The creature’s speed is increased by 2 until the end of the encounter','The creature can fly until the end of the encounter.','The creature turns invisible until the end of their next turn.') }),
   ],
   'harlequin-mask': [

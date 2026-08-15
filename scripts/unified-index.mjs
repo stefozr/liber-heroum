@@ -36,6 +36,46 @@ export const stripMd = (s) => deLink(s)
   .replace(/\*\*([^*]*)\*\*/g, '$1').replace(/\*([^*]*)\*/g, '$1')
   .replace(/^#+\s*/gm, '').trim();
 
+/**
+ * The prose body of `metadata.content` — the doc's full markdown, minus the leading italic
+ * flavor line and the `| **Magic** | **Maneuver** |` stat table the card renders itself.
+ *
+ * This exists because the structured `effects[].effect` is only ever the *lead-in*: for
+ * Practical Magic it is literally "Choose one of the following effects:", and the three
+ * options it promises live nowhere but `content`. A pass that trusted the structured field
+ * shipped instructions with nothing to choose from (v1.7), so the renderers below fall back
+ * here. deLink() keeps the bullets and turns headings into the **bold** lines the app
+ * renders via src/rich-text.js.
+ */
+export function contentBody(doc) {
+  const raw = doc?.metadata?.content;
+  if (!raw) return '';
+  const lines = String(raw).split('\n');
+  const kept = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (/^\|/.test(t)) continue;                                   // stat table row
+    if (!kept.length && /^\*[^*].*\*$/.test(t)) continue;          // leading italic flavor
+    if (!kept.length && !t) continue;
+    kept.push(line);
+  }
+  return deLink(kept.join('\n'));
+}
+
+/**
+ * The `**Label:** …` section of a content body, up to the next bold label at line start.
+ * Returns '' when the label is absent.
+ */
+export function contentSection(doc, label) {
+  const body = contentBody(doc);
+  if (!body) return '';
+  const m = body.match(new RegExp(`\\*\\*${label}[^:*]*:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\n\\*\\*[^*]+:\\*\\*|$)`, 'i'));
+  return m ? m[1].trim() : '';
+}
+
+/** Text that promises a list it doesn't contain — the v1.7 failure signature. */
+const isLeadIn = (s) => /:\s*$/.test(String(s || '').trim());
+
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
 
 function* walkJson(dir) {
@@ -216,6 +256,13 @@ export function renderAbility(doc) {
       effectParts.push(`**${deLink(e.name)}:** ${text}`);
     }
   }
+  // The structured effect is a lead-in whose list lives only in metadata.content — take
+  // the fuller text from there instead of shipping "Choose one of the following:" alone.
+  let effect = effectParts.join('\n\n');
+  if (isLeadIn(effect)) {
+    const fromContent = contentSection(doc, 'Effect');
+    if (fromContent.length > effect.length) effect = fromContent;
+  }
   return {
     name: doc.name,
     flavor: deLink(doc.flavor || ''),
@@ -228,7 +275,7 @@ export function renderAbility(doc) {
     costText: deLink(doc.cost || ''),
     powerRoll: roll ? parseRoll(roll.roll) : '',
     tiers: roll ? [roll.tier1, roll.tier2, roll.tier3].map(t => deLink(t || '')) : null,
-    effect: effectParts.join('\n\n'),
+    effect,
     strained: strainedParts.join('\n\n'),
     spend: spendParts.map(s => (s.text.includes(String(s.cost)) ? s.text : `${s.cost}: ${s.text}`)).join('\n\n'),
     spendParts,
@@ -237,11 +284,15 @@ export function renderAbility(doc) {
 
 /** Non-ability feature/trait text: effects[].effect joined, links stripped. */
 export function renderFeatureText(doc) {
-  return (doc.effects || [])
+  const structured = (doc.effects || [])
     .filter(e => e.roll == null)
     .map(e => {
       const text = deLink(e.effect || '');
       return !e.name || /^effects?$/i.test(e.name) ? text : `**${deLink(e.name)}:** ${text}`;
     })
     .filter(Boolean).join('\n\n');
+  // Same lead-in trap as renderAbility: the options are in metadata.content only.
+  if (!isLeadIn(structured)) return structured;
+  const body = contentBody(doc);
+  return body.length > structured.length ? body : structured;
 }

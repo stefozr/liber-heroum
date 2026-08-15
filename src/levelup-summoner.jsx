@@ -97,7 +97,7 @@ const ESS_9 = () => [
   }),
   ess(9, 'Army’s Idol', 'Your champion’s appearance has an enchanting impact on you and your allies.', {
     keywords: ['Area','Champion','Magic'], type: 'Maneuver', distance: '4 burst', target: 'Self and each ally in the area',
-    effect: 'You can use this ability as if in the space of one of your minions within your Summoner\'s Range.',
+    effect: 'You can use this ability as if in the space of one of your minions within your Summoner’s Range. Until the end of the encounter or you become dying, each target has a +2 bonus to saving throws. Each target can immediately make each of their saving throws and stand up from prone.',
   }),
   ess(9, 'The Champion Slams the Earth', 'Your champion lays their fury upon those unfortunate enough to be in their wake.', {
     keywords: ['Area','Champion','Magic','Weapon'], type: 'Main action', distance: '4 cube within 1', target: 'Each enemy and object in the area',
@@ -106,7 +106,7 @@ const ESS_9 = () => [
   }),
   ess(9, 'Their Pall Shrouds All', 'Your champion fills the area with a thick haze hiding friend from foe.', {
     keywords: ['Area','Champion','Magic'], type: 'Maneuver', distance: '4 burst', target: 'Each enemy in the area',
-    effect: 'You can use this ability as if in the space of one of your minions within your Summoner\'s Range.',
+    effect: 'You can use this ability as if in the space of one of your minions within your Summoner’s Range. Each target is R < AVERAGE, weakened (save ends). Until the end of the encounter, whenever a target gets a tier 1 result on a strike, they deal half damage. If a target was striking a creature adjacent to one of their allies, they target their ally instead.',
   }),
 ];
 
@@ -122,12 +122,12 @@ const ESS_11 = () => [
   }),
   ess(11, 'I Abjure Thee', 'Cast those not affixed to this manifold into the void of a minion’s existence.', {
     keywords: ['Area','Magic'], type: 'Main action', distance: '3 burst', target: 'Special',
-    effect: 'Each enemy minion in the area is permanently removed from the encounter map. Up to three non-leader or non-solo enemies in the area are removed from the encounter for 1 round.',
+    effect: 'Each enemy minion in the area is permanently removed from the encounter map. Up to three non-leader or non-solo enemies in the area are removed from the encounter for 1 round. A leader or a solo enemy in the area that has R, I, or P < AVERAGE is weakened and slowed (save ends) as they are partially removed from the manifold. You can increase the potency by 1 for each of your minions adjacent to the target you choose to sacrifice as a part of using this ability.',
   }),
   ess(11, 'The Champion’s Wrath', 'Your champion appears and goes into a rampage, clearing the way for your minions to march forth.', {
     keywords: ['Area','Champion','Magic','Weapon'], type: 'Main action', distance: '4 burst', target: 'Each enemy in the area',
     powerRoll: 'Reason', tiers: t('6 damage; push 4; M < WEAK, push is vertical','10 damage; push 5; M < AVERAGE, push is vertical','14 damage; push 6; M < STRONG, push is vertical'),
-    effect: 'You can use this ability as if in the space of one of your minions within your Summoner\'s Range.',
+    effect: 'You can use this ability as if in the space of one of your minions within your Summoner’s Range. You can change the damage type to be a type that your champion deals on their stat block (see Portfolio Champion). For each enemy reduced to 0 Stamina by this ability, an ally within distance can move up to their speed.',
   }),
 ];
 

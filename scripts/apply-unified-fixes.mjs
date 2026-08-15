@@ -88,6 +88,25 @@ const squash = (s) => String(s || '')
   .replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
   .replace(/[–—−]/g, '-').replace(/\s+/g, ' ').trim();
 
+/**
+ * Why swapping `app` for `ref` would lose content, or null when the swap is safe.
+ * Mirrors lossReason() in repair-unified-losses.mjs, which cleaned up the damage this
+ * guard now prevents. Growth is never a loss: the reference often carries a fuller
+ * writeup, and only the shrinking cases are suspect.
+ */
+function lossyReplacement(app, ref) {
+  const a = String(app || '').trim();
+  const r = String(ref || '').trim();
+  if (!a || !r) return null;
+  if (/:$/.test(r) && !/:$/.test(a)) return 'reference ends on a dangling lead-in colon';
+  if (r.length >= a.length) return null;
+  if (/\n- /.test(a) && !/\n- /.test(r)) return 'reference drops a bullet list the app has';
+  if (a.length >= 250 && r.length < a.length * 0.6) {
+    return `reference is ${Math.round((1 - r.length / a.length) * 100)}% shorter`;
+  }
+  return null;
+}
+
 // ───────────────────────── jobs from findings ─────────────────────────
 
 /** The entity/ability name a finding belongs to, for disambiguating duplicate literals. */
@@ -184,6 +203,13 @@ function main() {
       unapplied.push({ ...job, reason: 'reference text contains a markdown table' });
       continue;
     }
+    // Never trade complete text for truncated text. The unified repo stores an ability's
+    // structured effect as only its lead-in ("Choose one of the following effects:") and
+    // keeps the options in metadata.content, so before unified-index.mjs learned to read
+    // that, this pass silently shipped 16 fields with their lists gone (v1.7). Each of
+    // these three rules alone would have caught every one of them.
+    const lossy = lossyReplacement(job.app, job.ref);
+    if (lossy) { unapplied.push({ ...job, reason: `refused: ${lossy}` }); continue; }
     let cands = byValue.get(squash(job.app)) || [];
     let suffix = '';                        // preserved app-added tail (prefix matches)
     cands = cands.filter(c => !claimed.has(`${c.file.rel}:${c.lit.start}`));

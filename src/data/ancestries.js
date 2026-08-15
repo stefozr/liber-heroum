@@ -14,7 +14,7 @@ const DS_ANCESTRIES = [
           ab('Glowing Eyes', { flavor: 'Your eyes are a solid, vibrant color that flares to show your excitement or rage.',
             keywords: ['—'], type: 'Triggered', badge: 'TRIGGER', distance: 'Special', target: 'The triggering creature',
             trigger: 'You take damage from a creature.',
-            effect: 'Your eyes are a solid, vibrant color that flares to show your excitement or rage. Whenever you take damage from a creature, you can use a triggered action to deal that creature psychic damage equal to 1d10 + your level.' }),
+            effect: 'You deal psychic damage equal to 1d10 + your level to that creature.' }),
         ] },
       { name: 'Hellsight', cost: 1, text: 'Your eyes let you see through darkness, fog, and other obscuring effects. You don\'t take a bane on strikes made against creatures with concealment.' },
       { name: 'Impressive Horns', cost: 2, text: 'Your cherished horns are larger than the average devil\'s, and a hardened representation of your force of will. Whenever you make a saving throw, you succeed on a roll of 5 or higher.' },
