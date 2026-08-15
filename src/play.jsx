@@ -204,13 +204,16 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
   // (setResource) is the correction channel and deliberately leaves rampage alone.
   const isBeastheart = cls?.id === 'beastheart';
   const isSummoner = cls?.id === 'summoner';
+  // The Talent can spend clarity they don't have, down to −(1 + Reason); below 0
+  // they are strained. Every other class's heroic resource still floors at 0.
+  const resourceFloor = cls?.id === 'talent' ? -(1 + (derived.chars?.Reason || 0)) : 0;
   const adjResource = (delta) => setPlay(p => {
     const cur = p.resource || 0;
-    const next = Math.max(0, cur + delta);
+    const next = Math.max(resourceFloor, cur + delta);
     const spent = cur - next;
     return { ...p, resource: next, ...(isBeastheart && spent > 0 ? { rampage: (p.rampage || 0) + spent } : {}) };
   });
-  const setResource = (val) => setPlay(p => ({ ...p, resource: Math.max(0, Math.floor(val)) }));
+  const setResource = (val) => setPlay(p => ({ ...p, resource: Math.max(resourceFloor, Math.floor(val)) }));
   const adjVictories = (delta) => setPlay(p => ({ ...p, victories: Math.max(0, (p.victories || 0) + delta) }));
   const adjSurges = (delta) => setPlay(p => ({ ...p, surges: Math.max(0, (p.surges || 0) + delta) }));
   const adjHero = (delta) => setPlay(p => ({ ...p, heroTokens: Math.max(0, (p.heroTokens || 0) + delta) }));
@@ -515,9 +518,11 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
               onSet={canEdit ? setStamina : null}
             />
             <VitalGauge
-              label={cls?.resource || 'Resource'}
+              label={(character.play.resource || 0) < 0 ? `${cls?.resource || 'Resource'} · Strained` : (cls?.resource || 'Resource')}
               value={character.play.resource || 0}
               max={12}
+              min={resourceFloor}
+              winded={resourceFloor < 0 ? -1 : undefined}
               accent="var(--gold)"
               onAdj={canEdit ? adjResource : null}
               onSet={canEdit ? setResource : null}
@@ -945,7 +950,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
 
 function fmt(n) { return n == null ? '—' : (n > 0 ? '+' + n : n); }
 
-function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
+function VitalGauge({ label, value, max, min = 0, winded, accent, onAdj, onSet }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   // Red is an alarm, not a theme: the bar only turns rubric at or below the
   // winded threshold (and while dying); a healthy hero reads the accent (green
@@ -963,7 +968,7 @@ function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
   };
   const commit = () => {
     const n = parseInt(draft, 10);
-    if (!isNaN(n)) onSet(Math.max(0, n));
+    if (!isNaN(n)) onSet(Math.max(min, n));
     setEditing(false);
   };
   React.useEffect(() => {
@@ -980,7 +985,7 @@ function VitalGauge({ label, value, max, winded, accent, onAdj, onSet }) {
               ref={inputRef}
               className="vital-edit"
               type="number"
-              min="0"
+              min={min}
               max={max}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

@@ -232,7 +232,7 @@ function Modal({ open, onClose, title, children, footer, width }) {
 
 }
 
-// Official rules text carries **bold** spans (e.g. "**Strained:**", "**Persistent 1:**").
+// Official rules text carries **bold** spans (e.g. "**Persistent 1:**").
 // Render them as real <b> runs instead of leaking the asterisks; everything else
 // passes through as plain text (no other markup is ever interpreted).
 function renderRich(text) {
@@ -281,6 +281,10 @@ function FeatureTable({ table, level, reached }) {
     </div>);
 
 }
+
+// The Talent's strained rule, surfaced as a hover tip on every "Strained." label
+// (native title, same zero-plumbing pattern as the SIG tag below).
+const STRAINED_TIP = 'Strained — while your clarity is below 0. You can spend clarity you don’t have, down to −(1 + Reason); while strained you take 1 damage per negative point of clarity at the end of your turn.';
 
 // Map an ability's action type to a color-coded class for its header tag.
 function actionTagClass(type) {
@@ -332,6 +336,7 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
       }
       {a.special && <div className="ac-effect"><b>Special.</b> {renderRich(a.special)}</div>}
       {a.effect && <div className="ac-effect"><b>Effect.</b> {renderRich(a.effect)}</div>}
+      {a.strained && <div className="ac-effect ac-strained"><b title={STRAINED_TIP}>Strained.</b> {renderRich(a.strained)}</div>}
       {a.spend && <div className="ac-effect"><b>Spend {a.spendCost || 1} {a.resource || ''}.</b> {renderRich(a.spend)}</div>}
       {a.orderBenefit && <div className="ac-effect"><b>Order Benefit.</b> {renderRich(a.orderBenefit)}</div>}
     </Root>);

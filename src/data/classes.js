@@ -1270,7 +1270,7 @@ const DS_CLASSES = [
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
         powerRoll: 'Reason', tiers: [['≤11','2 + R psychic damage'],['12–16','4 + R psychic damage'],['17+','6 + R psychic damage']],
-        effect: '**Strained:** The target takes an extra 2 psychic damage. You also take 2 psychic damage that can’t be reduced in any way.'
+        strained: 'The target takes an extra 2 psychic damage. You also take 2 psychic damage that can’t be reduced in any way.'
       }) },
       { name: 'Augmentation / Ward', text: 'Choose one Psionic Augmentation and one Talent Ward below. You can swap either by undergoing a psionic meditation during a respite.', choose: 'augmentWard' },
       { name: 'Telepathic Speech', text: 'You know the Mindspeech language and can telepathically communicate with any creature within Mind Spike\u2019s distance that shares a language with you; they can answer telepathically.' },
@@ -1282,56 +1282,61 @@ const DS_CLASSES = [
         keywords: ['Psionic','Ranged','Telekinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','Slide 2 + R'],['12–16','Slide 4 + R; R < AVERAGE'],['17+','Slide 6 + R; prone']],
-        effect: 'You must vertical push the target instead of sliding them.'
+        strained: 'You must vertical push the target instead of sliding them.'
       }),
       ab('Incinerate', {
         flavor: 'The air erupts into a column of smokeless flame.',
         keywords: ['Area','Psionic','Ranged','Fire','Pyrokinesis'], type: 'Main action',
         distance: '3 cube within 10', target: 'Each enemy in the area',
         powerRoll: 'Reason', tiers: [['≤11','2 fire damage'],['12–16','4 fire damage'],['17+','6 fire damage']],
-        effect: 'A column of fire remains in the area until the start of your next turn. Each enemy who enters the area for the first time in a combat round or starts their turn there takes 2 fire damage.\n\nThe size of the cube increases by 2, but the fire disappears at the end of your turn.'
+        effect: 'A column of fire remains in the area until the start of your next turn. Each enemy who enters the area for the first time in a combat round or starts their turn there takes 2 fire damage.',
+        strained: 'The size of the cube increases by 2, but the fire disappears at the end of your turn.'
       }),
       ab('Entropic Bolt', {
         flavor: 'You advance an enemy\u2019s age for a moment.',
         keywords: ['Psionic','Ranged','Strike','Chronopathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Presence', tiers: [['≤11','2 + P corruption; P<WEAK, slowed (save)'],['12–16','3 + P corruption damage; P < AVERAGE, slowed (save ends)'],['17+','5 + P corruption damage; P < STRONG, slowed (save ends)']],
-        effect: 'The target takes an extra 1 corruption damage for each additional time they are targeted by this ability during the encounter.\n\nYou gain 1 clarity when you obtain a tier 2 or tier 3 outcome on the power roll.'
+        effect: 'The target takes an extra 1 corruption damage for each additional time they are targeted by this ability during the encounter.',
+        strained: 'You gain 1 clarity when you obtain a tier 2 or tier 3 outcome on the power roll.'
       }),
       ab('Kinetic Pulse', {
         flavor: 'The force of your mind hurls enemies backward.',
         keywords: ['Area','Psionic','Telepathy'], type: 'Main action',
         distance: '1 burst', target: 'Each enemy in the area',
         powerRoll: 'Reason', tiers: [['≤11','2 psychic damage'],['12–16','5 psychic damage; push 1'],['17+','7 psychic damage; push 2']],
-        effect: 'The size of the burst increases by 2, and you are bleeding until the start of your next turn.'
+        strained: 'The size of the burst increases by 2, and you are bleeding until the start of your next turn.'
       }),
       ab('Materialize', {
         flavor: 'You picture an object in your mind and give it form—directly above your opponent’s head.',
         keywords: ['Psionic','Ranged','Strike','Resopathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','3 + R damage'],['12–16','5 + R damage'],['17+','8 + R damage']],
-        effect: 'A worthless size 1M object drops onto the target to deal the damage, then rolls into an adjacent unoccupied space of your choice. The object is made of wood, stone, or metal (your choice).\n\nThe object explodes after the damage is dealt, and each creature adjacent to the target takes damage equal to your Reason score. You also take damage equal to your Reason score that can’t be reduced in any way.'
+        effect: 'A worthless size 1M object drops onto the target to deal the damage, then rolls into an adjacent unoccupied space of your choice. The object is made of wood, stone, or metal (your choice).',
+        strained: 'The object explodes after the damage is dealt, and each creature adjacent to the target takes damage equal to your Reason score. You also take damage equal to your Reason score that can’t be reduced in any way.'
       }),
       ab('Hoarfrost', {
         flavor: 'You blast a foe with a pulse of cold energy.',
         keywords: ['Psionic','Ranged','Strike','Cryokinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
         powerRoll: 'Reason', tiers: [['≤11','2 + R cold damage; M < WEAK, slowed (EoT)'],['12–16','4 + R cold; M<AVERAGE, slowed (EoT)'],['17+','6 + R cold; M<STRONG, slowed (EoT)']],
-        effect: 'You are slowed until the end of your next turn. Additionally, a target slowed by this ability is restrained instead.'
+        strained: 'You are slowed until the end of your next turn. Additionally, a target slowed by this ability is restrained instead.'
       }),
       ab('Spirit Sword', {
         flavor: 'You form a blade of mind energy and stab your target, invigorating yourself.',
         keywords: ['Melee','Psionic','Strike','Animapathy'], type: 'Main action',
         distance: 'Melee 2', target: 'One creature or object',
         powerRoll: 'Presence', tiers: [['≤11','3 + P damage'],['12–16','6 + P damage'],['17+','9 + P damage']],
-        effect: 'You gain 1 surge.\n\nThe target takes an extra 3 damage. You also take 3 damage that can’t be reduced in any way.'
+        effect: 'You gain 1 surge.',
+        strained: 'The target takes an extra 3 damage. You also take 3 damage that can’t be reduced in any way.'
       }),
       ab('Optic Blast', {
         flavor: 'Your eyes emit rays of powerful enervating force.',
         keywords: ['Psionic','Ranged','Strike','Metamorphosis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','2 + R damage; M < WEAK, prone'],['12–16','4 + R; M<AVERAGE, prone'],['17+','6 + R; M<STRONG, prone']],
-        effect: 'When targeting an object with a solid reflective surface or a creature carrying or wearing such an object (such as a mirror, an unpainted metal shield, or shiny metal plate armor), you can target one additional creature or object within 3 squares of the first target.\n\nYou gain 1 surge that you can use immediately, and you take damage equal to your Reason score that can’t be reduced in any way.'
+        effect: 'When targeting an object with a solid reflective surface or a creature carrying or wearing such an object (such as a mirror, an unpainted metal shield, or shiny metal plate armor), you can target one additional creature or object within 3 squares of the first target.',
+        strained: 'You gain 1 surge that you can use immediately, and you take damage equal to your Reason score that can’t be reduced in any way.'
       }),
     ],
     heroic3: [
@@ -1347,7 +1352,7 @@ const DS_CLASSES = [
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
         powerRoll: 'Presence', tiers: [['≤11','3 + P psychic damage; I < WEAK, frightened (save ends)'],['12–16','6 + P psychic; I<AVERAGE, frightened (save)'],['17+','9 + P psychic; I<STRONG, frightened (save)']],
-        effect: 'If you target an ally, they gain three times your Presence score temporary Stamina equal to three times your Presence score, and they can end one effect on them that is ended by a saving throw or that ends at the end of their turn. If you target an enemy, you make a power roll.'
+        effect: 'If you target an ally, they gain temporary Stamina equal to three times your Presence score, and they can end one effect on them that is ended by a saving throw or that ends at the end of their turn. If you target an enemy, you make a power roll.'
       }),
       ab('Smolder', { cost: 3, resource: 'Clarity',
         flavor: 'Smoke flows from your enemy like tears as their skin begins to blacken and flake.',
@@ -1368,25 +1373,29 @@ const DS_CLASSES = [
         flavor: 'Your psionic energy surrounds the target and pushes everything else away from them.',
         keywords: ['Psionic','Ranged','Telekinesis'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target ignores difficult terrain and takes no damage from forced movement until the start of your next turn. Whenever the target enters a square while under this effect, they can push one adjacent creature up to a number of squares equal to your Reason score. When pushing an ally, the target can ignore that ally’s stability. A creature can only be force moved this way once a turn.\n\n**Strained:** You are weakened (save ends). While you are weakened this way, whenever you are force moved, the forced movement distance gains a +5 bonus.'
+        effect: 'The target ignores difficult terrain and takes no damage from forced movement until the start of your next turn. Whenever the target enters a square while under this effect, they can push one adjacent creature up to a number of squares equal to your Reason score. When pushing an ally, the target can ignore that ally’s stability. A creature can only be force moved this way once a turn.',
+        strained: 'You are weakened (save ends). While you are weakened this way, whenever you are force moved, the forced movement distance gains a +5 bonus.'
       }),
       ab('Iron', { cost: 5, resource: 'Clarity',
         flavor: 'The target’s skin turns to hard, dark metal, impenetrable and dense.',
         keywords: ['Psionic','Ranged','Metamorphosis'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'Effect: The target’s stability increases by an amount equal to your Reason score, and they gain 10 Stamina and gains 2 surges. This stability increase lasts until the target no longer has temporary Stamina from this ability.\n\n**Strained:** You can’t use maneuvers (save ends).'
+        effect: 'The target’s stability increases by an amount equal to your Reason score, and they gain 10 temporary Stamina and 2 surges. This stability increase lasts until the target no longer has temporary Stamina from this ability.',
+        strained: 'You can’t use maneuvers (save ends).'
       }),
       ab('Perfect Clarity', { cost: 5, resource: 'Clarity',
         flavor: 'You clear the mind of nothing but the goal.',
         keywords: ['Psionic','Ranged','Telepathy'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'Until the start of your next turn, the target gains a +3 bonus to speed, and they have a double edge on the next power roll they make. If the target obtains a tier 3 outcome on that roll, you gain 1 clarity.\n\n**Strained:** You take 1d6 damage, and you can’t use triggered actions (save ends).'
+        effect: 'Until the start of your next turn, the target gains a +3 bonus to speed, and they have a double edge on the next power roll they make. If the target obtains a tier 3 outcome on that roll, you gain 1 clarity.',
+        strained: 'You take 1d6 damage, and you can’t use triggered actions (save ends).'
       }),
       ab('Flashback', { cost: 5, resource: 'Clarity',
         flavor: 'The target is thrown several seconds back through time and gets to do it all again.',
         keywords: ['Psionic','Ranged','Chronopathy'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target uses an ability with a base Heroic Resource cost of 7 or lower that they’ve previously used this round, without needing to spend the base cost. Augmentations to the ability can be paid for as usual.\n\n**Strained:** You take 1d6 damage and are slowed (save ends).'
+        effect: 'The target uses an ability with a base Heroic Resource cost of 7 or lower that they’ve previously used this round, without needing to spend the base cost. Augmentations to the ability can be paid for as usual.',
+        strained: 'You take 1d6 damage and are slowed (save ends).'
       }),
     ],
   },

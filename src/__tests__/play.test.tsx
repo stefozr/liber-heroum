@@ -397,6 +397,36 @@ describe('master-class play trackers', () => {
     expect(ref.c.play.rampage).toBe(5);
   });
 
+  it('talent: clarity goes negative down to −(1 + Reason) and reads strained', () => {
+    const init = completedCharacter();
+    init.cclass.id = 'talent';
+    init.cclass.subclass = 'chronopathy';
+    init.cclass.characteristics = { ...init.cclass.characteristics, Reason: 2 };
+    init.play = { ...init.play, resource: 1 };
+    const { ref, update } = capture(init);
+    const { container, rerender } = render(
+      <PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />
+    );
+    // Stepper spends past 0 but stops at the strain floor of −(1 + Reason) = −3.
+    fireEvent.click(ctl(gauge(container, 'Clarity'), '−5'));
+    expect(ref.c.play.resource).toBe(-3);
+    rerender(<PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />);
+    const strained = gauge(container, 'Clarity · Strained');
+    expect(strained).toBeTruthy();
+    // Typed-in values clamp to the same floor.
+    fireEvent.click(strained.querySelector('.vital-cur')!);
+    const input = strained.querySelector('input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '-9' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(ref.c.play.resource).toBe(-3);
+    // Back above 0 the strained flag clears from the label.
+    rerender(<PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />);
+    fireEvent.click(ctl(gauge(container, 'Clarity · Strained'), '+5'));
+    expect(ref.c.play.resource).toBe(2);
+    rerender(<PlayView character={ref.c} update={update} onExit={noop} onEdit={noop} />);
+    expect(gauge(container, 'Clarity')).toBeTruthy();
+  });
+
   it('beastheart: companion panel shows the stat block, rampage pill and gated table rows', () => {
     const init = beastheartCharacter();
     init.play = { ...init.play, rampage: 12 };

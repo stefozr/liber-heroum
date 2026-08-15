@@ -995,6 +995,9 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
   white-space: pre-line;
 }
 .ability-card .ac-effect b { color: var(--gold-2); }
+/* The Talent's strained rider is a conditional drawback — its label reads as a
+   warning (rubric), not another gold section header. */
+.ability-card .ac-strained b { color: var(--rubric); cursor: help; }
 
 /* Feature benefit tables (FeatureTable) — e.g. the Fury's Growing Ferocity.
    Lives inside .trait-block / .orn-frame feature blocks, so it styles standalone

@@ -174,6 +174,7 @@ const DS_RULES = [
         'When you target one or more creatures with an ability that has a potency, you can spend two surges to increase the potency by 1 for one of the creatures targeted with the effect. You can\u2019t increase the potency by more than 1 with surges, though you can spend multiple at once to increase the potency for multiple targets.',
         'After you spend a surge, it disappears. At the end of combat, you lose all surges.',
       ]},
+      { name: 'Strained', text: 'A talent can spend clarity they don’t have, pushing it into negative numbers down to −(1 + their Reason score). While their clarity is below 0, they are strained and take 1 damage for each negative point of clarity at the end of each of their turns. Some psionic abilities have additional effects while the talent is strained; strained effects can still impact the talent even after they are no longer strained.' },
       { name: 'Winded', text: 'When your Stamina is equal to half your maximum or less, you are winded.' },
     ],
   },
