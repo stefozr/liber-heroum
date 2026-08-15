@@ -1,9 +1,9 @@
 // wizard/steps/ancestry.jsx — AncestryStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures } from '../helpers.js';
+import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures, orderTraitCards, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
@@ -11,8 +11,13 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 function AncestryStep({ character, update }) {
   const sel = character.ancestry.id;
   // Re-clicking the already-selected ancestry must not wipe the trait picks.
-  const setAnc = (id) => update(c => c.ancestry.id === id ? c
-    : ({ ...c, ancestry: { ...c.ancestry, id, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} } }));
+  const setAnc = (id) => {
+    // The signature trait and the trait-point budget live below the poster grid —
+    // bring them into view on a fresh pick, or the points go unspent.
+    if (id !== character.ancestry.id) scrollWizardTo('ancestry-config');
+    update(c => c.ancestry.id === id ? c
+      : ({ ...c, ancestry: { ...c.ancestry, id, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} } }));
+  };
 
   const anc = ancestryDef(character);
   const spent = ancestrySpent(character);
@@ -131,7 +136,7 @@ function AncestryStep({ character, update }) {
                 <div className="pc-name">{a.name}</div>
                 <span className="c-stamp">{a.glyph}</span>
               </div>
-              <div className="pc-desc">{a.desc}</div>
+              <div className="pc-desc-reveal"><div className="pc-desc">{a.desc}</div></div>
             </div>
           </SelCard>
         ))}
@@ -139,6 +144,7 @@ function AncestryStep({ character, update }) {
 
       {anc && (
         <>
+          <div id="ancestry-config" />
           <OrnDivider glyph={`❦  ${anc.name.toUpperCase()}  ❦`} />
 
           {(anc.height || anc.lifespan) && (
@@ -153,7 +159,7 @@ function AncestryStep({ character, update }) {
             <div key={sig.name} className="orn-frame bracket-corners" style={{padding: '22px 24px'}}>
               <H3>Signature Trait: <span style={{color:'var(--gold-2)'}}>{sig.name}</span></H3>
               <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.55}}>
-                {sig.text}
+                {renderRich(sig.text)}
               </div>
               {sig.skillChoice && (
                 <SkillChoicePicker
@@ -208,7 +214,7 @@ function AncestryStep({ character, update }) {
               </div>
             </div>
             <div className="grid-2">
-              {anc.traits.map(t => {
+              {orderTraitCards(anc.traits).map(t => {
                 const isOn = (character.ancestry.traits || []).includes(t.name);
                 const overBudget = !isOn && t.cost > remaining;
                 const isQuick = (anc.quick || []).includes(t.name);
@@ -226,7 +232,7 @@ function AncestryStep({ character, update }) {
                       </div>
                       <Tag kind="gold">{t.cost} PT</Tag>
                     </div>
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
                   </SelCard>
                 );
               })}
@@ -266,7 +272,7 @@ function AncestryStep({ character, update }) {
                               <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
                               <Tag kind="gold">{t.cost} PT</Tag>
                             </div>
-                            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
+                            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
                           </SelCard>
                         );
                       })}
@@ -289,7 +295,7 @@ function AncestryStep({ character, update }) {
                       <H3>{t.name}{t.borrowedFrom ? <span style={{color:'var(--gold-2)'}}> — borrowed from {t.borrowedFrom}</span> : ''}</H3>
                       <Pill kind={done ? 'gold' : ''}>{done ? 'CHOSEN' : `PICK ${count}`}</Pill>
                     </div>
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{t.text}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
                     {t.skillChoice && (
                       <SkillChoicePicker
                         character={character}
@@ -375,7 +381,7 @@ function OptionChoicePicker({ choice, options, picked, toggle }) {
                 onClick={() => !blocked && toggle(o.name)}
               >
                 <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{o.name}</div>
-                {o.text && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{o.text}</div>}
+                {o.text && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(o.text)}</div>}
               </SelCard>
             );
           })}

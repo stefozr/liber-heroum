@@ -9,7 +9,7 @@ import { UnfinishedChapters } from './UnfinishedChapters.jsx';
 import { AncestryStep } from './steps/ancestry.jsx';
 import { CultureStep } from './steps/culture.jsx';
 import { CareerStep } from './steps/career.jsx';
-import { ClassStep } from './steps/class.jsx';
+import { ClassStep, PW_CONFIG } from './steps/class.jsx';
 import { ComplicationStep } from './steps/complication.jsx';
 import { IdentityStep } from './steps/identity.jsx';
 import { ReviewStep } from './steps/review.jsx';
@@ -183,7 +183,8 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
           <StepHeader step={step} />
           <div style={{height: 8}}></div>
           <Step character={character} update={update}
-            {...(step.id === 'review' ? { incompleteSteps, onGoToStep: setStep } : {})} />
+            {...(step.id === 'review' ? { incompleteSteps, onGoToStep: setStep } : {})}
+            {...(step.id === 'class' ? { sections: classSections(character) } : {})} />
           <div style={{height: 60}}></div>
         </div>
       </div>
@@ -197,7 +198,13 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
           : <Button kind="ghost" onClick={onBack}>◂ {DS_STEPS[stepIndex - 1].name.toUpperCase()}</Button>}
         <div className="meta">
           Chapter {stepIndex + 1} of {DS_STEPS.length} · {step.name}
-          {!stepValid && !isLast && <span style={{color:'var(--gold-2)'}}> · choices remain ▾</span>}
+          {/* Name the number: "choices remain" gave no sense of whether that meant
+              one more click or eight, which on the class step is the difference
+              that matters. */}
+          {!stepValid && !isLast && (() => {
+            const n = stepIssues(character, stepIndex).length;
+            return <span style={{color:'var(--gold-2)'}}> · {n} choice{n === 1 ? '' : 's'} remain{n === 1 ? 's' : ''} ▾</span>;
+          })()}
         </div>
         <Button kind="primary" onClick={onContinue} disabled={nameMissing}
           title={nameMissing ? 'Name your hero to continue' : undefined}>
@@ -257,6 +264,106 @@ function unresolvedSwaps(c, collisions, swaps, ownKey, ownNames) {
 
 function swapsResolved(c, collisions, swaps, ownKey, ownNames) {
   return unresolvedSwaps(c, collisions, swaps, ownKey, ownNames).length === 0;
+}
+
+// The class step's decisions, in the order they appear on screen: what this class
+// asks of you, and which asks are settled. Drives the docket pinned to the top of
+// the step (ids double as its scroll anchors).
+//
+// It lives here, beside stepIssues, because the two must agree — every section's
+// `done` mirrors one clause of the 'class' branch below, and a test asserts the
+// equivalence over every class × subclass. Keeping them in one file is what makes
+// a divergence visible in review. (It can't live in helpers.js: app.jsx imports
+// that module, so reaching skillsTakenExcept/duplicateSkillPicks from there would
+// close an import cycle.)
+function classSections(c) {
+  const cls = classDef(c);
+  if (!cls) return [];
+  const cc = c.cclass || {};
+  const out = [];
+  // required: false marks a decision the step asks for but stepIssues does not
+  // gate on, so the docket can show it without changing what "complete" means.
+  const add = (key, label, done, detail, required = true) =>
+    out.push({ id: `class-sec-${key}`, label, done: !!done, detail: detail || '', required });
+
+  // — the subclass picker, in whichever of its two shapes this class uses —
+  if (cls.subclasses) add('subclass', cls.subclassName || 'Subclass', cc.subclass);
+  // The domain skill is listed from the start even though it only becomes
+  // choosable once a feature is picked: a total that grows as you work would
+  // undercut the count it sits next to. It reads as settled when the chosen
+  // feature grants no skill, which is how stepIssues treats it.
+  const domainSkillDone = () => !!cc.domainFeature && (!cc.domainFeature.skillGroup || !!cc.domainSkill);
+  if (cls.pickTwoDomains) {
+    const doms = cc.domains || [];
+    add('domains', 'Domains', doms.length >= 2, `${doms.length} of 2`);
+    add('domain-feature', 'Domain feature', cc.domainFeature);
+    add('domain-skill', 'Domain skill', domainSkillDone());
+    add('domain-ability', 'Domain ability', cc.domainAbility);
+  }
+  if (cls.companionRequired) {
+    add('companion', 'Companion', cc.companion);
+    const comp = cc.companion && companionById(cc.companion);
+    if (comp?.optionChoice) {
+      add('companion-option', comp.optionChoice.label, (cc.companionOptions || {})[comp.optionChoice.id]);
+    }
+  }
+  if (cls.minionPicks) {
+    for (const [tier, need] of Object.entries(cls.minionPicks)) {
+      const got = ((cc.minions || {})[tier] || []).length;
+      add(`minions-${tier}`, tier === 'sig' ? 'Signature minions' : '3-essence minions',
+        got >= need, `${got} of ${need}`);
+    }
+  }
+  // Censor: the domain grants its own 1st-level feature, so the two settle together
+  // and read as one decision.
+  if (cls.pickOneDomain) {
+    add('domain', 'Domain', (cc.domains || []).length >= 1 && cc.domainFeature);
+    add('domain-skill', 'Domain skill', domainSkillDone());
+  }
+  {
+    const sub = (cls.subclasses || []).find(s => (s.id || s.name) === cc.subclass);
+    const need = classSkillPicks(cls, sub).reduce((s, p) => s + p.count, 0);
+    const got = (cc.skills || []).length;
+    // Unresolved swaps and stale duplicate picks surface in this same panel
+    // (SkillSwapBlock), so they belong to this chip rather than one of their own.
+    const ownNames = [...classGrantedSkills(cls, sub), ...(cc.skills || [])];
+    const clean = swapsResolved(c, classGrantCollisions(c), cc.skillSwaps, 'class', ownNames)
+      && !duplicateSkillPicks(c).some(d => d.key === 'class' || d.key === 'domain');
+    if (need > 0 || !clean) add('skills', 'Class skills', got >= need && clean, `${got} of ${need}`);
+  }
+  if (cls.flexCharOrder) {
+    const chars = cc.characteristics || {};
+    const vals = cls.flexCharOrder.map(k => chars[k]);
+    const inRange = vals.every(v => typeof v === 'number' && v >= -1 && v <= 2);
+    const budget = Math.max(...(cls.charArrays || [[0]]).map(arr => arr.reduce((s, v) => s + v, 0)));
+    const spent = vals.reduce((s, v) => s + (v || 0), 0);
+    add('chars', 'Characteristics', inRange && (spent === budget || matchesCharArray(cls, vals)));
+  }
+  // Feature-embedded choices (prayer, ward, formation, …). Derived from the same
+  // PW_CONFIG the picker renders from, walked in feature order, so the labels and
+  // the ordering match the screen without a second list to keep in step. These sit
+  // inside the class features list, between the characteristics and ability picks.
+  // stepIssues gates on every one of them except the triggered action.
+  for (const f of cls.features || []) {
+    for (const [label, poolKey, stateKey] of PW_CONFIG[f.choose] || []) {
+      if ((cls[poolKey] || []).length) add(stateKey, label, cc[stateKey], '', stateKey !== 'triggeredAction');
+    }
+  }
+
+  const sigsNeed = cls.sigCount ?? 1;
+  if (sigsNeed > 0) {
+    const sigsGot = (cc.signatures || []).length;
+    add('signatures', sigsNeed === 1 ? 'Signature ability' : 'Signature abilities',
+      sigsGot >= sigsNeed, sigsNeed > 1 ? `${sigsGot} of ${sigsNeed}` : '');
+  }
+  if (cls.deep && cls.heroic3?.length > 0) add('heroic3', `3-${cls.resource}`, cc.heroic3);
+  if (cls.deep && cls.heroic5?.length > 0) add('heroic5', `5-${cls.resource}`, cc.heroic5);
+
+  const kitPool = kitPoolFor(cls, cc.subclass);
+  const inKitPool = (id) => kitPool.some(k => k.id === id);
+  if (cls.kitRequired) add('kit', cls.kit2Required ? 'First kit' : 'Kit', c.kit?.id && inKitPool(c.kit.id));
+  if (cls.kit2Required) add('kit2', 'Second kit', c.kit2?.id && inKitPool(c.kit2.id));
+  return out;
 }
 
 // Everything still missing from a chapter, as short human-readable lines.
@@ -510,4 +617,4 @@ const STEP_COMPONENTS = {
 };
 
 
-export { Wizard, isStepValid, stepIssues, wizardProgress };
+export { Wizard, isStepValid, stepIssues, classSections, wizardProgress };

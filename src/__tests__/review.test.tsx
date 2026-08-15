@@ -38,13 +38,13 @@ describe('ReviewStep renders complete feature data', () => {
     const c = buildValidCharacter({ ancestry: 'dwarf', traits: ['Grounded', 'Great Fortitude'] });
     const text = renderReview(c);
     // Signature trait in full, not just its name.
-    expect(text).toContain('you carve a magic rune onto your skin');
+    expect(text).toContain('carve a rune onto your skin with 10 uninterrupted minutes');
     // The chosen rune's own rules text (factory defaults to the first option, Detection).
     expect(text).toContain('Your rune glows softly');
     // Purchased traits with cost tags and rules text.
     expect(text).toContain('Grounded');
     expect(text).toContain('1 PT');
-    expect(text).toContain('+1 to stability.');
+    expect(text).toContain('+1 bonus to stability.');
     expect(text).toContain("You can't be made weakened.");
   });
 
@@ -54,7 +54,7 @@ describe('ReviewStep renders complete feature data', () => {
     });
     const text = renderReview(c);
     expect(text).toContain('PREVIOUS LIFE — DWARF');
-    expect(text).toContain('+1 to stability.'); // Grounded, borrowed in full
+    expect(text).toContain('+1 bonus to stability.'); // Grounded, borrowed in full
     expect(text).not.toContain('Take a 1-point trait');
   });
 
@@ -92,19 +92,19 @@ describe('ReviewStep renders complete feature data', () => {
     // ambiguous effect line ("slowed/restrained (EoT)") — they now live in the rows.
     const byName = (name: string): any => DS_KITS.find((k: any) => k.sig.startsWith(name));
     const net = parseKitSig(byName('Net and Stab').sig, byName('Net and Stab').sigTiers);
-    expect(net.rows![0]).toEqual(['≤ 11', '4 + M or A; A < WEAK, slowed (EoT)']);
-    expect(net.rows![1][1]).toBe('6 + M or A; A < AVERAGE, slowed (EoT)');
-    expect(net.rows![2][1]).toBe('8 + M or A; A < STRONG, restrained (EoT)');
+    expect(net.rows![0]).toEqual(['≤ 11', '4 + M or A damage; A < WEAK, slowed (EoT)']);
+    expect(net.rows![1][1]).toBe('6 + M or A damage; A < AVERAGE, slowed (EoT)');
+    expect(net.rows![2][1]).toBe('8 + M or A damage; A < STRONG, restrained (EoT)');
     expect(net.effect).toBeNull(); // nothing ambiguous left behind
     // Shield Bash: prone is a tier-3-only rider, not a blanket condition.
     const bash = parseKitSig(byName('Shield Bash').sig, byName('Shield Bash').sigTiers);
-    expect(bash.rows![0][1]).toBe('4 + M or A; push 1');
-    expect(bash.rows![2][1]).toBe('9 + M or A; push 3; M < STRONG, prone');
+    expect(bash.rows![0][1]).toBe('4 + M or A damage; push 1');
+    expect(bash.rows![2][1]).toBe('9 + M or A damage; push 3; M < STRONG, prone');
     expect(bash.rows![0][1]).not.toContain('prone');
     expect(bash.rows![1][1]).not.toContain('prone');
     // Driving Pounce: the push lives per-tier now; the shift rider stays an effect.
     const pounce = parseKitSig(byName('Driving Pounce').sig, byName('Driving Pounce').sigTiers);
-    expect(pounce.rows![1][1]).toBe('5 + A; push 1');
+    expect(pounce.rows![1][1]).toBe('7 + A damage; push 1');
     expect(pounce.effect).toContain('as many squares as you pushed');
     expect(pounce.effect).not.toMatch(/\d\/\d\/\d/);
     // Consistency: every sigTiers kit has exactly 3 rows, each starting with the

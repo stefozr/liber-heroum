@@ -12,6 +12,7 @@ import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { collectLevelUpFeatures } from './levelup.jsx';
 import { DS_CULTURES } from './data/cultures.js';
 import { DS_SKILL_GROUPS } from './data/skills.js';
+import { parseBlocks, blocksToHtml } from './rich-text.js';
 
 // ───────── id / slug / naming helpers ─────────
 
@@ -44,8 +45,11 @@ const FOUNDRY_SKILL_IDS = new Set(Object.values(DS_SKILL_GROUPS).flat().map(skil
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+// Descriptions carry the same markdown subset the app renders (paragraphs,
+// bullets, bold labels, sidebars), so they go through the same parser — a lone
+// escaped <p> would collapse every paragraph and ship the asterisks to Foundry.
 function para(text) {
-  return text ? `<p>${esc(text)}</p>` : '';
+  return text ? blocksToHtml(parseBlocks(text), esc) : '';
 }
 // Feature benefit table ({ head, rows: [[label, text, minLevel?]] }) as real HTML,
 // used when no official doc substitutes (offline export) so the table isn't lost.
@@ -544,7 +548,9 @@ function characterToFoundryHero(c, officialIndex = null) {
   if (comp) {
     const custom = c.complication?.custom;
     add(official('complication', comp.name, descriptionItem(comp.name, 'complication', 0,
-      section('Benefit', comp.benefit) + section('Drawback', comp.drawback) + para(custom)),
+      (comp.combined
+        ? section('Benefit and Drawback', comp.benefit)
+        : section('Benefit', comp.benefit) + section('Drawback', comp.drawback)) + para(custom)),
       custom ? { appendDescription: para(custom) } : null));
   }
 

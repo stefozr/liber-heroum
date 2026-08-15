@@ -2,6 +2,7 @@
 // renderGlyph, actionTagClass) and cross-refs (Modal→H2, AbilityCard→Tag/PowerRoll)
 // are co-located so the set is self-contained.
 import React from 'react';
+import { parseBlocks, isPlain } from '../rich-text.js';
 
 function OrnDivider({ glyph = '❦  ✠  ❦', size = '' }) {
   return (
@@ -232,13 +233,33 @@ function Modal({ open, onClose, title, children, footer, width }) {
 
 }
 
-// Official rules text carries **bold** spans (e.g. "**Persistent 1:**").
-// Render them as real <b> runs instead of leaking the asterisks; everything else
-// passes through as plain text (no other markup is ever interpreted).
+// Official rules text carries real structure — paragraphs, bullets, **bold**
+// labels and section headings, *italic* citations, the odd sidebar. parseBlocks
+// (src/rich-text.js) knows that vocabulary; this turns it into nodes.
+//
+// Two constraints shape the output. Callers splice the result inline — after a
+// "<b>Effect.</b>" label, and inside the <span> of a FeatureTable cell — so the
+// wrappers are block-display spans rather than <p>/<ul>, which would be invalid
+// there; and a leading paragraph emits bare, so it continues on the label's line
+// and single-paragraph text (nearly all of it) renders exactly as it always has.
 function renderRich(text) {
-  if (typeof text !== 'string' || !text.includes('**')) return text;
-  const parts = text.split(/\*\*(.+?)\*\*/g);
-  return parts.map((part, i) => (i % 2 === 1 ? <b key={i}>{part}</b> : part));
+  if (isPlain(text)) return text;
+  const blocks = parseBlocks(text);
+  const inline = (spans, key) => spans.map(({ t, s }, i) =>
+    t === 'b' ? <b key={`${key}-${i}`}>{s}</b>
+      : t === 'i' ? <i key={`${key}-${i}`}>{s}</i>
+      : <React.Fragment key={`${key}-${i}`}>{s}</React.Fragment>);
+  const render = (b, i) => {
+    if (b.kind === 'list') {
+      return <span className="rt-list" key={i}>
+        {b.items.map((it, j) => <span className="rt-li" key={j}>{inline(it, j)}</span>)}
+      </span>;
+    }
+    if (b.kind === 'quote') return <span className="rt-quote" key={i}>{b.blocks.map(render)}</span>;
+    return <span className={b.kind === 'h' ? 'rt-h' : 'rt-p'} key={i}>{inline(b.spans, i)}</span>;
+  };
+  if (blocks[0]?.kind === 'p') return [...inline(blocks[0].spans, 0), ...blocks.slice(1).map(render)];
+  return blocks.map(render);
 }
 
 // Power-roll table renderer for ability cards
@@ -248,7 +269,7 @@ function PowerRoll({ rows }) {
       {rows.map(([t, e], i) =>
       <React.Fragment key={i}>
           <span className={`t tier-${i + 1}`}>{t}</span>
-          <span className={`e tier-${i + 1}`}>{e}</span>
+          <span className={`e tier-${i + 1}`}>{renderRich(e)}</span>
         </React.Fragment>
       )}
     </div>);

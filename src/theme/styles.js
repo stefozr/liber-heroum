@@ -657,6 +657,67 @@ ${MQ.phone} {
 .wiz-rail .rstep.active { border-bottom-color: var(--gold); background: linear-gradient(180deg, transparent, rgba(212,169,69,0.10)); }
 .wiz-rail .rstep.active .rnum { border-color: var(--gold); color: var(--gold); }
 .wiz-rail .rstep.active .rname { color: var(--ink); }
+/* Class decision docket (ClassDocket.jsx). The class step asks for 6–12 separate
+   choices across 15–30 viewport-heights, so this pins to the top of the step body
+   and stays there while you scroll it — the only position:sticky in the app, and
+   the only case that warrants it: the wizard's other affixed surfaces (rail,
+   footer, modal chrome) are chrome and can be grid rows around the scroller,
+   whereas this is class-specific content that lives inside the scroller.
+   Sticks against .wiz-step (the scrollport); the negative margins cancel
+   .col-main's padding so it spans the full width like the rail does, and it
+   carries the rail's own background/blur because .step-bg sits behind it.
+   The head is a disclosure: .shut hides the chip list at every width, and the
+   phone tier below both defaults it shut and relays the chips as a list. */
+.cls-docket {
+  position: sticky; top: 0; z-index: 6;
+  margin: 0 -44px 4px; padding: 10px 44px 11px;
+  background: rgba(7,9,28,0.82); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+/* The head is the disclosure control (ClassDocket.jsx), so it carries a button
+   reset — the chip list is open by default here and shut by default on a phone. */
+.cls-docket .cd-head {
+  appearance: none; -webkit-appearance: none; background: transparent;
+  border: 0; padding: 0; width: 100%; text-align: left; cursor: pointer; color: inherit;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.2em;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.cls-docket .cd-head:hover .cd-chevron { color: var(--gold-2); opacity: 1; }
+.cls-docket .cd-head:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; }
+/* Name yields the row's slack so the count and chevron stay pinned right. */
+.cls-docket .cd-name { color: var(--ink-2); flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cls-docket .cd-count { color: var(--gold-2); white-space: nowrap; }
+.cls-docket .cd-count.all-done { color: var(--ink-3); }
+/* Same chevron treatment as the sheet's collapsible panels (play.jsx). */
+.cls-docket .cd-chevron {
+  font-family: var(--display); font-size: var(--fs-7); color: var(--gold); opacity: 0.55;
+  line-height: 1; transition: transform 180ms ease, opacity 180ms ease, color 180ms ease;
+}
+.cls-docket .cd-chevron.down { transform: rotate(0deg); }
+.cls-docket .cd-chevron.up { transform: rotate(180deg); }
+.cls-docket .cd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cls-docket.shut .cd-head { margin-bottom: 0; }
+.cls-docket.shut .cd-chips { display: none; }
+.cls-docket .cd-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 4px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-2);
+  font-family: var(--display-2); font-size: var(--fs-3); font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-2);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.cls-docket .cd-chip:hover { background: rgba(212,169,69,0.08); border-color: var(--gold-deep); }
+/* Same ✓-on-gold the rail uses for a finished chapter, shrunk to chip scale. */
+.cls-docket .cd-mark {
+  width: 15px; height: 15px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: var(--fs-2);
+  border: 1px solid var(--line-2); color: var(--ink-3);
+}
+.cls-docket .cd-chip.done { color: var(--ink-3); border-color: var(--line); }
+.cls-docket .cd-chip.done .cd-mark { background: var(--gold); border-color: var(--gold); color: var(--bg-0); }
+.cls-docket .cd-detail { color: var(--ink-3); letter-spacing: 0.1em; }
+
 /* Measured, not a device tier: the 7 steps + padding need ~1150px, so below that
    the rail scrolls (scrollbar hidden above). The right-edge fade is the only
    signal there are more chapters off-screen. */
@@ -990,14 +1051,37 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
 .ability-card .ac-roll .t { font-weight: 700; }
 .ability-card .ac-effect {
   margin-top: 10px; font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.5;
-  /* Official effect text carries real paragraph and bullet breaks — honour them without
-     turning the string into markup. pre-line keeps wrapping intact. */
-  white-space: pre-line;
 }
 .ability-card .ac-effect b { color: var(--gold-2); }
 /* The Talent's strained rider is a conditional drawback — its label reads as a
    warning (rubric), not another gold section header. */
 .ability-card .ac-strained b { color: var(--rubric); cursor: help; }
+
+/* Rules prose (renderRich → src/rich-text.js). Every surface that shows rules
+   text hosts these — ability cards, trait blocks, feature bodies, level-up
+   options — so they live in the global sheet and are styled to inherit rather
+   than to set their own type: the container decides the font, this decides the
+   shape. Block-display spans, because renderRich splices its output inline
+   (after an "Effect." label, inside a FeatureTable cell) where <p>/<ul> would
+   be invalid. A leading paragraph is emitted unwrapped, so the first line still
+   runs on from its label and only later blocks carry the top margin. */
+.rt-p, .rt-h, .rt-list, .rt-li, .rt-quote { display: block; }
+.rt-p, .rt-list, .rt-quote { margin-top: 0.6em; }
+.rt-h {
+  margin-top: 0.9em; font-family: var(--mono); font-size: var(--fs-3);
+  color: var(--gold-2); letter-spacing: 0.18em; text-transform: uppercase;
+}
+/* Hanging indent: the marker sits in the gutter and wrapped lines align to the
+   text, which is the whole point of rendering these as a list rather than
+   leaving the dashes inline. */
+.rt-li { padding-left: 1.1em; text-indent: -1.1em; margin-top: 0.3em; }
+.rt-li::before { content: '▪'; color: var(--gold-2); padding-right: 0.55em; }
+.rt-quote {
+  border-left: 2px solid var(--line-2); padding: 2px 0 2px 12px; color: var(--ink-3);
+}
+/* Inside a sidebar the first paragraph needs no extra gap — the border already
+   separates it — and its heading is the sidebar's title. */
+.rt-quote > .rt-p:first-child, .rt-quote > .rt-h:first-child { margin-top: 0; }
 
 /* Feature benefit tables (FeatureTable) — e.g. the Fury's Growing Ferocity.
    Lives inside .trait-block / .orn-frame feature blocks, so it styles standalone
@@ -1019,11 +1103,11 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
 .feat-table .ftl.ft-active { color: var(--rubric); }
 .feat-table .ftv.ft-active { color: var(--ink-1); }
 
-/* Poster cards (ancestry + class pickers) — the artwork IS the card; name and
-   the full untruncated blurb sit on a bottom scrim (2:3 leaves room for the
-   longest blurb). Scrim text colors are fixed rather than --ink because the
-   scrim is dark in both themes. Once a pick exists the other cards dim; hover
-   restores them. */
+/* Poster cards (ancestry + class pickers) — the artwork IS the card; the name
+   sits on a bottom scrim at all times and the full untruncated blurb unfolds
+   below it on hover or selection (2:3 leaves room for the longest blurb).
+   Scrim text colors are fixed rather than --ink because the scrim is dark in
+   both themes. Once a pick exists the other cards dim; hover restores them. */
 .poster-card { position: relative; padding: 0; overflow: hidden; aspect-ratio: 2 / 3; display: flex; align-items: flex-end; }
 .poster-card .pc-art {
   position: absolute; inset: 0;
@@ -1051,10 +1135,30 @@ ${MQ.phone} { .pw-grid { grid-template-columns: 1fr; } }
    wraps on 5 of the 9 class cards and strands a separator at the end of the
    line — give it its own line on every card instead, and keep it gold. */
 .poster-card .pc-resource { display: block; color: var(--gold-2); margin-top: 2px; }
+/* The blurb is reference text, not identity, so it stays out of the way until
+   the card is engaged — hovered, focused, or picked — and the scrim shrinks to
+   the name alone the rest of the time, uncovering the art. A 0fr → 1fr track
+   animates to the blurb's real height; max-height cannot, because these run
+   from one line (Revenant) to a dozen (Dragon Knight). The gap above the text
+   is padding rather than margin so it collapses with the clipped box. */
+.poster-card .pc-desc-reveal {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .3s ease;
+}
 .poster-card .pc-desc {
   font-family: var(--serif); font-size: var(--fs-6); color: rgba(236,228,210,0.85);
-  margin-top: 8px; line-height: 1.45;
+  padding-top: 8px; line-height: 1.45;
+  overflow: hidden; min-height: 0; opacity: 0;
+  transition: opacity .25s ease;
 }
+/* SelCard renders a real <button>, so :focus-visible gives keyboard users the
+   same reveal the mouse gets. */
+.poster-card:hover .pc-desc-reveal,
+.poster-card:focus-visible .pc-desc-reveal,
+.poster-card.selected .pc-desc-reveal { grid-template-rows: 1fr; }
+.poster-card:hover .pc-desc,
+.poster-card:focus-visible .pc-desc,
+.poster-card.selected .pc-desc { opacity: 1; }
 /* In-development classes (cls.wip) carry a corner tag so players know the
    content may still shift. Top-left — the selection stamp owns the top-right. */
 .poster-card .pc-wip {
@@ -1162,6 +1266,7 @@ ${MQ.tab} {
 
   .roster-inner { padding: 40px 24px 60px; }
   .wiz-step .col-main { padding: 26px 24px 0; }
+  .cls-docket { margin: 0 -24px 4px; padding: 10px 24px 11px; }
   .wiz-footer { padding-left: 22px; padding-right: 22px; }
 
   /* Swap the rail for the compact navigator: seven step names can't fit, and a
@@ -1196,6 +1301,28 @@ ${MQ.phone} {
   .roster-inner { padding: 28px max(16px, env(safe-area-inset-left)) 48px max(16px, env(safe-area-inset-right)); }
   .roster-section-title { margin: 28px 0 14px; }
   .wiz-step .col-main { padding: 20px 16px 0; }
+  /* A conduit's 12 chips wrap to four rows here, which would eat a third of a
+     bar that never leaves the screen — so the head collapses them by default
+     (ClassDocket.jsx) and opening drops a vertical checklist instead of a chip
+     cloud: full width per row, so the longest labels can't be cut off, and the
+     44px tap floor the tab strip uses. Capped at 46vh — 12 rows overrun a phone. */
+  /* Shut, the bar is exactly the 44px head and nothing else. */
+  .cls-docket { margin: 0 -16px 4px; padding: 0 16px 8px; }
+  .cls-docket.shut { padding-bottom: 0; }
+  .cls-docket .cd-head { min-height: 44px; margin-bottom: 6px; }
+  .cls-docket .cd-chips {
+    flex-direction: column; flex-wrap: nowrap; gap: 0;
+    max-height: 46vh; overflow-y: auto; overscroll-behavior: contain;
+    margin: 0 -16px -8px; padding: 0 16px;
+    border-top: 1px solid var(--line);
+  }
+  .cls-docket .cd-chip {
+    width: 100%; justify-content: flex-start;
+    min-height: 44px; padding: 10px 2px;
+    border: 0; border-bottom: 1px solid var(--line);
+  }
+  .cls-docket .cd-chips .cd-chip:last-child { border-bottom: 0; }
+  .cls-docket .cd-detail { margin-left: auto; }
   /* One row, not two: the ghost back button keeps ~1/3 (ellipsized when a long
      step name like "◂ COMPLICATION" won't fit) and CONTINUE fills the rest —
      stacked rows burned ~150px of a phone viewport. */
@@ -1265,6 +1392,10 @@ ${MQ.touch} {
   /* Hover-only reveals that are the ONLY cue for a real action. A capability
      query rather than a width one, so touch laptops get them too. */
   .portrait-drop .portrait-overlay { opacity: 1; }
+  /* Poster blurbs unfold on hover; without one, the only way to read a card's
+     description would be to select it. Keep them all open instead. */
+  .poster-card .pc-desc-reveal { grid-template-rows: 1fr; }
+  .poster-card .pc-desc { opacity: 1; }
   /* A disabled skill chip explains itself only through title=, which touch users
      never see. :has() targets exactly the grids that actually contain one, so no
      hint appears where nothing is blocked. Desktop keeps the per-chip tooltips,

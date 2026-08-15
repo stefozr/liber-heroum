@@ -50,8 +50,11 @@ export async function loadAppData() {
         contents: `
           export * from ${JSON.stringify(join(ROOT, 'src/data.jsx'))};
           export { LEVELUP_DATA, makeContext, levelChoicesFor, deriveGroupName,
-                   DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 }
+                   DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES,
+                   CENSOR_DOMAIN_1, CENSOR_DOMAIN_4, CENSOR_DOMAIN_7 }
             from ${JSON.stringify(join(ROOT, 'src/levelup.jsx'))};
+          export { DOMAIN_6_ABILITIES, DOMAIN_7_FEATURES, DOMAIN_9_ABILITIES }
+            from ${JSON.stringify(join(ROOT, 'src/data/conduit-domains.js'))};
           export { PERKS, parseCareerSkills, classSkillPicks, pickPool }
             from ${JSON.stringify(join(ROOT, 'src/wizard/helpers.js'))};
           export { newCharacter, computeDerived, classDef } from ${JSON.stringify(join(ROOT, 'src/app.jsx'))};

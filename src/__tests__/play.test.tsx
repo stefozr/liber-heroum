@@ -104,6 +104,24 @@ describe('PlayView renders the character sheet', () => {
     expect(text).not.toContain('You slam an invisible force'); // Concussive Slam flavor
   });
 
+  it('the biography shows the inciting incident story, not just its name', () => {
+    const c = completedCharacter();
+    const car: any = DS_CAREERS.find((x: any) => x.id === c.career.id);
+    const inc = car.incidents[0];
+    c.career.incident = inc.name;
+    const { container, getAllByText } = render(
+      <PlayView character={c} update={noop} onExit={noop} onEdit={noop} />
+    );
+    // The story lives only in this modal — nowhere else on the sheet — which is
+    // what makes the assertion below meaningful rather than vacuous.
+    expect(container.textContent).not.toContain(inc.text);
+    // Top-bar actions render twice by design (buttons + collapsed ⋯ menu).
+    fireEvent.click(getAllByText('BIOGRAPHY')[0]);
+    const text = container.textContent!;
+    expect(text).toContain(inc.name);
+    expect(text).toContain(inc.text);
+  });
+
   it('read-only sheet disables the session trackers and names the owner', () => {
     const { container } = render(
       <PlayView character={completedCharacter()} update={noop} onExit={noop}

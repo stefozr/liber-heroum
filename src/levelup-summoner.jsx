@@ -75,7 +75,7 @@ const ESS_7 = () => [
   }),
   ess(7, 'Cavalry Call', 'A lone squad appears to disrupt the enemy’s plans and peels off their forces, one by one.', {
     keywords: ['Magic'], type: 'Main action', distance: 'Summoner’s Range', target: 'Special',
-    effect: 'You summon a temporary squad containing 6 of your signature minions regardless of your minion maximum within distance. Whenever one of these minions deals damage to an enemy, the enemy is R < AVERAGE, compelled to move 5 squares toward the source of the damage (provoking opportunity attacks). The potency increases by 1 for enemies targeted by two or more of these minions. These minions die at the end of your turn, activate no effects upon death, and you gain no essence from their deaths.',
+    effect: 'You summon a temporary squad containing 6 of your signature minions regardless of your minion maximum within distance. Whenever one of these minions deals damage to an enemy, the enemy is R < AVERAGE compelled to move 5 squares toward the source of the damage (provoking opportunity attacks). The potency increases by 1 for enemies targeted by two or more of these minions.',
   }),
   ess(7, 'Essence Funnel', 'You rapidly summon and sacrifice minions in order to power a devastating blast of magic.', {
     keywords: ['Area','Magic'], type: 'Main action', distance: '10 × 1 line within 1', target: 'Each enemy and object in the area',
@@ -97,7 +97,7 @@ const ESS_9 = () => [
   }),
   ess(9, 'Army’s Idol', 'Your champion’s appearance has an enchanting impact on you and your allies.', {
     keywords: ['Area','Champion','Magic'], type: 'Maneuver', distance: '4 burst', target: 'Self and each ally in the area',
-    effect: 'You can use this ability as if in the space of one of your minions within your Summoner’s Range. Until the end of the encounter or you become dying, each target has a +2 bonus to saving throws. Each target can immediately make each of their saving throws and stand up from prone.',
+    effect: 'You can use this ability as if in the space of one of your minions within your Summoner\'s Range.',
   }),
   ess(9, 'The Champion Slams the Earth', 'Your champion lays their fury upon those unfortunate enough to be in their wake.', {
     keywords: ['Area','Champion','Magic','Weapon'], type: 'Main action', distance: '4 cube within 1', target: 'Each enemy and object in the area',
@@ -106,7 +106,7 @@ const ESS_9 = () => [
   }),
   ess(9, 'Their Pall Shrouds All', 'Your champion fills the area with a thick haze hiding friend from foe.', {
     keywords: ['Area','Champion','Magic'], type: 'Maneuver', distance: '4 burst', target: 'Each enemy in the area',
-    effect: 'You can use this ability as if in the space of one of your minions within your Summoner’s Range. Each target is R < AVERAGE, weakened (save ends). Until the end of the encounter, whenever a target gets a tier 1 result on a strike, they deal half damage. If a target was striking a creature adjacent to one of their allies, they target their ally instead.',
+    effect: 'You can use this ability as if in the space of one of your minions within your Summoner\'s Range.',
   }),
 ];
 
@@ -114,7 +114,7 @@ const ESS_9 = () => [
 const ESS_11 = () => [
   ess(11, '10,000 Minions', 'The battle is now a war. Your entire army storms the field.', {
     keywords: ['Magic'], type: 'Main action', distance: 'Special', target: 'Special',
-    effect: 'Until the end of the encounter or you are dying, each square on the ground is considered teeming with minions. An enemy that ends their turn in an affected square takes 5 damage. This damage can’t be reduced. Additionally, you can use Minion Bridge treating each affected square as an eligible minion (up to a maximum of 10 additional squares).',
+    effect: 'Until the end of the encounter or you are dying, each square on the ground is considered teeming with minions. An enemy that ends their turn in an affected square takes 5 damage. This damage can\'t be reduced.',
   }),
   ess(11, 'Bodyguard Tactics', 'You surround your allies with a nigh-endless supply of summons that stand in the way of all impacts.', {
     keywords: ['Area','Magic'], type: 'Main action', distance: '5 burst', target: 'Self and each non-minion ally in the area',
@@ -122,12 +122,12 @@ const ESS_11 = () => [
   }),
   ess(11, 'I Abjure Thee', 'Cast those not affixed to this manifold into the void of a minion’s existence.', {
     keywords: ['Area','Magic'], type: 'Main action', distance: '3 burst', target: 'Special',
-    effect: 'Each enemy minion in the area is permanently removed from the encounter map. Up to three non-leader or non-solo enemies in the area are removed from the encounter for 1 round. A leader or a solo enemy in the area that has R, I, or P < AVERAGE is weakened and slowed (save ends) as they are partially removed from the manifold. You can increase the potency by 1 for each of your minions adjacent to the target you choose to sacrifice as a part of using this ability.',
+    effect: 'Each enemy minion in the area is permanently removed from the encounter map. Up to three non-leader or non-solo enemies in the area are removed from the encounter for 1 round.',
   }),
   ess(11, 'The Champion’s Wrath', 'Your champion appears and goes into a rampage, clearing the way for your minions to march forth.', {
     keywords: ['Area','Champion','Magic','Weapon'], type: 'Main action', distance: '4 burst', target: 'Each enemy in the area',
     powerRoll: 'Reason', tiers: t('6 damage; push 4; M < WEAK, push is vertical','10 damage; push 5; M < AVERAGE, push is vertical','14 damage; push 6; M < STRONG, push is vertical'),
-    effect: 'You can use this ability as if in the space of one of your minions within your Summoner’s Range. You can change the damage type to be a type that your champion deals on their stat block (see Portfolio Champion). For each enemy reduced to 0 Stamina by this ability, an ally within distance can move up to their speed.',
+    effect: 'You can use this ability as if in the space of one of your minions within your Summoner\'s Range.',
   }),
 ];
 
@@ -152,7 +152,7 @@ const CIRCLE_FEAT_5 = {
 };
 const CIRCLE_FEAT_8 = {
   blight: [
-    { name: 'Abyssal Evolution', text: 'At the start of each of your turns, you can transform up to two of your demon minions within your Summoner’s Range. A demon can transform into a different demon minion within your Summoner’s Range, maintaining their current Stamina. Starting from round 2, a demon can transform into any demon minion you can call forth for half the essence cost, as if you summoned the new minion into the demon’s space. The minions must be reassigned to a new squad if their new name differs from the other squad members.' },
+    { name: 'Abyssal Evolution', text: 'At the start of each of your turns, you can transform up to two of your demon minions within your Summoner\'s Range. A demon can transform into a different demon minion within your Summoner\'s Range, maintaining their current Stamina. Starting from round 2, a demon can transform any demon minion you can call forth for half the essence cost, as if you summoned the new minion into the demon\'s space.\n\nThe minions must be reassigned to a new squad if their new name differs from the other squad members.' },
   ],
   graves: [
     { name: 'Kill the Pain', text: 'You aren’t affected by excess damage after all minions in a squad are dead. Additionally, you and each of your undead minions ignore damage rolled as a d3 or a d6 and damage from environmental effects while you are not winded.' },
@@ -194,7 +194,7 @@ export const summoner = {
     summary: 'You conjure a kit — an implement and a ward — and learn a mightier command.',
     staminaGain: 6,
     autoFeatures: () => [
-      { name: 'Summoner’s Kit', text: 'You conjure a kit for yourself. This kit includes an implement, such as a rod or a baton, which grants you the following benefits: the damage of your Summoner Strike ability increases to twice your Reason score; the potency of your Summoner Strike ability increases to R < AVERAGE; and the distance of your Summoner Strike ability is now equal to your Summoner’s Range. Your kit also comes with wards like magic armor and transient minion forces — choose one ward.' },
+      { name: 'Summoner’s Kit', text: 'You conjure a kit for yourself. This kit includes an implement, such as a rod or a baton, which grants you the following benefits:\n\n- The damage of your Summoner Strike ability increases to twice your Reason score.\n- The potency of your Summoner Strike ability increases to R < AVERAGE.\n- The distance of your Summoner Strike ability is now equal to your Summoner\'s Range.\n\nYour kit also comes with wards like magic armor and transient minion forces. Choose one of the following wards.' },
     ],
     choices: [
       { id: 'ward-3', label: 'Summoner’s Kit Ward', help: 'Choose one ward from your Summoner’s Kit.', kind: 'feature', options: wardOptions(3) },
@@ -280,7 +280,7 @@ export const summoner = {
     summary: 'Your kit takes its ultimate form, and two worlds claim you as steward.',
     staminaGain: 6,
     autoFeatures: () => [
-      { name: 'Kit Improvement', text: 'You have conjured your kit into its ultimate form, which grants you the following benefits: the potency of your Summoner Strike ability increases to R < STRONG; you can choose one additional ward from your Summoner’s Kit; and you have a double edge on tests made to dissuade or scare enemy minions or lackeys. Additionally, your clothing and equipment become adorned with distinct and elaborate regalia to make you stand out from your army, like massive rib cage pauldrons, a tooth crested helmet, or a billowing mantle of fire.' },
+      { name: 'Kit Improvement', text: 'You\'ve conjured your kit into its ultimate form. You have the following benefits:\n\n- The potency of your Summoner Strike ability increases to R < STRONG.\n- You can choose one additional ward from your Summoner\'s Kit.\n- You have a double edge on tests made to dissuade or scare enemy minions or lackeys.\n- Your clothing and equipment become adorned with distinct and elaborate regalia to make you stand out from your army, like massive rib cage pauldrons, a tooth crested helmet, or a billowing mantle of fire.' },
       { name: 'Steward of Two Worlds', text: 'You and your allies are now welcome in your circle’s source manifold. Negotiations with native denizens of your circle’s source manifold have their patience increased by 2.' },
     ],
     choices: [
@@ -303,7 +303,7 @@ export const summoner = {
         ] } },
       { name: 'Eidos', text: 'You gain an epic resource called eidos. When you take a respite, you gain eidos equal to the XP you gain. You can spend eidos as if it were essence on minions and abilities you have. When you do, you summon up to two bonus signature minions into unoccupied spaces within your Summoner’s Range. You and your champion also have access to abilities that can be used by spending eidos (see Their Life for Mine and Portfolio Champion). Eidos remains until you spend it.' },
       { name: 'No Matter the Cost', text: 'Whenever you sacrifice minions, you now reduce the cost of a heroic ability or minion by the same amount (to a minimum of 1) instead of only reducing the cost by 1.' },
-      { name: 'Among Our Ranks', text: 'As a respite activity, you summon a willing and not-restrained NPC or player ally to join your party, regardless of distance or manifold. The target stays until the start of your next respite or until they are killed, in which case they are immediately dismissed to the place from which they were summoned. You can’t have more than one character summoned in this way.' },
+      { name: 'Among Our Ranks', text: 'As a respite activity, you summon a willing and not-restrained NPC or player ally to join your party, regardless of distance or manifold. The target stays until the start of your next respite or until they are killed, in which they are immediately dismissed to the place from which they were summoned. You can\'t have more than one character summoned in this way.' },
     ],
     choices: [
       { id: 'char-bonus-10', label: 'Characteristic Increase', help: 'Increase one of your characteristic scores by 1 (max 5).', kind: 'char-bonus', max: 5,

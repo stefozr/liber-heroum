@@ -677,7 +677,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                           : <><b style={{color:'var(--gold-2)'}}>{benefits.perk.group}</b> <span style={{color:'var(--ink-3)'}}>perk group</span></>}
                       </div>
                       {benefits.perk.chosen && benefits.perk.desc && (
-                        <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)', whiteSpace:'pre-line'}}>{benefits.perk.desc}</div>
+                        <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{renderRich(benefits.perk.desc)}</div>
                       )}
                       {levelUpPerks.map((lp, i) => (
                         <div className="perk-leveled" key={`${lp.level}-${lp.name}-${i}`}>
@@ -686,7 +686,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                             <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.18em'}}>({lp.group})</span>
                             <span className="perk-lvl-tag">LV {lp.level}</span>
                           </div>
-                          {lp.text && <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)', whiteSpace:'pre-line'}}>{lp.text}</div>}
+                          {lp.text && <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{renderRich(lp.text)}</div>}
                         </div>
                       ))}
                     </div>
@@ -753,8 +753,8 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
                 <Panel title="Complication" collapsible>
                   <div className="trait-block">
                     <div className="trait-name">{comp.name}</div>
-                    <div className="trait-text"><b style={{color:'var(--gold-2)'}}>Benefit.</b> {comp.benefit}</div>
-                    <div className="trait-text"><b style={{color:'var(--rubric-2)'}}>Drawback.</b> {comp.drawback}</div>
+                    <div className="trait-text"><b style={{color:'var(--gold-2)'}}>{comp.combined ? 'Benefit and Drawback.' : 'Benefit.'}</b> {renderRich(comp.benefit)}</div>
+                    {!comp.combined && <div className="trait-text"><b style={{color:'var(--rubric-2)'}}>Drawback.</b> {renderRich(comp.drawback)}</div>}
                   </div>
                 </Panel>
               )}
@@ -1286,6 +1286,10 @@ function Panel({ title, children, collapsible, defaultCollapsed = false }) {
 function BiographyContent({ character, canEdit = false }) {
   const id = character.identity || {};
   const car = careerDef(character);
+  // The character carries only the incident's name; its story lives on the career.
+  const incident = car && character.career.incident
+    ? (car.incidents || []).find(i => i.name === character.career.incident)
+    : null;
   // Empty fields render as muted prompts (for the hero's own keeper) instead of
   // silently vanishing — an owner shouldn't wonder whether the app lost them.
   const emptyNote = (what) => canEdit
@@ -1321,6 +1325,9 @@ function BiographyContent({ character, canEdit = false }) {
         <div>
           <H4Meta>Inciting Incident</H4Meta>
           <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', color:'var(--ink)', fontWeight:600, letterSpacing:'0.12em'}}>{character.career.incident}</div>
+          {incident?.text && (
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:6}}>{renderRich(incident.text)}</div>
+          )}
         </div>
       )}
       {character.career.taken && (
@@ -1711,7 +1718,7 @@ button.hb-stat-num:hover { color: var(--gold); text-decoration-color: var(--gold
 .prog-pick { display: flex; flex-direction: column; gap: 1px; }
 .prog-pick-text {
   font-family: var(--serif); font-size: var(--fs-5); color: var(--ink-2);
-  line-height: 1.5; margin-top: 3px; white-space: pre-line;
+  line-height: 1.5; margin-top: 3px;
 }
 .prog-pick-k {
   font-family: var(--mono); font-size: var(--fs-2); letter-spacing: 0.2em;

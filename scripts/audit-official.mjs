@@ -585,4 +585,6 @@ async function main() {
   console.log(`\nReports → ${OUT_DIR}`);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+// The bundled app modules can leave handles open (supabase client, timers), which would
+// keep the process alive after main() returns — exit explicitly.
+main().then(() => process.exit(0), (err) => { console.error(err); process.exit(1); });

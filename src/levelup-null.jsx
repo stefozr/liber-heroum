@@ -25,33 +25,33 @@ const DIS_7 = () => [
   dis(7, 'Synapse Field', 'Attacks made by allies in your null field disrupt your enemies’ thoughts, causing psychic pain.', 'Until the end of the encounter, the size of your Null Field ability increases by 1. While the area of that ability is enlarged this way, whenever an enemy in the area takes rolled damage, they take extra psychic damage equal to twice your Intuition score.', { type:'Maneuver', keywords:['Psionic'], distance:'Self', target:'Self' }),
 ];
 const DIS_9 = () => [
-  dis(9, 'Anticipating Strike', 'You suddenly strike an enemy, then grab them in a psionically enhanced grip.', 'This strike resolves before the triggering movement or main action.', { type:'Free triggered action', trigger:'The target moves or uses a main action.', tiers:t('7 + A damage; I < WEAK, restrained (save ends)','10 + A damage; A < AVERAGE, restrained (save ends)','13 + A damage; A < STRONG, restrained (save ends)') }),
+  dis(9, 'Anticipating Strike', 'You suddenly strike an enemy, then grab them in a psionically enhanced grip.', 'This strike resolves before the triggering movement or main action.', { type:'Free triggered action', trigger:'The target moves or uses a main action.', tiers:t('7 + A damage; I < WEAK, restrained (save ends)','10 + A damage; I < AVERAGE, restrained (save ends)','13 + A damage; I < STRONG, restrained (save ends)') }),
   dis(9, 'Iron Grip', 'You grab the target with supernatural force.', 'While grabbed this way, the target takes a bane on the Escape Grab maneuver. Each time they use that maneuver, they take damage equal to twice your Agility score.', { tiers:t('10 + A damage; A < WEAK, grabbed','14 + A damage; A < AVERAGE, grabbed','18 + A damage; A < STRONG, grabbed') }),
   dis(9, 'Phase Leap', 'You leap beyond reality, leaving an afterimage of yourself.', 'You jump up to your speed without provoking opportunity attacks. Until the end of your next turn, a static afterimage of you remains in the space you left, and any enemy adjacent to your afterimage takes a bane on ability rolls. You can use your abilities from your own space or from the space of your afterimage as if you were still there. Additionally, if your Null Field ability is active, your afterimage also projects the aura from that ability, which you control as if you were in the afterimage’s space.', { type:'Move action', keywords:['Psionic'], distance:'Self', target:'Self' }),
   dis(9, 'Synaptic Reset', 'You expand your nullifying power to mitigate harmful effects.', 'Each target can end any conditions or effects on themself, and gains 5 temporary Stamina for each condition or effect removed.', { type:'Maneuver', keywords:['Area','Psionic'], distance:'3 burst', target:'Self and each ally in the area' }),
 ];
 const DIS_11 = () => [
-  dis(11, 'Arcane Purge', 'You focus your null field into a pressure point strike that prevents your foe from channeling sorcery.', 'While suppressed, a target takes psychic damage equal to twice your Intuition score at the start of their turns, whenever they use a supernatural ability, or whenever they use an ability that costs Malice.', { tiers:t('13 + A damage; M < WEAK, the target is suppressed (save ends)','19 + A damage; A < AVERAGE, the target is suppressed (save ends)','24 + A damage; A < STRONG, the target is suppressed (save ends)'), powerRoll:'Agility' }),
-  dis(11, 'Phase Hurl', 'You throw your foe out of phase with this manifold, causing them to harm other enemies as they return.', 'The target and each creature or object they collide with from this forced movement takes psychic damage equal to the total number of squares the target was force moved. While the target is dazed this way, they see glimpses of creatures from other parts of the timescape.', { tiers:t('9 + A damage; push 5; I < WEAK, dazed (save ends)','13 + A damage; push 7; A < AVERAGE, dazed (save ends)','18 + A damage; push 10; A < STRONG, dazed (save ends)') }),
+  dis(11, 'Arcane Purge', 'You focus your null field into a pressure point strike that prevents your foe from channeling sorcery.', 'While suppressed, a target takes psychic damage equal to twice your Intuition score at the start of their turns, whenever they use a supernatural ability, or whenever they use an ability that costs Malice.', { tiers:t('13 + A damage; M < WEAK, the target is suppressed (save ends)','19 + A damage; M < AVERAGE, the target is suppressed (save ends)','24 + A damage; M < STRONG, the target is suppressed (save ends)'), powerRoll:'Agility' }),
+  dis(11, 'Phase Hurl', 'You throw your foe out of phase with this manifold, causing them to harm other enemies as they return.', 'The target and each creature or object they collide with from this forced movement takes psychic damage equal to the total number of squares the target was force moved. While the target is dazed this way, they see glimpses of creatures from other parts of the timescape.', { tiers:t('9 + A damage; push 5; I < WEAK, dazed (save ends)','13 + A damage; push 7; I < AVERAGE, dazed (save ends)','18 + A damage; push 10; I < STRONG, dazed (save ends)') }),
   dis(11, 'Scalar Assault', 'You warp reality to grow a limb for just a moment and make a single devastating attack.', '', { keywords:['Area','Psionic'], type:'Main action', distance:'3 cube within 1', target:'Each enemy in the area', powerRoll:'Agility', tiers:t('12 psychic damage; push 3','17 psychic damage; push 5','23 psychic damage; push 7') }),
-  dis(11, 'Synaptic Anchor', 'You disrupt an enemy’s strike and create a feedback loop in their mind, preventing them from focusing on future attacks.', 'The target takes half the damage, and if the triggering creature has I < AVERAGE, they are dazed (save ends). While the triggering creature is dazed this way, they take psychic damage equal to your Intuition score whenever they use a main action.', { type:'Free triggered action', trigger:'The target takes damage from another creature’s ability while in the area of your Null Field ability.', keywords:['Psionic'], distance:'Self', target:'Self or one creature' }),
+  dis(11, 'Synaptic Anchor', 'You disrupt an enemy’s strike and create a feedback loop in their mind, preventing them from focusing on future attacks.', 'The target takes half the damage, and if the triggering creature has I < AVERAGE, they are dazed (save ends). While the triggering creature is dazed this way, they take psychic damage equal to your Intuition score whenever they use a main action.', { type:'Free triggered action', trigger:'The target takes damage from another creature’s ability while in the area of your Null Field ability.', keywords:['Psionic'], distance:'Self; see below', target:'Self or one creature' }),
 ];
 
 // Tradition features (auto, subclass-keyed)
 const TRAD_FEAT_2 = {
-  chronokinetic: [{ name: 'Rapid Processing', text: 'As a maneuver you can read a whole book or process similar information, and you gain an extra respite activity.' }],
-  cryokinetic: [{ name: 'Entropic Adaptability', text: 'You have cold immunity equal to twice your Intuition, ignore cold/ice difficult terrain, and climb at full speed.' }],
-  metakinetic: [{ name: 'Inertial Sink', text: 'Add your Intuition to your effective size for lifting/forced-movement, reduce falls by 5 squares, and reduce forced-movement damage by your level.' }],
+  chronokinetic: [{ name: 'Rapid Processing', text: 'As a maneuver, you can read an entire book or process a similar amount of information. Additionally, during any respite, you can take an additional respite activity.' }],
+  cryokinetic: [{ name: 'Entropic Adaptability', text: 'You have cold immunity equal to twice your Intuition score. Additionally, you ignore difficult terrain related to cold and ice, and you can automatically climb at full speed while moving.' }],
+  metakinetic: [{ name: 'Inertial Sink', text: 'You add your Intuition score to your effective size for the purpose of interacting with creatures and objects, such as for determining whether you can lift an object, whether you are affected by forced movement, and so forth. This has no effect on whether you can be grabbed.\n\nAdditionally, when you fall, you reduce the effective height of the fall by 5 squares in addition to any other reductions. Whenever you take damage from being force moved, you reduce that damage by an amount equal to your level.' }],
 };
 const TRAD_FEAT_5 = {
-  chronokinetic: [{ name: 'Instant Action', text: 'If not surprised on your first turn, gain an edge on ability rolls and 2 surges. If surprised, spend 3 discipline to negate it and gain the benefit.' }],
-  cryokinetic: [{ name: 'Chilling Readiness', text: 'At the start of any combat, you gain surges equal to your Victories.' }],
-  metakinetic: [{ name: 'Inertial Fulcrum', text: 'When you reduce damage to yourself or forced movement on yourself, deal damage equal to your Intuition to one enemy in your Null Field.' }],
+  chronokinetic: [{ name: 'Instant Action', text: 'If you\'re not surprised at the start of your first turn in combat, you gain an edge on ability rolls and gain 2 surges. If you are surprised, you can spend 3 discipline to no longer be surprised and gain the benefits of this feature.' }],
+  cryokinetic: [{ name: 'Chilling Readiness', text: 'You steel yourself for imminent danger by tapping into your body\'s cold energy. At the start of any combat, you gain a number of surges equal to your Victories.' }],
+  metakinetic: [{ name: 'Inertial Fulcrum', text: 'Whenever you use an ability to reduce damage dealt to you or to reduce the distance of forced movement imposed upon you, you can deal damage to one enemy in the area of your Null Field ability equal to your Intuition score.' }],
 };
 const TRAD_FEAT_8 = {
-  chronokinetic: [{ name: 'Shared Momentum', text: 'When you Disengage, one ally in your Null Field can Disengage as a free triggered action using your distance.' }],
-  cryokinetic: [{ name: 'Synaptic Triage', text: 'Free maneuver: spend 1d6 Stamina to remove one effect on you; each chosen creature in your Null Field gains this too.' }],
-  metakinetic: [{ name: 'Inertial Dampener', text: 'You and chosen creatures/objects in your Null Field gain a stability bonus equal to your Intuition; would-be force-movers take psychic damage.' }],
+  chronokinetic: [{ name: 'Shared Momentum', text: 'When you take the Disengage move action, one ally in the area of your Null Field ability can also take the Disengage move action as a free triggered action, using your distance for that move action.' }],
+  cryokinetic: [{ name: 'Synaptic Triage', text: 'As a free maneuver, you can spend 1d6 Stamina to remove one effect on you. Each creature of your choice in the area of your Null Field ability also gains this benefit.' }],
+  metakinetic: [{ name: 'Inertial Dampener', text: 'You and each creature or object of your choice in the area of your Null Field ability gain a bonus to stability equal to your Intuition score. A creature who attempts to force move a target with this bonus takes psychic damage equal to your Intuition score.' }],
 };
 const TRAD_ABILITY_2 = {
   chronokinetic: [
@@ -70,10 +70,10 @@ const TRAD_ABILITY_2 = {
 const TRAD_ABILITY_6 = {
   chronokinetic: [
     dis(9, 'Interphase', 'You slip into a faster timestream to act more quickly.', 'You can use up to three signature abilities, each of which gains an edge.', { type:'Main action', keywords:['Psionic'], distance:'Self', target:'Self' }),
-    dis(9, 'Phase Step', 'You weaken your connection to this manifold, allowing you to move through and damage enemies.', 'You can shift up to your speed, and squares occupied by enemies or objects are not difficult terrain for this shift. You make one power roll that targets each enemy you moved through during this shift.', { keywords:['Melee','Psionic','Weapon'], distance:'Self', target:'Self', powerRoll:'Agility', tiers:t('6 damage; M < WEAK, dazed','8 damage; A < AVERAGE, dazed','12 damage; A < STRONG, dazed') }),
+    dis(9, 'Phase Step', 'You weaken your connection to this manifold, allowing you to move through and damage enemies.', 'You can shift up to your speed, and squares occupied by enemies or objects are not difficult terrain for this shift. You make one power roll that targets each enemy you moved through during this shift.', { keywords:['Melee','Psionic','Weapon'], distance:'Self; see below', target:'Self', powerRoll:'Agility', tiers:t('6 damage; M < WEAK, dazed','8 damage; M < AVERAGE, dazed','12 damage; M < STRONG, dazed') }),
   ],
   cryokinetic: [
-    dis(9, 'Ice Pillars', 'Pillars of ice erupt from the ground and launch your foes into the air.', 'The pillars vanish as soon as the effects of the forced movement are resolved.', { keywords:['Psionic','Ranged'], type:'Main action', distance:'Ranged 10', target:'Three creature or objects', powerRoll:'Intuition', tiers:t('vertical slide 6','vertical slide 8','vertical slide 10') }),
+    dis(9, 'Ice Pillars', 'Pillars of ice erupt from the ground and launch your foes into the air.', 'The pillars vanish as soon as the effects of the forced movement are resolved.', { keywords:['Psionic','Ranged'], type:'Main action', distance:'Ranged 10', target:'Three creatures or objects', powerRoll:'Intuition', tiers:t('vertical slide 6','vertical slide 8','vertical slide 10') }),
     dis(9, 'Wall of Ice', 'You create a wall of ice.', 'You can place this wall in occupied squares, sliding each creature in the area into the nearest unoccupied space of your choice. The wall remains until the end of the encounter or until you are dying. The wall’s squares are treated as stone squares for the purpose of damage, and you and allies can move freely through the wall. Each enemy who enters a square adjacent to the wall and has M < AVERAGE is slowed (save ends). Each enemy who is force moved into the wall and has M < AVERAGE is restrained (save ends).', { keywords:['Area','Psionic','Ranged'], type:'Main action', distance:'10 wall within 10', target:'Special' }),
   ],
   metakinetic: [
@@ -88,11 +88,11 @@ const TRAD_ABILITY_9 = {
   ],
   cryokinetic: [
     dis(11, 'Absolute Zero', 'You become the coldest thing in the timescape.', 'Until the end of the encounter or until you are dead, you become an avatar of uttermost cold. You gain immunity to all damage equal to the cold damage immunity granted by your Entropic Adaptability trait, you ignore the negative effects of dying, and you have a +2 bonus to potencies.', { tiers: [['≤11','You gain 20 temporary Stamina'],['12–16','You gain 30 temporary Stamina'],['17+','You gain 40 temporary Stamina']], type:'Maneuver', keywords:['Psionic'], distance:'Self', target:'Self' }),
-    dis(11, 'Heat Drain', 'You drain all the heat from the target.', 'While restrained this way, the target takes cold damage equal to your Intuition score at the start of each of your turns. Additionally, whenever the target damages another creature while restrained this way, any potency associated with the damage is reduced by 2.', { type: 'Maneuver', keywords:['Melee','Psionic','Strike'], powerRoll:'Intuition', tiers:t('8 + I cold damage; M < WEAK, restrained (save ends)','11 + I cold damage; I < AVERAGE, restrained (save ends)','15 + I cold damage; I < STRONG, restrained (save ends)') }),
+    dis(11, 'Heat Drain', 'You drain all the heat from the target.', 'While restrained this way, the target takes cold damage equal to your Intuition score at the start of each of your turns. Additionally, whenever the target damages another creature while restrained this way, any potency associated with the damage is reduced by 2.', { type: 'Maneuver', keywords:['Melee','Psionic','Strike'], powerRoll:'Intuition', tiers:t('8 + I cold damage; M < WEAK, restrained (save ends)','11 + I cold damage; M < AVERAGE, restrained (save ends)','15 + I cold damage; M < STRONG, restrained (save ends)') }),
   ],
   metakinetic: [
     dis(11, 'Inertial Absorption', 'You absorb an attack to empower your body.', 'You take half the damage, negate any effects associated with the damage for you, and gain 3 surges.', { type:'Free triggered action', trigger:'Another creature damages you using an ability.', keywords:['Psionic'], distance:'Self', target:'Self' }),
-    dis(11, 'Realitas', 'Your essential hyperreality disrupts your enemy’s connection to existence.', 'While dazed this way, the target takes psychic damage equal to twice your Intuition score at the start of each of your turns. If this ability causes a creature who is not a leader or solo creature to become winded, they are instead reduced to 0 Stamina. Any creature reduced to 0 Stamina by this ability is forgotten by all creatures of your level or lower in the timescape who are not present in the encounter. Loved ones of the forgotten creature retain a faint sense of melancholy. This effect can be reversed only at the Director’s discretion.', { powerRoll:'Agility', tiers:t('7 + A psychic damage; I < WEAK, dazed','10 + A psychic damage; A < AVERAGE, dazed','13 + A psychic damage; A < STRONG, dazed') }),
+    dis(11, 'Realitas', 'Your essential hyperreality disrupts your enemy’s connection to existence.', 'While dazed this way, the target takes psychic damage equal to twice your Intuition score at the start of each of your turns. If this ability causes a creature who is not a leader or solo creature to become winded, they are instead reduced to 0 Stamina. Any creature reduced to 0 Stamina by this ability is forgotten by all creatures of your level or lower in the timescape who are not present in the encounter. Loved ones of the forgotten creature retain a faint sense of melancholy. This effect can be reversed only at the Director’s discretion.', { powerRoll:'Agility', tiers:t('7 + A psychic damage; I < WEAK, dazed','10 + A psychic damage; I < AVERAGE, dazed','13 + A psychic damage; I < STRONG, dazed') }),
   ],
 };
 
@@ -110,8 +110,8 @@ export const nul = {
     summary: 'Your psionic body answers faster than thought.',
     staminaGain: 9,
     autoFeatures: () => [
-      { name: 'Psionic Leap', text: 'You long-jump and high-jump a distance equal to twice your Agility with no test.' },
-      { name: 'Reorder', text: 'At the start of your turn, free triggered action: end one save-ends or end-of-turn effect on you, or on a creature in your Null Field.' },
+      { name: 'Psionic Leap', text: 'You can long jump and high jump a distance equal to twice your Agility score without needing to make a test.' },
+      { name: 'Reorder', text: 'At the start of each of your turns, you can use a free triggered action to end one effect on you that is ended by a saving throw or that ends at the end of your turn. Alternatively, you can grant this benefit to one creature in the area of your Null Field ability.' },
     ],
     choices: [
       { id: 'discipline-7', label: '7-Discipline Ability', help: 'Choose one heroic ability that costs 7 discipline.', kind: 'ability', options: DIS_7 },
@@ -124,8 +124,8 @@ export const nul = {
     autoFeatures: (ctx) => [
       { name: 'Characteristic Increase', text: 'Your Agility and Intuition scores each increase to 3.' },
       masteryImprovement('I', 8)(ctx),
-      { name: 'Enhanced Null Field', text: 'Your Null Field removes temporary supernatural terrain of your level or lower it overlaps, and suppresses permanent ones while overlapping.' },
-      { name: 'Regenerative Field', text: 'The first time each round an enemy in your Null Field uses a main action, you gain 2 discipline instead of 1.' },
+      { name: 'Enhanced Null Field', text: 'While using your Null Field ability, you disrupt magic and psionic power suffusing the area around you. During combat, any temporary supernatural terrain effects of your level or lower are removed when your aura partially or fully overlaps with their location. Permanent supernatural terrain effects of your level or lower are temporarily negated while your aura overlaps with their location, but return when the aura no longer overlaps with them.' },
+      { name: 'Regenerative Field', text: 'The first time each combat round that an enemy in the area of your Null Field ability uses a main action, you gain 2 discipline instead of 1.' },
     ],
     choices: [
       { id: 'perk-4', label: 'Perk', help: 'Choose any perk.', kind: 'perk', options: PERK_ANY },
@@ -144,8 +144,8 @@ export const nul = {
     summary: 'Your field learns to drink the elements themselves.',
     staminaGain: 9,
     autoFeatures: () => [
-      { name: 'Elemental Absorption', text: 'When you use Inertial Shield, gain immunity to acid, cold, corruption, fire, lightning, poison, and sonic equal to your Intuition against the triggering damage.' },
-      { name: 'Elemental Buffer', text: 'When you reduce elemental damage with immunity, gain 2 surges usable only on your next strike.' },
+      { name: 'Elemental Absorption', text: 'Whenever you use your Inertial Shield triggered action, you gain immunity to acid, cold, corruption, fire, lightning, poison, and sonic damage equal to your Intuition score against the triggering damage.' },
+      { name: 'Elemental Buffer', text: 'Whenever you reduce acid, cold, corruption, fire, lightning, poison, or sonic damage with damage immunity, you gain 2 surges that can be used only to increase the damage of your next strike.' },
     ],
     choices: [
       { id: 'perk-6', label: 'Perk', help: 'Choose one exploration, interpersonal, or intrigue perk.', kind: 'perk', options: PERK_EII },
@@ -157,10 +157,10 @@ export const nul = {
     staminaGain: 9,
     autoCharIncreaseAll: { delta: 1, max: 4 },
     autoFeatures: (ctx) => [
-      { name: 'Characteristic Increase', text: 'Each characteristic score increases by 1, to a maximum of 4.' },
+      { name: 'Characteristic Increase', text: 'Each of your characteristic scores increases by 1, to a maximum of 4.' },
       masteryImprovement('II', 10)(ctx),
       { name: 'Psi Boost',
-        text: 'Whenever you use an ability that is a main action or a maneuver with the Psionic keyword, you can spend additional discipline to apply a psi boost to it and enhance its effects. A psi boost’s effects last only until the end of the turn in which the ability is first used. You can apply multiple psi boosts to an ability, but only one instance of each specific boost. You can use the following psi boosts:',
+        text: 'Whenever you use an ability that is a main action or a maneuver with the Psionic keyword, you can spend additional discipline to apply a psi boost to it and enhance its effects. A psi boost\'s effects only last until the end of the turn which the ability is first used. You can apply multiple psi boosts to an ability, but only one instance of each specific boost. You can use the following psi boosts.',
         table: { head: ['Psi Boost', 'Effect'], rows: [
           ['Dynamic Power (1 Discipline)', 'If the ability force moves a target, the forced movement distance gains a bonus equal to your Intuition score.'],
           ['Expanded Power (3 Discipline)', 'If the ability targets an area, you increase the size of the area by 1. If the area is a line, you increase the size of one dimension, not both.'],
@@ -170,7 +170,7 @@ export const nul = {
           ['Shared Power (5 Discipline)', 'If the ability targets individual creatures or objects, you target one additional creature or object within distance.'],
           ['Sharpened Power (1 Discipline)', 'If the ability has any power roll, that roll gains an edge.'],
         ] } },
-      { name: 'Improved Body', text: 'When you gain discipline at the start of your turns in combat, you gain 3 instead of 2.' },
+      { name: 'Improved Body', text: 'When you gain discipline at the start of each of your turns during combat, you gain 3 discipline instead of 2.' },
     ],
     choices: [
       { id: 'skill-7', label: 'Skill', help: 'Choose any skill from any group.', kind: 'skill-group', options: SKILL_ANY },
@@ -189,7 +189,7 @@ export const nul = {
     summary: 'You become the weapon — beyond hunger, age, and frailty.',
     staminaGain: 9,
     autoFeatures: () => [
-      { name: 'I Am the Weapon', text: 'Your Stamina increases by 21; you can\u2019t be made bleeding even while dying, no longer age or need food, and can use Intuition to resist any potency.' },
+      { name: 'I Am the Weapon', text: 'Your Stamina increases by 21 and you can\'t be made bleeding even while dying. You no longer age or have need of food. Additionally, you can use Intuition instead of another characteristic when resisting potencies.' },
     ],
     choices: [
       { id: 'tradition-ability-9', label: '9th-Level Tradition Ability', help: 'Your tradition grants your choice of one of two heroic abilities.', kind: 'ability', options: ({ sub }) => TRAD_ABILITY_9[sub] || [] },
@@ -202,9 +202,9 @@ export const nul = {
     autoFeatures: (ctx) => [
       { name: 'Characteristic Increase', text: 'Your Agility and Intuition scores each increase to 5.' },
       masteryImprovement('III', 12)(ctx),
-      { name: 'Manifold Body', text: 'When you gain discipline at the start of your turns in combat, you gain 4 instead of 3.' },
-      { name: 'Manifold Resonance', text: 'Each respite, shift yourself and creatures in your Null Field to a known location. Each ability grants 1 discipline usable only for a Psi Boost on it, and you and allies in your field ignore banes on power rolls.' },
-      { name: 'Order', text: 'You gain the epic resource order equal to the XP you earn each respite, spendable as discipline. Spend 1 order at the start of combat to enlarge your Null Field for the encounter. Order remains until spent.' },
+      { name: 'Manifold Body', text: 'When you gain discipline at the start of each of your turns during combat, you gain 4 discipline instead of 3.' },
+      { name: 'Manifold Resonance', text: 'Your body becomes perfected matter, beyond the whims and chaos of the timescape and the restrictions of the manifolds. Each time you finish a respite, you can shift yourself and any creatures in the area of your Null Field ability to any location in the timescape known to you, known to any other creature in the area, or where any supernatural treasure in the area has been before.\n\nWhenever you use an ability, you gain 1 discipline that can be used only to apply a benefit from your Psi Boost feature to that ability. Additionally, you and allies in the area of your Null Field ability ignore banes and double banes on your power rolls.' },
+      { name: 'Order', text: 'You have an epic resource called order. Each time you finish a respite, you gain order equal to the XP you gain. You can spend order on your abilities as if it were discipline.\n\nAt the start of a combat encounter, you can spend 1 order to increase the size of your Null Field by 1 until the end of the encounter.\n\nOrder remains until you spend it.' },
     ],
     choices: [
       { id: 'perk-10', label: 'Perk', help: 'Choose one exploration, interpersonal, or intrigue perk.', kind: 'perk', options: PERK_EII },

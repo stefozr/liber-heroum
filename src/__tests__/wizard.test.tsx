@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import React from 'react';
-import { Wizard, isStepValid, stepIssues } from '../wizard.jsx';
+import { Wizard, isStepValid, stepIssues, classSections } from '../wizard.jsx';
 import { newCharacter, collectSkillPicks } from '../app.jsx';
 import { DS_STEPS, DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS, DS_CULTURES, DS_SKILL_GROUPS, DS_LANGUAGES, kitPoolFor } from '../data.jsx';
 import { PERKS, pickPool } from '../wizard/helpers.js';
@@ -163,6 +163,78 @@ describe('class skill picker', () => {
     const c2 = atStep(CLASS_STEP, { cls: 'tactician', subclass: 'mastermind' });
     const { container: c2c } = renderWizard(c2);
     expect(c2c.textContent).toContain('one lore — from Mastermind');
+  });
+
+  // The docket's chips are only useful if they land somewhere. Each chip id is
+  // also the id of a real anchor in the step, so a section that moves or gets
+  // renamed without its anchor following shows up here rather than as a chip
+  // that silently does nothing.
+  it('every docket chip points at an anchor that exists, for every class', () => {
+    for (const cls of DS_CLASSES as any[]) {
+      const c = atStep(CLASS_STEP, { cls: cls.id });
+      const { container } = renderWizard(c);
+      const chips = [...container.querySelectorAll<HTMLElement>('.cd-chip')];
+      expect(chips.length, `${cls.id} rendered no docket chips`).toBeGreaterThan(0);
+      for (const chip of chips) {
+        const id = classSections(c).find((s: any) => chip.textContent?.includes(s.label))?.id;
+        expect(container.querySelector(`#${id}`), `${cls.id}: no anchor for "${chip.textContent}"`).toBeTruthy();
+      }
+      cleanup();
+    }
+  });
+
+  it('the docket counts a fresh class as nothing chosen, and tracks a pick', () => {
+    const c = atStep(CLASS_STEP, { cls: 'conduit' });
+    c.cclass = { ...c.cclass, domains: [], domainFeature: null, domainAbility: null,
+      domainSkill: null, skills: [], signatures: [], heroic3: null, heroic5: null,
+      prayer: null, ward: null, triggeredAction: null, characteristics: {} };
+    const { container } = renderWizard(c);
+    expect(container.querySelector('.cd-count')?.textContent).toBe('0 of 12 chosen');
+
+    cleanup();
+    const done = atStep(CLASS_STEP, { cls: 'conduit' });   // factory builds a valid conduit
+    const { container: c2 } = renderWizard(done);
+    expect(c2.querySelector('.cd-count')?.textContent).toBe('every choice made');
+    expect(c2.querySelectorAll('.cd-chip.done').length).toBe(classSections(done).length);
+  });
+
+  // The docket's head is a disclosure — open above the phone tier, shut below it,
+  // where the chips render as a vertical checklist instead of a cloud. jsdom's
+  // matchMedia reports no match, so this is the wide default. The visual half is
+  // CSS the tests can't see, so pin the state to the markup it keys off.
+  it('the docket head is a disclosure, open by default at desk width', () => {
+    const c = atStep(CLASS_STEP, { cls: 'conduit' });
+    const { container } = renderWizard(c);
+    const head = container.querySelector<HTMLButtonElement>('.cd-head')!;
+    expect(head.tagName).toBe('BUTTON');
+    expect(head.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector('.cls-docket.shut')).toBeNull();
+
+    fireEvent.click(head);
+    expect(head.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('.cls-docket.shut')).toBeTruthy();
+    // Shut hides the chips in CSS rather than unmounting them, so aria-expanded
+    // stays honest and the anchor sweep above keeps finding every chip.
+    expect(container.querySelectorAll('.cd-chip').length).toBe(classSections(c).length);
+    expect(container.querySelector('.cd-chips')!.id).toBe(head.getAttribute('aria-controls'));
+  });
+
+  // A chip collapses the docket before it scrolls (phone only), so this guards the
+  // ordering: the click must still reach scrollWizardTo.
+  it('a chip click scrolls the step to its section', async () => {
+    const c = atStep(CLASS_STEP, { cls: 'fury' });
+    const { container } = renderWizard(c);
+    const proto = Element.prototype as any;
+    const prev = proto.scrollTo;
+    const calls: any[] = [];
+    proto.scrollTo = function (o: any) { calls.push(o); };
+    try {
+      fireEvent.click(container.querySelector<HTMLButtonElement>('.cd-chip')!);
+      await new Promise(r => requestAnimationFrame(() => r(null)));   // scrollWizardTo defers a frame
+      expect(calls.length).toBe(1);
+    } finally {
+      if (prev) proto.scrollTo = prev; else delete proto.scrollTo;
+    }
   });
 
   it('quick build applies the class suggestions minus granted/dupes', () => {

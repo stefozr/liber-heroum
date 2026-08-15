@@ -5,7 +5,7 @@ const ab = (name, opts) => ({ name, ...opts });
 // subclass) because the Grounded complication also grants it.
 const MOTIVATE_EARTH = ab('Motivate Earth', { noBadge: true, flavor: 'The earth rises, falls, or opens up at your command.',
   keywords: ['Magic','Earth','Melee'], type: 'Main action', distance: 'Melee 1', target: 'Special',
-  effect: 'You touch a square containing mundane dirt, stone, or metal and create a 5 wall of the same material, which rises up out of the ground and must include the square you touched.\n\nAlternatively, you touch a structure made of mundane dirt, stone, or metal that occupies 2 or more squares. You can open a 1-square opening in the structure where you touched it. You can instead touch an existing doorway or other opening that is 1 square or smaller in a mundane dirt, stone, or metal surface. The opening is sealed by the same material that makes up the surface.' });
+  effect: 'You touch a square containing mundane dirt, stone, or metal and create a 5 wall of the same material, which rises up out of the ground and must include the square you touched.' });
 
 // ───────── Classes ─────────
 const DS_CLASSES = [
@@ -52,7 +52,7 @@ const DS_CLASSES = [
           oracle:   'Oracle — the first time on a turn you judge a creature, you can deal holy damage equal to twice your Presence score to the judged creature.',
           paragon:  'Paragon — the first time on a turn you judge a creature, you can vertical pull the judged creature up to twice your Presence score.',
         },
-        effect: 'The target is judged by you until the end of the encounter, you use this ability again, you willingly end this effect (no action required), or another censor judges the target.\n\nWhenever a creature judged by you uses a main action and is within your line of effect, you can use a free triggered action to deal holy damage equal to twice your Presence score to them.\n\nWhen a creature judged by you is reduced to 0 Stamina, you can use a free triggered action to use this ability against a new target.\n\nAdditionally, you can spend 1 wrath to take one of the following free triggered actions:\n\n- When an adjacent creature judged by you starts to shift, you make a melee free strike against them and their speed becomes 0 until the end of the current turn, preventing them from shifting.\n- When a creature judged by you within 10 squares makes a power roll, you cause them to take a bane on the roll.\n- When a creature judged by you within 10 squares uses an ability with a potency that targets only one creature, the potency is reduced by 1 for that creature.\n- If you damage a creature judged by you with a melee ability, the creature is taunted by you until the end of their next turn.\n\nYou can choose only one free triggered action option at a time, even if multiple options are triggered by the same effect.'
+        effect: 'The target is judged by you until the end of the encounter, you use this ability again, you willingly end this effect (no action required), or another censor judges the target.'
       }) },
       { name: 'My Life for Yours', ability: ab('My Life for Yours', {
         flavor: 'You channel some of your vitality into more resilience for you or an ally.',
@@ -118,7 +118,7 @@ const DS_CLASSES = [
         flavor: 'You conjure memories of their sins to harry your foes.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','5 + P holy damage; I < WEAK, dazed (save ends)'],['12–16','8 + P holy; I<AVERAGE, dazed (save)'],['17+','11 + P holy; I<STRONG, dazed (save)']],
+        powerRoll: 'Presence', tiers: [['≤11','5 + P holy damage; I < WEAK, dazed (save ends)'],['12–16','8 + P holy damage; I < AVERAGE, dazed (save ends)'],['17+','11 + P holy damage; I < STRONG, dazed (save ends)']],
       }),
     ],
     heroic5: [
@@ -140,14 +140,14 @@ const DS_CLASSES = [
         flavor: 'You attack a foe and your enemies behold a vision of the true nature of your resolve.',
         keywords: ['Magic','Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature',
-        powerRoll: 'Might', tiers: [['≤11','3 + M holy; if P<WEAK, enemies near target are frightened (save)'],['12–16','5 + M holy; P<AVERAGE'],['17+','8 + M holy; P<STRONG']],
+        powerRoll: 'Might', tiers: [['≤11','3 + M holy damage; if the target has P < WEAK, each enemy within 2 squares of them is frightened of you (save ends)'],['12–16','5 + M holy damage; if the target has P < AVERAGE, each enemy within 2 squares of them is frightened of you (save ends)'],['17+','8 + M holy damage; if the target has P < STRONG, each enemy within 2 squares of them is frightened of you (save ends)']],
         effect: 'Each enemy frightened this way is pushed up to 2 squares away from the target and takes psychic damage equal to your Presence score.'
       }),
       ab('Censored', { cost: 5, resource: 'Wrath',
         flavor: 'Judged and sentenced.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Might', tiers: [['≤11','2 + M holy'],['12–16','3 + M holy'],['17+','5 + M holy']],
+        powerRoll: 'Might', tiers: [['≤11','2 + M holy damage'],['12–16','3 + M holy damage'],['17+','5 + M holy damage']],
         effect: 'When a target who is not a leader or solo creature is made winded by this ability, they are reduced to 0 Stamina.'
       }),
     ],
@@ -184,7 +184,8 @@ const DS_CLASSES = [
       { name: 'Healing Grace', ability: ab('Healing Grace', { noBadge: true,
         flavor: 'Your divine energy restores the righteous.',
         keywords: ['Magic','Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally',
-        effect: 'The target can spend a Recovery.\n\nSpend 1+ Piety: For each piety spent, choose one of the following enhancements:\n\n- You can target one additional ally within distance.\n- You can end one effect on a target that is ended by a saving throw or that ends at the end of their turn.\n- A prone target can stand up.\n- A target can spend 1 additional Recovery.'
+        effect: 'The target can spend a Recovery.',
+        resource: 'Piety', spendCost: '1+', spend: 'For each piety spent, choose one of the following enhancements:\n\n- You can target one additional ally within distance.\n- You can end one effect on a target that is ended by a saving throw or that ends at the end of their turn.\n- A prone target can stand up.\n- A target can spend 1 additional Recovery.'
       }) },
       { name: 'Ray of Wrath', ability: ab('Ray of Wrath', { noBadge: true,
         flavor: 'You unleash a blast of holy light upon your foe.',
@@ -192,7 +193,7 @@ const DS_CLASSES = [
         powerRoll: 'Intuition', tiers: [['≤11','2 + I damage'],['12–16','4 + I damage'],['17+','6 + I damage']],
         effect: 'You can have this ability deal holy damage.'
       }) },
-      { name: 'Triggered Action', text: 'Choose one of the following triggered actions. You can use it once per turn.', choose: 'triggered' },
+      { name: 'Triggered Action', text: 'Choose one of the following triggered actions. (*Quick Build:* Word of Guidance.)', choose: 'triggered' },
       { name: 'Prayer / Ward', text: 'Choose one Prayer and one Conduit Ward below. You can swap either during a respite.', choose: 'prayerWard' },
     ],
     triggereds: [
@@ -257,7 +258,7 @@ const DS_CLASSES = [
       ab('Wither', { flavor: 'A bolt of holy energy saps the life from a foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption damage; P < WEAK, the target takes a bane on their next power roll'],['12–16','5 + I corruption; P<AVERAGE, bane on next power roll'],['17+','8 + I corruption; P<STRONG, bane on next power roll']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption damage; P < WEAK, the target takes a bane on their next power roll'],['12–16','5 + I corruption damage; P < AVERAGE, the target takes a bane on their next power roll'],['17+','8 + I corruption damage; P < STRONG, the target takes a bane on their next power roll']],
       }),
     ],
     heroic3: [
@@ -279,7 +280,7 @@ const DS_CLASSES = [
         flavor: 'Your divine fury is a hammer that crashes down upon the unrighteous.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage; A < WEAK, prone'],['12–16','6 + I holy damage; I < AVERAGE, prone'],['17+','9 + I holy damage; I < STRONG, prone and can\'t stand (save ends)']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I holy damage; A < WEAK, prone'],['12–16','6 + I holy damage; A < AVERAGE, prone'],['17+','9 + I holy damage; A < STRONG, prone and can\'t stand (save ends)']],
       }),
       ab('Font of Wrath', { cost: 3, resource: 'Piety',
         flavor: 'A brilliant column of holy light appears on the battlefield, striking out at nearby enemies.',
@@ -311,7 +312,7 @@ const DS_CLASSES = [
         flavor: 'Cursed by you, your enemy takes more damage from your allies.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption damage; M < WEAK, damage weakness 5 (save ends)'],['12–16','6 + I corruption damage; I < AVERAGE, damage weakness 5 (save ends)'],['17+','9 + I corruption damage; I < STRONG, damage weakness 5 (save ends)']],
+        powerRoll: 'Intuition', tiers: [['≤11','3 + I corruption damage; M < WEAK, damage weakness 5 (save ends)'],['12–16','6 + I corruption damage; M < AVERAGE, damage weakness 5 (save ends)'],['17+','9 + I corruption damage; M < STRONG, damage weakness 5 (save ends)']],
       }),
     ],
   },
@@ -402,7 +403,7 @@ const DS_CLASSES = [
             distance: 'Self', target: 'Self',
             trigger: 'You lose Stamina and are not dying.',
             effect: 'You gain temporary Stamina equal to your Might score and can enter your animal form or hybrid form.',
-            resource: 'Ferocity', spend: 'if you are not dying, you can spend a Recovery.',
+            resource: 'Ferocity', spend: 'If you are not dying, you can spend a Recovery.',
           }),
         ],
       },
@@ -427,7 +428,7 @@ const DS_CLASSES = [
       ab('Hit and Run', { flavor: 'Staying in constant motion helps you slip out of reach after a brutal assault.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','2 + M damage; M < WEAK'],['12–16','5 + M damage; M < AVERAGE'],['17+','7 + M damage; A < STRONG, slowed (save ends)']],
+        powerRoll: 'Might', tiers: [['≤11','2 + M damage'],['12–16','5 + M damage'],['17+','7 + M damage; A < STRONG, slowed (save ends)']],
         effect: 'You can shift 1 square.'
       }),
       ab('Impaled!', { flavor: 'You skewer your enemy like a boar upon a spit.',
@@ -453,7 +454,7 @@ const DS_CLASSES = [
       ab('Tide of Death', { cost: 3, resource: 'Ferocity',
         flavor: 'Teach them the folly of lining up for you.',
         keywords: ['Melee','Weapon'], type: 'Main action',
-        distance: 'Self', target: 'Self',
+        distance: 'Self; see below', target: 'Self',
         powerRoll: 'Might', tiers: [['≤11','2 damage'],['12–16','3 damage'],['17+','5 damage']],
         effect: 'You move up to your speed in a straight line, and enemy squares are not difficult terrain for this movement. You can end this movement in a creature’s space and move them to an adjacent unoccupied space. You make one power roll that targets each enemy whose space you move through.\n\nThe last target you damage takes extra damage equal to your Might score for each opportunity attack you trigger during your move.'
       }),
@@ -549,20 +550,20 @@ const DS_CLASSES = [
         text: 'Acolyte of the Green — when you damage a creature with a Green + Magic ability that costs essence, you or a creature within 10 squares gains temporary Stamina equal to your Reason.',
         acolyte: { name: 'Acolyte of the Green', text: 'Whenever you deal damage using an ability with the Green and Magic keywords that costs essence, you or one creature within 10 squares gains temporary Stamina equal to your Reason score.' },
         features: [
-          { name: 'It Is the Soul Which Hears', text: 'You can speak with and understand animals, beasts, and plant creatures, and use Reason instead of Presence to influence them. You can also telepathically commune with non-creature plants you touch.' },
+          { name: 'It Is the Soul Which Hears', text: 'You can speak with and understand animals, beasts, and plant creatures, even if they don\'t share a language with you. Your ability to communicate with these creatures doesn\'t make them inherently more intelligent, but you can use Reason instead of Presence while making tests to influence them.\n\nAdditionally, you can touch a living plant that is not a plant creature to communicate with it telepathically. You can use words to communicate with the plant, but it communicates with you only by transmitting feelings and sensations that can\'t be overly specific.' },
         ],
         abilities: [
           ab('Breath of Dawn Remembered', { flavor: 'The power you channel grants the ability to get back in the fight.',
             keywords: ['Magic','Ranged','Green'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target starts their turn or takes damage.', effect: 'The target can spend a Recovery.',
-            resource: 'Essence', spend: 'The target can spend an additional Recovery for each essence spent.' }),
+            resource: 'Essence', spendCost: '1+', spend: 'The target can spend an additional Recovery for each essence spent.' }),
         ],
       },
       { id: 'void', name: 'Void', tag: 'Mystery',
         text: 'Acolyte of the Mystery — the distance of your abilities with the Magic, Ranged, and Void keywords increases by 2 squares.',
         acolyte: { name: 'Acolyte of the Mystery', text: 'The distance of all your abilities with the Magic, Ranged, and Void keywords increases by 2 squares.', distanceBonus: { keywords: ['Magic', 'Ranged', 'Void'], amount: 2 } },
         features: [
-          { name: 'A Beyonding of Vision', text: 'You recognize illusions, see invisible creatures, and supernatural effects can\u2019t conceal things from you. You always know if an observed area or object is magical and what that magic does.' },
+          { name: 'A Beyonding of Vision', text: 'You instantly recognize illusions for what they are, you can see invisible creatures, and supernatural effects can\'t conceal creatures and objects from you. Additionally, you always know if an area or object you observe is magical or affected by magic, and you know the specifics of what that magic can do.\n\nYou also gain the following ability.' },
         ],
         abilities: [
           ab('Shared Void Sense', { noBadge: true, flavor: 'You grant allies a taste of your unearthly vision.',
@@ -579,13 +580,13 @@ const DS_CLASSES = [
       { name: 'Hurl Element', ability: ab('Hurl Element', { noBadge: true,
         flavor: 'You cast a ball of elemental energy at a foe.',
         keywords: ['Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R acid and cold and corruption and fire and lightning and poison and sonic damage'],['12–16','4 + R acid and cold and corruption and fire and lightning and poison and sonic damage'],['17+','6 + R acid and cold and corruption and fire and lightning and poison and sonic damage']],
+        powerRoll: 'Reason', tiers: [['≤11','2 + R damage'],['12–16','4 + R damage'],['17+','6 + R damage']],
         effect: 'When you make this strike, choose the damage type from one of the following options: acid, cold, corruption, fire, lightning, poison, or sonic.' }) },
       { name: 'Practical Magic', ability: ab('Practical Magic', { noBadge: true,
         flavor: 'Your mastery of elemental power lets you customize your conjurations.',
-        keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-        effect: 'Choose one of the following effects:\n\n- You use the Knockback maneuver, but its distance becomes the range of your Hurl Element ability, and you use Reason instead of Might for the power roll.\n- You choose a creature within the distance of your Hurl Element ability and one of the following damage types: your Reason score acid/cold/corruption/fire/lightning/poison/sonic damage. That creature takes damage of the chosen type equal to your Reason score.\n- You teleport up to a number of squares equal to your Reason score. If you choose this option, you can spend essence to teleport 1 additional square for each essence spent.' }) },
-      { name: 'Persistent Magic', text: 'Some abilities have a Persistent value. While maintained, you earn that much less essence at the start of your turn to keep the effect going. Taking damage ≥ 5× your Reason in one turn ends all persistent effects.' },
+        keywords: ['Magic'], type: 'Maneuver', distance: 'Self; see below', target: 'Self',
+        effect: 'Choose one of the following effects:' }) },
+      { name: 'Persistent Magic', text: 'Some of your heroic abilities have a persistent effect entry. For example, the Instantaneous Excavation ability has an effect noted as "Persistent 1." Whenever you use a persistent ability, you decide whether you want to maintain it, and start doing so immediately after you first use the ability. If you maintain a persistent ability in combat, you reduce the amount of essence you earn at the start of your turn by an amount equal to the ability\'s persistent value, which enables the ability\'s persistent effect. All your active persistent abilities end at the end of the encounter.\n\nYou can\'t maintain any abilities that would make you earn a negative amount of essence at the start of your turn. You can stop maintaining an ability at any time (no action required).\n\nIf you maintain the same ability on several targets and the effect includes a power roll, you make that roll once and apply the same effect to all targets. A creature can\'t be affected by multiple instances of a persistent ability.\n\nIf you take damage equal to or greater than 5 times your Reason score in one turn, you stop maintaining any persistent abilities. For instance, if you have a Reason score of 2 and are maintaining Instantaneous Excavation, taking 10 or more damage in one turn causes you to stop maintaining the ability.' },
       { name: 'Enchantment / Ward', text: 'Choose one Enchantment and one Elementalist Ward below. You can swap either by performing a complex ritual during a respite.', choose: 'enchantWard' },
     ],
     enchantments: [
@@ -603,11 +604,11 @@ const DS_CLASSES = [
     ],
     signatures: [
       ab('Bifurcated Incineration', { flavor: 'Two jets of flame lance out at your command.',
-        keywords: ['Magic','Ranged','Fire','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'Two creature or objects',
+        keywords: ['Magic','Ranged','Fire','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'Two creatures or objects',
         powerRoll: 'Reason', tiers: [['≤11','2 fire damage'],['12–16','4 fire damage'],['17+','6 fire damage']] }),
       ab('Viscous Fire', { flavor: 'A jet of heavy fire erupts where you strike.',
         keywords: ['Magic','Ranged','Strike','Fire'], type: 'Main action', distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R fire; push 2'],['12–16','5 + R fire; push 3'],['17+','7 + R fire; push 4']] }),
+        powerRoll: 'Reason', tiers: [['≤11','2 + R fire damage; push 2'],['12–16','5 + R fire damage; push 3'],['17+','7 + R fire damage; push 4']] }),
       ab('Meteoric Introduction', { flavor: 'You give your enemy a gentle tap—like an asteroid impact.',
         keywords: ['Magic','Melee','Strike','Earth'], type: 'Main action', distance: 'Melee 1', target: 'One creature or object',
         powerRoll: 'Reason', tiers: [['≤11','3 + R damage; push 2'],['12–16','5 + R damage; push 3'],['17+','8 + R damage; push 4']] }),
@@ -643,7 +644,7 @@ const DS_CLASSES = [
       ab('Invigorating Growth', { cost: 3, resource: 'Essence', flavor: 'Mushrooms erupt from a foe, sapping their vitality to spread strengthening spores.',
         keywords: ['Magic','Ranged','Strike','Green'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
         powerRoll: 'Reason', tiers: [['≤11','4 + R poison damage'],['12–16','7 + R poison damage'],['17+','11 + R poison damage']],
-        effect: 'Mushrooms cover the target’s body. While the mushrooms are on the target, you and any ally adjacent to the target gains 1 surge whenever the target takes damage. The mushrooms can be removed by the target or an adjacent creature as a main action.' }),
+        effect: 'Mushrooms cover the target\'s body. While the mushrooms are on the target, you and any ally adjacent to the target gain 1 surge whenever the target takes damage. The mushrooms can be removed by the target or an adjacent creature as a main action.' }),
       ab('Ripples in the Earth', { cost: 3, resource: 'Essence', flavor: 'Like a stone was dropped into a pond, waves in the earth radiate from you.',
         keywords: ['Area','Magic','Earth'], type: 'Main action', distance: '2 burst', target: 'Each enemy in the area',
         powerRoll: 'Reason', tiers: [['≤11','3 damage'],['12–16','5 damage'],['17+','8 damage; M < STRONG, prone']],
@@ -657,7 +658,7 @@ const DS_CLASSES = [
       ab('Instantaneous Excavation', { cost: 5, resource: 'Essence', flavor: 'The surface of the world around you opens up to swallow foes.',
         keywords: ['Magic','Ranged','Earth'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special',
         powerRoll: 'Reason', tiers: [['≤11','The target can shift 1 square from the edge of the hole to the nearest unoccupied space of their choice.'],['12–16','The target falls into the hole.'],['17+','The target falls into the hole and can’t reduce the height of the fall.']],
-        effect: 'You open up two holes with 1-square openings that are 4 squares deep, which can be placed on any mundane surface within distance. You can place these holes next to each other to create fewer holes with wider openings. When the holes open, make a separate power roll for each creature on the ground above a hole and small enough to fall in. (You can’t score a critical hit with this ability because it uses a maneuver.)\n\nAt the start of your turn, you open another hole, making a power roll against each creature who could fall into the hole when it opens without spending essence.' }),
+        effect: 'You open up two holes with 1-square openings that are 4 squares deep, which can be placed on any mundane surface within distance. You can place these holes next to each other to create fewer holes with wider openings. When the holes open, make a separate power roll for each creature on the ground above a hole and small enough to fall in. (You can\'t score a critical hit with this ability because it uses a maneuver.)\n\n**Persistent 1:** At the start of your turn, you open another hole, making a power roll against each creature who could fall into the hole when it opens without spending essence.' }),
       ab('No More Than a Breeze', { cost: 5, resource: 'Essence', flavor: 'The material substance of a creature shreds away at your command.',
         keywords: ['Magic','Ranged','Void'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally',
         effect: 'Until the start of your next turn, the target can move through solid matter, they ignore difficult terrain, and their movement can’t provoke opportunity attacks. If the target ends their turn inside solid matter, they are forced out into the space where they entered it and this effect ends.\n\n**Persistent 1:** The effect lasts until the start of your next turn.' }),
@@ -754,10 +755,10 @@ const DS_CLASSES = [
         resource: 'Discipline', spendCost: 1,
         spend: 'The potency of one effect associated with the damage is reduced by 1 for you.'
       }) },
-      { name: 'Discipline', text: 'At the start of combat you gain discipline equal to your Victories, then 2 at the start of each turn. You gain 1 more the first time each round an enemy in your Null Field takes a main action, and 1 the first time the Director spends Malice.' },
-      { name: 'Null Speed', text: 'You gain a bonus to speed and to the number of squares you can shift when you take the Disengage move action equal to your Agility score.', bonuses: { spdChar: 'Agility', disChar: 'Agility' } },
-      { name: 'Psionic Augmentation', text: 'Your training has turned your body into the perfect psionic weapon, shaping pathways in your mind that enhance your physical form. Choose one of the following augmentations. You can change your augmentation by undergoing a psionic meditation as a respite activity.', choose: 'augment' },
-      { name: 'Psionic Martial Arts', text: 'A Null forgoes a kit — your body is your weapon. Whenever you use the Knockback or Grab maneuver you use Intuition instead of Might (for the roll and for targeting larger creatures), and Knockback can slide the target instead of pushing.' },
+      { name: 'Discipline', text: 'As your mastery of your body and tradition grows, it imbues you with a Heroic Resource called discipline.\n\n**Discipline in Combat**\n\nAt the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain discipline equal to your Victories. At the start of each of your turns during combat, you gain 2 discipline.\n\nAdditionally, the first time each combat round that an enemy in the area of your Null Field ability (see below) uses a main action, you gain 1 discipline. The first time each combat round that the Director uses an ability that costs Malice (see *Draw Steel: Monsters*), you gain 1 discipline.\n\nYou lose any remaining discipline at the end of the encounter.\n\n**Discipline Outside of Combat**\n\nThough you can\'t gain discipline outside of combat, you can use your heroic abilities and effects that cost discipline without spending it. Whenever you use an ability or effect outside of combat that costs discipline, you can\'t use that same ability or effect outside of combat again until you earn 1 or more Victories or finish a respite.\n\nWhen you use an ability outside of combat that lets you spend unlimited discipline on its effect, you can use it as if you had spent an amount of discipline equal to your Victories. (Such abilities aren\'t part of the core rules for the null, but they might appear in future products.)' },
+      { name: 'Null Speed', text: 'The flow of psionic power through you allows you to achieve high velocity. You gain a bonus to speed and to the number of squares you can shift when you take the Disengage move action equal to your Agility score.', bonuses: { spdChar: 'Agility', disChar: 'Agility' } },
+      { name: 'Psionic Augmentation', text: 'Your training has turned your body into the perfect psionic weapon, shaping pathways in your mind that enhance your physical form. Choose one of the following augmentations. You can change your augmentation by undergoing a psionic meditation as a respite activity. (*Quick Build:* Speed Augmentation.)', choose: 'augment' },
+      { name: 'Psionic Martial Arts', text: 'Whenever you use the Knockback or Grab maneuver, you use Intuition instead of Might for the power roll and for determining if you can target creatures larger than you. Additionally, whenever you use the Knockback maneuver, you can choose to slide the target instead of pushing them.' },
     ],
     // Psionic Augmentation options (stored in cclass.enchantment, like the Talent's).
     enchantments: [
@@ -770,7 +771,7 @@ const DS_CLASSES = [
       ab('Faster Than the Eye', {
         flavor: 'You strike so quickly that your hands become a blur.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
-        distance: 'Melee 1', target: 'Two creature or objects',
+        distance: 'Melee 1', target: 'Two creatures or objects',
         powerRoll: 'Agility', tiers: [['≤11','4 damage'],['12–16','5 damage'],['17+','7 damage']],
         effect: 'You can deal damage equal to your Agility score to one creature or object adjacent to you.'
       }),
@@ -792,7 +793,7 @@ const DS_CLASSES = [
         flavor: 'Your opponent staggers. They cannot ignore you.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; taunted (EoT);'],['12–16','5 + A damage; taunted (EoT); slide 1'],['17+','6 + A; taunted (EoT), slide 2']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; taunted (EoT);'],['12–16','5 + A damage; taunted (EoT); slide 1'],['17+','6 + A damage; taunted (EoT), slide 2']],
       }),
       ab('Joint Lock', {
         flavor: 'You contort your enemy\u2019s body into a stance they struggle to escape from.',
@@ -818,8 +819,8 @@ const DS_CLASSES = [
       ab('Magnetic Strike', { cost: 3, resource: 'Discipline',
         flavor: 'The force of your blow extends past the limits of your body, pulling your enemy closer.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
-        distance: 'Melee 2', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','5 + A psychic; vertical pull 1'],['12–16','8 + A psychic; vertical pull 2'],['17+','11 + A psychic; vertical pull 3']],
+        distance: 'Melee 2', target: 'One creature',
+        powerRoll: 'Agility', tiers: [['≤11','5 + A psychic damage; vertical pull 1'],['12–16','8 + A psychic damage; vertical pull 2'],['17+','11 + A psychic damage; vertical pull 3']],
       }),
       ab('Psychic Pulse', { cost: 3, resource: 'Discipline',
         flavor: 'A burst of psionic energy interferes with your enemy\u2019s synapses.',
@@ -831,7 +832,7 @@ const DS_CLASSES = [
         flavor: 'You focus your psionic technique into a concussive punch.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature or object',
-        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; I < WEAK, dazed and slowed (save ends)'],['12–16','5 + A; I<AVERAGE, dazed & slowed (save)'],['17+','7 + A; I<STRONG, dazed & slowed (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','4 + A damage; I < WEAK, dazed and slowed (save ends)'],['12–16','5 + A damage; I < AVERAGE, dazed and slowed (save ends)'],['17+','7 + A damage; I < STRONG, dazed and slowed (save ends)']],
       }),
       ab('Phase Inversion Strike', { cost: 3, resource: 'Discipline',
         flavor: 'You step momentarily out of phase as you pull an enemy through you.',
@@ -858,7 +859,7 @@ const DS_CLASSES = [
       }),
       ab('Impart Force', { cost: 5, resource: 'Discipline',
         flavor: 'A single touch from you, and your enemy flies backward.',
-        keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
+        keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Maneuver',
         distance: 'Melee 1', target: 'One creature or object',
         powerRoll: 'Intuition', tiers: [['≤11','push 3'],['12–16','push 5'],['17+','push 7']],
         effect: 'An object you target must be your size or smaller. You gain an edge on this ability. Additionally, for each square you push the target, they take 1 psychic damage.'
@@ -867,14 +868,14 @@ const DS_CLASSES = [
         flavor: 'For a moment, your foe slips out of phase with this manifold.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','3 + A psychic; I<WEAK, out of phase (save)'],['12–16','4 + A psychic; I<AVERAGE, out of phase (save)'],['17+','6 + A psychic; I<STRONG, out of phase (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','3 + A psychic damage; I < WEAK, the target goes out of phase (save ends)'],['12–16','4 + A psychic damage; I < AVERAGE, the target goes out of phase (save ends)'],['17+','6 + A psychic damage; I < STRONG, the target goes out of phase (save ends)']],
         effect: 'A target who goes out of phase is slowed, has their stability reduced by 2, and can’t obtain a tier 3 outcome on ability rolls.'
       }),
       ab('Arcane Disruptor', { cost: 5, resource: 'Discipline',
         flavor: 'Your blow reorders a foe’s body, causing pain if they attempt to channel sorcery.',
         keywords: ['Melee','Psionic','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','8 + A psychic; M<WEAK, weakened (save)'],['12–16','12 + A psychic; M<AVERAGE, weakened (save)'],['17+','16 + A psychic; M<STRONG, weakened (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','8 + **A** psychic damage; M < WEAK, weakened (save ends)'],['12–16','12 + **A** psychic damage; M < AVERAGE, weakened (save ends)'],['17+','16 + **A** psychic damage; M < STRONG, weakened (save ends)']],
         effect: 'While weakened this way, the target takes damage equal to your Intuition score whenever they use a supernatural ability that costs Malice.'
       }),
     ],
@@ -927,7 +928,7 @@ const DS_CLASSES = [
             keywords: ['—'], type: 'Maneuver', distance: 'Self', target: 'Self',
             effect: 'You gain 2 surges. Additionally, whenever you use a surge before the end of the encounter, you can choose to have it deal poison damage.',
             resource: 'Insight', spendCost: '1+', spend: 'For each insight you spend, you gain 1 additional surge.' }),
-          ab('Defensive Roll', { flavor: 'You instinctively tumble away from danger.',
+          ab('Defensive Roll', { flavor: 'When an enemy attacks, you roll with the impact to reduce the harm.',
             keywords: ['—'], type: 'Triggered', distance: 'Self', target: 'Self',
             trigger: 'Another creature damages you.',
             effect: 'You take half the triggering damage, then can shift up to 2 squares after the triggering effect resolves. If you end this shift with concealment or cover, you can use the Hide maneuver even if you are observed.',
@@ -938,7 +939,7 @@ const DS_CLASSES = [
         abilities: [
           ab('I’m No Threat', { flavor: 'Taking on an illusory countenance gives you an advantage on subterfuge.',
             keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-            effect: 'You envelop yourself in an illusion that makes you appear nonthreatening and harmless to your enemies. You might take on the appearance of a harmless animal of your size, such as a sheep or capybara, or you might appear as a less heroic and unarmed version of yourself. While this illusion lasts, your strikes gain an edge, and when you take the Disengage move action, you gain a +1 bonus to the distance you can shift. The illusion ends when you harm another creature, when you physically interact with a creature, when you use this ability again, or when you end the illusion (no action required). If you end this illusion by harming another creature, you gain 1 surge.',
+            effect: 'You envelop yourself in an illusion that makes you appear nonthreatening and harmless to your enemies. You might take on the appearance of a harmless animal of your size, such as a sheep or capybara, or you might appear as a less heroic and unarmed version of yourself. While this illusion lasts, your strikes gain an edge, and when you take the Disengage move action, you gain a +1 bonus to the distance you can shift.',
             resource: 'Insight', spend: 'Choose a creature whose size is no more than 1 greater than yours and who is within 10 squares. This ability’s illusion makes you appear as that creature. This illusion covers your entire body, including clothing and armor, and alters your voice to sound like that of the creature. You gain an edge on tests made to convince the creature’s allies that you are the creature.' }),
           ab('Clever Trick', { flavor: 'You sow a moment of confusion in combat, to your enemy’s peril.',
             keywords: ['Magic'], type: 'Triggered', cost: 1, resource: 'Insight', distance: 'Self', target: 'Self',
@@ -950,7 +951,7 @@ const DS_CLASSES = [
     kitRequired: true,
     quickKit: 'Cloak and Dagger',
     features: [
-      { name: 'Insight', text: 'At the start of combat you gain insight equal to your Victories, then 1d3 at the start of each turn. The first time each round you deal damage with one or more surges, gain 1 insight. A heroic ability that uses a power roll costs 1 less insight while you have an edge or double edge on it. Lost at end of encounter.' },
+      { name: 'Insight', text: 'By observing your enemy, you learn how to use their weaknesses against them, building up a Heroic Resource called insight.\n\n**Insight in Combat**\n\nAt the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain insight equal to your Victories. At the start of each of your turns during combat, you gain 1d3 insight.\n\nAdditionally, the first time each combat round that you deal damage incorporating 1 or more surges, you gain 1 insight.\n\nWhenever you use a heroic ability that makes use of a power roll, that ability costs 1 fewer insight if you have an edge or double edge on it. If the ability has multiple targets, the cost is reduced even if the ability gains an edge or has a double edge against only one target.\n\nYou lose any remaining insight at the end of the encounter.\n\n**Insight Outside of Combat**\n\nAlthough you can\'t gain insight outside of combat, you can use your heroic abilities and effects that cost insight without spending it. Whenever you use an ability or effect outside of combat that costs insight, you can\'t use that same ability or effect outside of combat again until you earn 1 or more Victories or finish a respite.\n\nWhen you use an ability outside of combat that lets you spend unlimited insight on its effect, such as Black Ash Teleport, you can use it as if you had spent an amount of insight equal to your Victories.' },
       { name: 'Hesitation Is Weakness', ability: ab('Hesitation Is Weakness', {
         flavor: 'Keep up the attack. Never give them a moment’s grace.',
         keywords: ['—'], type: 'Free triggered action',
@@ -987,7 +988,7 @@ const DS_CLASSES = [
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
         powerRoll: 'Agility', tiers: [['≤11','3 + A damage'],['12–16','5 + A damage'],['17+','8 + A damage']],
-        effect: 'As long as you have one or more allies within 5 squares of the target, gain 1 surge. If you are flanking the target when you use this ability, choose one ally who is flanking with you. That ally also gains 1 surge.'
+        effect: 'As long as you have one or more allies within 5 squares of the target, you gain 1 surge. If you are flanking the target when you use this ability, choose one ally who is flanking with you. That ally also gains 1 surge.'
       }),
     ],
     heroic3: [
@@ -1014,7 +1015,7 @@ const DS_CLASSES = [
       ab('Two Throats at Once', { cost: 3, resource: 'Insight',
         flavor: 'A bargain.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
-        distance: 'Melee 1 or ranged 5', target: 'Two creature or objects',
+        distance: 'Melee 1 or ranged 5', target: 'Two creatures or objects',
         powerRoll: 'Agility', tiers: [['≤11','4 damage'],['12–16','6 damage'],['17+','10 damage']],
       }),
     ],
@@ -1028,19 +1029,19 @@ const DS_CLASSES = [
       ab('Shadowstrike', { cost: 5, resource: 'Insight',
         flavor: 'They have no idea what the college taught you.',
         keywords: ['Magic','Melee','Ranged'], type: 'Main action',
-        distance: 'Self', target: 'Self',
+        distance: 'Self; see below', target: 'Self',
         effect: 'You use a strike signature ability twice.'
       }),
       ab('Setup', { cost: 5, resource: 'Insight',
         flavor: 'Your friends will thank you.',
         keywords: ['Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Ranged 5', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','6 + A damage; R < WEAK, the target has damage weakness 5 (save ends)'],['12–16','9 + A damage; A < AVERAGE, the target has damage weakness 5 (save ends)'],['17+','13 + A damage; A < STRONG, the target has damage weakness 5 (save ends)']],
+        powerRoll: 'Agility', tiers: [['≤11','6 + A damage; R < WEAK, the target has damage weakness 5 (save ends)'],['12–16','9 + A damage; R < AVERAGE, the target has damage weakness 5 (save ends)'],['17+','13 + A damage; R < STRONG, the target has damage weakness 5 (save ends)']],
       }),
       ab('One Hundred Throats', { cost: 5, resource: 'Insight',
         flavor: 'As you move across the battlefield, every foe within reach feels your wrath.',
         keywords: ['Melee','Weapon'], type: 'Main action',
-        distance: 'Self', target: 'Self',
+        distance: 'Self; see below', target: 'Self',
         powerRoll: 'Agility', tiers: [['≤11','3 damage'],['12–16','6 damage'],['17+','9 damage']],
         effect: 'You shift up to your speed and make one power roll that targets up to three enemies who came adjacent to you during the move.'
       }),
@@ -1077,7 +1078,7 @@ const DS_CLASSES = [
         ],
         abilities: [
           ab('Advanced Tactics', { flavor: 'Your leadership aids an ally.',
-            keywords: ['Ranged'], type: 'Triggered', distance: 'Ranged 10', target: 'One creature',
+            keywords: ['Ranged'], type: 'Triggered', distance: 'Ranged 10', target: 'One ally',
             trigger: 'The target deals damage to another creature.',
             effect: 'The target gains 2 surges, which they can use on the triggering damage.',
             resource: 'Focus', spendCost: 1, spend: 'If the damage has any potency effect associated with it, the potency is increased by 1.' }),
@@ -1085,14 +1086,14 @@ const DS_CLASSES = [
       },
       { id: 'mastermind', name: 'Mastermind', tag: 'Strategist', text: 'You hold an encyclopedic knowledge of warfare, viewing the battlefield as a game board and thinking steps ahead.', skillGroup: 'lore',
         features: [
-          { name: 'Studied Commander', text: 'Your encyclopedic knowledge of the history of battle lets you apply that knowledge to current challenges. While you are present, each hero with you treats the Discover Lore project related to a war or battle as one category cheaper. This makes projects seeking common lore free, but such projects still require a respite activity to complete.\n\nAdditionally, if you have 24 hours or more before a combat encounter or negotiation, and you have one or more clues or rumors regarding the encounter or negotiation, you can make a Reason test as a respite activity. The following test outcomes apply to a combat encounter:\n\n- ≤11: The Director tells you the number of creatures in the encounter.\n- 12–16: The Director tells you the number and level of the creatures in the encounter.\n- 17+: The Director tells you the tier 2 outcome information, and when the encounter begins, all enemies are surprised.\n\nThe following test results apply to a negotiation:\n\n- ≤11: The Director gives you three motivations, one of which belongs to an NPC in the negotiation.\n- 12–16: The Director gives you one motivation for an NPC in the negotiation.\n- 17+: The Director tells you the tier 2 outcome information, and you and each of your allies gains an edge on tests made to influence NPCs during the negotiation.\n\nYou can make this test only once for any encounter or negotiation.' },
+          { name: 'Studied Commander', text: 'Your encyclopedic knowledge of the history of battle lets you apply that knowledge to current challenges. While you are present, each hero with you treats the Discover Lore project related to a war or battle as one category cheaper. This makes projects seeking common lore free, but such projects still require a respite activity to complete. (See Chapter 12: Downtime Projects for more information.)\n\nAdditionally, if you have 24 hours or more before a combat encounter or negotiation, and you have one or more clues or rumors regarding the encounter or negotiation, you can make a Reason test as a respite activity. The following test outcomes apply to a combat encounter:\n\n- **≤11:** The Director tells you the number of creatures in the encounter.\n- **12-16:** The Director tells you the number and level of the creatures in the encounter.\n- **17+:** The Director tells you the tier 2 outcome information, and when the encounter begins, all enemies are surprised.\n\nThe following test outcomes apply to a negotiation:\n\n- **≤11:** The Director gives you three motivations, one of which belongs to an NPC in the negotiation.\n- **12-16:** The Director gives you one motivation for an NPC in the negotiation.\n- **17+:** The Director tells you the tier 2 outcome information, and you and each of your allies gains an edge on tests made to influence NPCs during the negotiation.\n\nYou can make this test only once for any encounter or negotiation.' },
         ],
         abilities: [
           ab('Overwatch', { flavor: 'Under your direction, an ally waits for just the right moment to strike.',
             keywords: ['Ranged'], type: 'Triggered', distance: 'Ranged 10', target: 'One creature',
             trigger: 'The target moves.',
-            effect: 'At any point during the target’s movement, one ally can make a free strike against them.',
-            resource: 'Focus', spendCost: 1, spend: 'If the target has R < Average, they are slowed (EoT).' }),
+            effect: 'At any time during the target\'s movement, one ally can make a free strike against them.',
+            resource: 'Focus', spendCost: 1, spend: 'If the target has R < AVERAGE, they are slowed (EoT).' }),
         ],
       },
       { id: 'vanguard',   name: 'Vanguard',   tag: 'Frontline',  text: 'You learned the stratagems of ancient heroes, leading from the front through force of will and personality.', skillGroup: 'interpersonal',
@@ -1116,13 +1117,13 @@ const DS_CLASSES = [
     sigCount: 0,
     signatures: [],
     features: [
-      { name: 'Focus', text: 'At the start of combat you gain focus equal to your Victories, then 2 at the start of each turn. The first time each round that you or an ally damages a creature you\u2019ve Marked, gain 1 focus; the first time each round an ally within 10 uses a heroic ability, gain 1. Lost at end of encounter.' },
-      { name: 'Field Arsenal', text: 'You can use and gain the benefits of two kits, including both their signature abilities. When both kits grant the same benefit, you take the higher of the two. Whenever you would choose or change one kit, you can choose or change the other as well.' },
+      { name: 'Focus', text: 'The ring of steel panics others but brings order to your mind, granting you a Heroic Resource called focus.\n\n**Focus in Combat**\n\nAt the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain focus equal to your Victories. At the start of each of your turns during combat, you gain 2 focus.\n\nAdditionally, the first time each combat round that you or any ally damages a creature marked by you (see Mark below), you gain 1 focus. The first time in a combat round that any ally within 10 squares of you uses a heroic ability, you gain 1 focus.\n\nYou lose any remaining focus at the end of the encounter.\n\n**Focus Outside of Combat**\n\nThough you can\'t gain focus outside of combat, you can use your heroic abilities and effects that cost focus without spending it. Whenever you use an ability or effect outside of combat that costs focus, you can\'t use that same ability or effect outside of combat again until you earn 1 or more Victories or finish a respite.\n\nWhen you use an ability outside of combat that lets you spend unlimited focus on its effect, you can use it as if you had spent an amount of focus equal to your Victories. (Such abilities aren\'t part of the core rules for the tactician, but they might appear in future products.)\n\n> **Tactician Abilities Explained**\n>\n> Many of the tactician\'s abilities grant allies extra movement, damage, and actions. But what\'s happening in the fiction to allow this? The tactician is an incredible strategist and inspiring leader who is quick to give commands and inspiration that causes their allies to act. The tactician can quickly read the battlefield, analyze enemies, and then bark orders and encouragement that pushes their allies to greatness. Many of the names of the tactician\'s abilities are the actual commands they give their friends!' },
+      { name: 'Field Arsenal', text: 'You have drilled with a broad array of arms and armor, and have developed techniques to optimize their use. You can use and gain the benefits of two kits, including both their signature abilities. Whenever you would choose or change one kit, you can choose or change your second kit as well. See Chapter 6: Kits for more information. (*Quick Build:* Shining Armor, Sniper.)\n\nIf both kits grant you the same benefit, you take one or the other and can\'t change your choice until you finish a respite. (This usually means taking the higher of two bonuses.)\n\nFor example, if you take the Shining Armor and Sniper kits, you gain the following benefits overall:\n\n- Stamina Bonus: +12 per echelon\n- Stability Bonus: +1\n- Melee Damage Bonus: +2/+2/+2\n- Ranged Damage Bonus: +0/+0/+4\n- Speed Bonus: +1\n- Ranged Distance Bonus: +10\n- Disengage Bonus: +1\n- You can use the Patient Shot and Protective Attack signature abilities.\n\nKit signature abilities have their kit\'s bonuses already applied, which might require you to adjust the bonuses of the signature abilities you gain from a kit. For example, you might take the Martial Artist kit, which gives a melee weapon damage bonus of +2/+2/+2, and the Mountain kit, which gives a melee weapon damage bonus of +0/+0/+4. If you choose to use the Mountain kit\'s damage bonus, then the Battle Grace signature ability from the Martial Artist kit loses the +2/+2/+2 bonus from that kit, reducing its usual 5/8/11 damage for its tier 1, tier 2, and tier 3 outcomes to 3/6/9. It then gains the +0/+0/+4 of the Mountain kit to deal 3/6/13 damage.' },
       { name: 'Mark', ability: ab('Mark', { noBadge: true,
         flavor: 'You draw your allies’ attention to a specific foe—with devastating effect.',
         keywords: ['Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'One creature',
-        effect: 'The target is marked by you until the end of the encounter, until you are dying, or until you use this ability again. You can willingly end your mark on a creature (no action required), and if another tactician marks a creature, your mark on that creature ends. When a creature marked by you is reduced to 0 Stamina, you can use a free triggered action to mark a new target within distance.\n\nYou can initially mark only one creature using this ability, though other tactician abilities allow you to mark additional creatures at the same time. The mastermind tactical doctrine’s Anticipation feature allows you to target additional creatures with this ability starting at 5th level.\n\nWhile a creature marked by you is within your line of effect, you and allies within your line of effect gain an edge on power rolls made against that creature. Additionally, whenever you or any ally uses an ability to deal rolled damage to a creature marked by you, you can spend 1 focus to gain one of the following benefits as a free triggered action:\n\n- The ability deals extra damage equal to twice your Reason score.\n- The creature dealing the damage can spend a Recovery.\n- The creature dealing the damage can shift up to a number of squares equal to your Reason score.\n- If you damage a creature marked by you with a melee ability, the creature is taunted by you until the end of their next turn.\n\nYou can’t gain more than one benefit from the same trigger.'
+        effect: 'The target is marked by you until the end of the encounter, until you are dying, or until you use this ability again. You can willingly end your mark on a creature (no action required), and if another tactician marks a creature, your mark on that creature ends. When a creature marked by you is reduced to 0 Stamina, you can use a free triggered action to mark a new target within distance.'
       }) },
       { name: '\u201cStrike Now!\u201d', ability: ab('\u201cStrike Now!\u201d', { noBadge: true,
         flavor: 'Your foe left an opening. You point this out to an ally!',
@@ -1138,7 +1139,7 @@ const DS_CLASSES = [
         flavor: 'Your attack gives an ally hope.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','3+M damage; you or one ally within 10 squares of you can spend a Recovery'],['12–16','5+M damage; you or one ally within 10 squares of you can spend a Recovery'],['17+','8+M damage; you or one ally within 10 squares of you can spend a Recovery, and each of you gains an edge on the next ability roll you make during the encounter']],
+        powerRoll: 'Might', tiers: [['≤11','3+M damage; you or one ally within 10 squares of you can spend a Recovery'],['12–16','5+M damage; you or one ally within 10 squares of you can spend a Recovery'],['17+','8 + M damage; you and one ally within 10 squares of you can spend a Recovery, and each of you gains an edge on the next ability roll you make during the encounter']],
       }),
       ab('Concussive Strike', { cost: 3, resource: 'Focus',
         flavor: 'Your precise strike leaves your foe struggling to respond.',
@@ -1155,7 +1156,7 @@ const DS_CLASSES = [
       ab('Squad! Forward!', { cost: 3, resource: 'Focus',
         flavor: 'On your command, you and your allies force back the enemy line.',
         keywords: ['Ranged'], type: 'Maneuver',
-        distance: 'Ranged 10', target: 'Self and one ally',
+        distance: 'Ranged 10', target: 'Self and two allies',
         effect: 'Each target can move up to their speed.'
       }),
     ],
@@ -1164,15 +1165,15 @@ const DS_CLASSES = [
         flavor: 'Let’s not argue about who’s the hammer and who’s the anvil!',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','5+M damage; one ally within 10 squares can make a signature strike against the target as a free triggered action'],['12–16','9+M damage; one ally within 10 squares can make a signature strike that gains an edge against the target as a free triggered action'],['17+','12+M damage; two allies within 10 squares can each make a signature strike that gains an edge against the target as free triggered actions']],
-        effect: 'If the target is reduced to 0 Stamina and a strike granted by this ability hasn’t been made, the striker can pick a different target.'
+        powerRoll: 'Might', tiers: [['≤11','5 + M damage; one ally within 10 squares of you can use a strike signature ability against the target as a free triggered action'],['12–16','9 + M damage; one ally within 10 squares of you can use a strike signature ability that gains an edge against the target as a free triggered action'],['17+','12 + M damage; two allies within 10 squares of you can each use a strike signature ability that gains an edge against the target as a free triggered action']],
+        effect: 'If the target is reduced to 0 Stamina before one or both chosen allies has made their strike, the ally or allies can pick a different target.'
       }),
       ab('Mind Game', { cost: 5, resource: 'Focus',
         flavor: 'Your attack demoralizes your foe. Your allies begin to think you can win.',
         keywords: ['Melee','Ranged','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1 or ranged 5', target: 'One creature or object',
-        powerRoll: 'Might', tiers: [['≤11','4 + M; R<WEAK, weakened (save)'],['12–16','6 + M; R<AVERAGE, weakened (save)'],['17+','10 + M; R<STRONG, weakened (save)']],
-        effect: 'The first time any ally deals damage any target you’ve marked before the start of your next turn, that ally can spend a Recovery.'
+        powerRoll: 'Might', tiers: [['≤11','4 + M damage; R < WEAK, weakened (save ends)'],['12–16','6 + M damage; R < AVERAGE, weakened (save ends)'],['17+','10 + M damage; R < STRONG, weakened (save ends)']],
+        effect: 'You mark the target.\n\nBefore the start of your next turn, the first time any ally deals damage to any target marked by you, that ally can spend a Recovery.'
       }),
       ab('Now!', { cost: 5, resource: 'Focus',
         flavor: 'Your allies wait for your command - then unleash death!',
@@ -1184,7 +1185,7 @@ const DS_CLASSES = [
         flavor: 'All those coordination drills you made them do finally pay off.',
         keywords: ['Ranged'], type: 'Maneuver',
         distance: 'Ranged 10', target: 'Two allies',
-        effect: 'Each target who hasn\u2019t acted yet this round can take their turn in any order immediately after yours.'
+        effect: 'Each target who hasn\'t acted yet this combat round can take their turn in any order immediately after yours.'
       }),
     ],
   },
@@ -1230,7 +1231,7 @@ const DS_CLASSES = [
           ab('Minor Telekinesis', { flavor: 'Wisps of psychic energy ripple visibly from your brain as you force the target to move using only your mind.',
             keywords: ['Psionic','Ranged'], type: 'Maneuver', noBadge: true, distance: 'Ranged 10', target: 'Self or one size 1 creature or object',
             effect: 'You slide the target up to a number of squares equal to your Reason score.',
-            resource: 'Clarity', spendCost: '1+', spend: 'The size of the creature or object you can target increases by 1 for every 2 clarity spent.\n\nSpend 3 clarity: You can vertical slide the target.' }),
+            resource: 'Clarity', spendCost: '2+', spend: 'The size of the creature or object you can target increases by 1 for every 2 clarity spent.\n\n**Spend 3 Clarity:** You can vertical slide the target.' }),
           ab('Repel', { flavor: 'They aren’t going anywhere, but you might!',
             keywords: ['Psionic','Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'Self or one ally',
             trigger: 'The target takes damage or is force moved.',
@@ -1264,7 +1265,7 @@ const DS_CLASSES = [
       { name: 'Vanishing Ward', text: 'Whenever you take damage, you become invisible until the end of your next turn.' },
     ],
     features: [
-      { name: 'Clarity and Strain', text: 'At the start of combat you gain clarity equal to your Victories, then 1d3 each turn; gain 1 the first time each round a creature is force moved. You can spend clarity you don\u2019t have, down to \u2212(1 + Reason); while clarity is below 0 you are strained and take 1 damage per negative point at end of turn. Some abilities have extra effects when strained.' },
+      { name: 'Clarity and Strain', text: 'The focus and precision of your thoughts grant you a Heroic Resource called clarity that empowers your psionic abilities.\n\n**Clarity in Combat**\n\nAt the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain clarity equal to your Victories. At the start of each of your turns during combat, you gain 1d3 clarity.\n\nAdditionally, the first time each combat round that a creature is force moved, you gain 1 clarity.\n\nYou can spend clarity you don\'t have, pushing that Heroic Resource into negative numbers to a maximum negative value equal to 1 + your Reason score. At the end of each of your turns, you take 1 damage for each negative point of clarity.\n\nWhenever you have clarity below 0, you are strained. Some psionic abilities have additional effects if you are already strained or become strained when you use them. Strained effects can still impact you even after you are no longer strained.\n\nYou lose any remaining clarity or reset any negative clarity at the end of the encounter.\n\n**Clarity Outside of Combat**\n\nThough you can\'t gain clarity outside of combat, you can use your heroic abilities and effects that cost clarity without spending it. Whenever you use an ability or effect outside of combat that costs clarity, you can\'t use that same ability or effect outside of combat again until you earn 1 or more Victories or finish a respite.\n\nAdditionally, whenever you use any ability or effect that costs clarity within 1 minute of using another such ability, you take 1d6 damage and incur any strain effect from using the new ability. Whenever you use an ability with a strain effect outside of combat, you can take 1d6 damage and incur the effect if you don\'t incur it for other reasons.\n\nWhen you use an ability outside of combat that lets you spend unlimited clarity on its effect, such as Minor Telekinesis, you can use it as if you had spent an amount of clarity equal to your Victories.' },
       { name: 'Mind Spike', ability: ab('Mind Spike', { noBadge: true,
         flavor: 'A telepathic bolt instantly zaps a creature’s brain.',
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',
@@ -1273,7 +1274,7 @@ const DS_CLASSES = [
         strained: 'The target takes an extra 2 psychic damage. You also take 2 psychic damage that can’t be reduced in any way.'
       }) },
       { name: 'Augmentation / Ward', text: 'Choose one Psionic Augmentation and one Talent Ward below. You can swap either by undergoing a psionic meditation during a respite.', choose: 'augmentWard' },
-      { name: 'Telepathic Speech', text: 'You know the Mindspeech language and can telepathically communicate with any creature within Mind Spike\u2019s distance that shares a language with you; they can answer telepathically.' },
+      { name: 'Telepathic Speech', text: 'You know the Mindspeech language (see Languages in Orden in Chapter 4: Background). Additionally, you can telepathically communicate with any creatures within distance of your Mind Spike ability if they share a language with you and you know of each other. When you communicate with someone this way, they can respond telepathically.' },
     ],
     sigCount: 2,
     signatures: [
@@ -1281,7 +1282,7 @@ const DS_CLASSES = [
         flavor: 'You lift and hurl your foe away from you.',
         keywords: ['Psionic','Ranged','Telekinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','Slide 2 + R'],['12–16','Slide 4 + R; R < AVERAGE'],['17+','Slide 6 + R; prone']],
+        powerRoll: 'Reason', tiers: [['≤11','Slide 2 + R'],['12–16','Slide 4 + R'],['17+','Slide 6 + R; prone']],
         strained: 'You must vertical push the target instead of sliding them.'
       }),
       ab('Incinerate', {
@@ -1296,7 +1297,7 @@ const DS_CLASSES = [
         flavor: 'You advance an enemy\u2019s age for a moment.',
         keywords: ['Psionic','Ranged','Strike','Chronopathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Presence', tiers: [['≤11','2 + P corruption; P<WEAK, slowed (save)'],['12–16','3 + P corruption damage; P < AVERAGE, slowed (save ends)'],['17+','5 + P corruption damage; P < STRONG, slowed (save ends)']],
+        powerRoll: 'Presence', tiers: [['≤11','2 + P corruption damage; P < WEAK, slowed (save ends)'],['12–16','3 + P corruption damage; P < AVERAGE, slowed (save ends)'],['17+','5 + P corruption damage; P < STRONG, slowed (save ends)']],
         effect: 'The target takes an extra 1 corruption damage for each additional time they are targeted by this ability during the encounter.',
         strained: 'You gain 1 clarity when you obtain a tier 2 or tier 3 outcome on the power roll.'
       }),
@@ -1319,7 +1320,7 @@ const DS_CLASSES = [
         flavor: 'You blast a foe with a pulse of cold energy.',
         keywords: ['Psionic','Ranged','Strike','Cryokinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R cold damage; M < WEAK, slowed (EoT)'],['12–16','4 + R cold; M<AVERAGE, slowed (EoT)'],['17+','6 + R cold; M<STRONG, slowed (EoT)']],
+        powerRoll: 'Reason', tiers: [['≤11','2 + R cold damage; M < WEAK, slowed (EoT)'],['12–16','4 + R cold damage; M < AVERAGE, slowed (EoT)'],['17+','6 + R cold damage; M < STRONG, slowed (EoT)']],
         strained: 'You are slowed until the end of your next turn. Additionally, a target slowed by this ability is restrained instead.'
       }),
       ab('Spirit Sword', {
@@ -1334,7 +1335,7 @@ const DS_CLASSES = [
         flavor: 'Your eyes emit rays of powerful enervating force.',
         keywords: ['Psionic','Ranged','Strike','Metamorphosis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature or object',
-        powerRoll: 'Reason', tiers: [['≤11','2 + R damage; M < WEAK, prone'],['12–16','4 + R; M<AVERAGE, prone'],['17+','6 + R; M<STRONG, prone']],
+        powerRoll: 'Reason', tiers: [['≤11','2 + R damage; M < WEAK, prone'],['12–16','4 + R damage; M < AVERAGE, prone'],['17+','6 + R damage; M < STRONG, prone']],
         effect: 'When targeting an object with a solid reflective surface or a creature carrying or wearing such an object (such as a mirror, an unpainted metal shield, or shiny metal plate armor), you can target one additional creature or object within 3 squares of the first target.',
         strained: 'You gain 1 surge that you can use immediately, and you take damage equal to your Reason score that can’t be reduced in any way.'
       }),
@@ -1344,14 +1345,14 @@ const DS_CLASSES = [
         flavor: 'You crush a foe in a telekinetic grip.',
         keywords: ['Psionic','Ranged','Strike','Telekinesis'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Reason', tiers: [['≤11','3 + R damage; M < WEAK, slowed (save ends)'],['12–16','5 + R damage; R < AVERAGE, slowed (save ends)'],['17+','8 + R damage; R < STRONG, restrained (save ends)']],
+        powerRoll: 'Reason', tiers: [['≤11','3 + R damage; M < WEAK, slowed (save ends)'],['12–16','5 + R damage; M < AVERAGE, slowed (save ends)'],['17+','8 + R damage; M < STRONG, restrained (save ends)']],
         effect: 'You can vertical pull the target up to 2 squares. If the target is made restrained by this ability, this forced movement ignores their stability.'
       }),
       ab('Awe', { cost: 3, resource: 'Clarity',
         flavor: 'You project psionic energy out to a creature and take on a new visage in their mind.',
         keywords: ['Psionic','Ranged','Strike','Telepathy'], type: 'Main action',
         distance: 'Ranged 10', target: 'One creature',
-        powerRoll: 'Presence', tiers: [['≤11','3 + P psychic damage; I < WEAK, frightened (save ends)'],['12–16','6 + P psychic; I<AVERAGE, frightened (save)'],['17+','9 + P psychic; I<STRONG, frightened (save)']],
+        powerRoll: 'Presence', tiers: [['≤11','3 + P psychic damage; I < WEAK, frightened (save ends)'],['12–16','6 + P psychic damage; I < AVERAGE, frightened (save ends)'],['17+','9 + P psychic damage; I < STRONG, frightened (save ends)']],
         effect: 'If you target an ally, they gain temporary Stamina equal to three times your Presence score, and they can end one effect on them that is ended by a saving throw or that ends at the end of their turn. If you target an enemy, you make a power roll.'
       }),
       ab('Smolder', { cost: 3, resource: 'Clarity',
@@ -1431,7 +1432,7 @@ const DS_CLASSES = [
             effect: 'At the end of each of your turns while this performance is active, you can choose up to a number of targets equal to your Presence score and teleport those targets to unoccupied spaces in the area. A target can’t be teleported in a way that would harm them (such as over a cliff), leave them dying, or result in them suffering a condition or other negative effect.' }),
           ab('Dramatic Monologue', { flavor: 'It doesn’t need to make sense. Just say it with emotion.',
             keywords: ['Magic','Ranged'], type: 'Maneuver', noBadge: true, distance: 'Ranged 10', target: 'Special',
-            effect: 'Choose one of the following effects:\n\n- You orate a rousing tale of victory. One ally within distance gains an edge on the next power roll they make before the start of your next turn.\n- You weave a tale of high-stakes heroics. One ally within distance gains 1 surge.\n- You insult a foe where they’re most vulnerable. One enemy within distance takes a bane on the next power roll they make before the end of their next turn.',
+            effect: 'Choose one of the following effects:',
             resource: 'Drama', spendCost: 1, spend: 'You can choose two targets for the chosen effect.' }),
           ab('Turnabout Is Fair Play', { flavor: 'All’s fair in love and whatever.',
             keywords: ['Ranged'], type: 'Triggered', badge: 'TRIGGER', distance: 'Ranged 10', target: 'One creature',
@@ -1465,13 +1466,13 @@ const DS_CLASSES = [
             effect: 'While this performance is active, each target who starts their turn in the area gains 1 surge.' }),
           ab('“Thunder Mother”', { flavor: 'All for thunder motherrr! Run and hide for coverrr!',
             keywords: ['Magic','Ranged','Strike','Performance'], badge: 'PERFORMANCE', distance: 'Ranged 10', target: 'One creature',
-            powerRoll: 'Presence', tiers: [['≤11','Lightning damage equal to your level'],['12–16','5 + your level lightning damage'],['17+','10 + your level lightning damage']],
+            powerRoll: 'Presence', tiers: [['≤11','Lightning damage equal to your level'],['12–16','Lightning damage equal to 5 + your level'],['17+','Lightning damage equal to 10 + your level']],
             effect: 'At the end of each combat round while this performance is active, you can make a power roll against the target that ignores cover. You can’t target the same creature twice with this effect.' }),
           ab('Harmonize', { flavor: 'Give the chorus a little punch.',
             keywords: ['Ranged'], type: 'Triggered', cost: 3, resource: 'Drama', distance: 'Ranged 5', target: 'One ally',
             trigger: 'The target uses an ability that targets only one enemy and costs 3 or fewer of their Heroic Resource.',
             effect: 'The target can choose one additional target for the triggering ability. Any damage dealt to the additional target is sonic damage.',
-            spendCost: '1+', spend: 'You can trigger this ability when a target uses an ability that has a Heroic Resource cost of 3 plus each additional drama spent.' }),
+            spendCost: '1+', spend: 'You can trigger this ability when a target uses an ability that has a Heroic Resource cost of 3 + each additional drama spent.' }),
         ],
       },
     ],
@@ -1490,7 +1491,7 @@ const DS_CLASSES = [
         keywords: ['Area','Magic','Performance'], badge: 'PERFORMANCE',
         distance: '5 aura', target: 'Self and each ally in the area',
         effect: 'At the end of each of your turns while this performance is active, you can choose up to a number of targets equal to your Presence score. Each chosen target can spend a Recovery.' }) },
-      { name: 'Scene Partner', text: 'On a successful interpersonal test with an NPC you can form a bond (up to your level). Bonded NPCs begin negotiations with +1 patience, and the first argument that would raise their interest raises it by 2 instead.' },
+      { name: 'Scene Partner', text: 'Whenever you obtain a success on a test to interact with an NPC using a skill from the interpersonal group, you can form a bond with that NPC. When you enter into a negotiation with a bonded NPC, their patience increases by 1 (to a maximum of 5). Additionally, the first time during a negotiation that you personally make an argument that would increase a bonded NPC\'s interest by 1, you instead increase their interest by 2 (to a maximum of 5).\n\nYou can have a number of bonds active equal to your level. When you form a bond with a new NPC that would exceed the limit, you must choose which of your active bonds to lose.' },
     ],
     sigCount: 1,
     signatures: [
@@ -1543,14 +1544,14 @@ const DS_CLASSES = [
         flavor: 'You write something unexpected into the scene that hinders your enemy.',
         keywords: ['Area','Magic','Ranged'], type: 'Main action',
         distance: '3 cube within 10', target: 'Each enemy in the area',
-        powerRoll: 'Presence', tiers: [['≤11','4 damage; P < WEAK, slowed (save ends)'],['12–16','5 damage; P < AVERAGE, slowed (save ends)'],['17+','6 damage; P < STRONG, slowed (save ends)']],
+        powerRoll: 'Presence', tiers: [['≤11','4 damage; P < WEAK, slowed (save ends)'],['12–16','5 damage; P < AVERAGE, slowed (save ends)'],['17+','6 damage; P < STRONG, restrained (save ends)']],
         effect: 'The area is difficult terrain for enemies.'
       }),
       ab('Upstage', { cost: 3, resource: 'Drama',
         flavor: 'As you bob and weave through the crowd, you can’t help but leave the audience wanting more.',
         keywords: ['Melee','Strike','Weapon'], type: 'Maneuver',
-        distance: 'Self', target: 'Self',
-        powerRoll: 'Agility or Presence', tiers: [['≤11','Taunted (EoT); A < WEAK, prone'],['12–16','Taunted (EoT); A<AVERAGE, prone'],['17+','Taunted (EoT); A<STRONG, prone & can\u2019t stand']],
+        distance: 'Self; see below', target: 'Self',
+        powerRoll: 'Agility or Presence', tiers: [['≤11','Taunted (EoT); A < WEAK, prone'],['12–16','Taunted (EoT); A<AVERAGE, prone'],['17+','Taunted (EoT); A < STRONG, prone and can\'t stand (EoT)']],
         effect: 'You shift up to your speed. You make one power roll that targets each enemy you move adjacent to during this shift.'
       }),
     ],
@@ -1565,7 +1566,7 @@ const DS_CLASSES = [
         flavor: 'They\u2019re so hurt by your performance, you start to believe it yourself.',
         keywords: ['Melee','Strike','Weapon'], type: 'Main action',
         distance: 'Melee 1', target: 'One creature',
-        powerRoll: 'Agility', tiers: [['≤11','6 + A; P<WEAK, weakened (save)'],['12–16','10 + A; P<AVERAGE, weakened (save)'],['17+','14 + A; P<STRONG, weakened (save)']],
+        powerRoll: 'Agility', tiers: [['≤11','6 + A damage; P < WEAK, weakened (save ends)'],['12–16','10 + A damage; P < AVERAGE, weakened (save ends)'],['17+','14 + A damage; P < STRONG, weakened (save ends)']],
         effect: 'You can become bleeding (save ends) to deal an extra 5 corruption damage to the target.'
       }),
       ab('Flip the Script', { cost: 5, resource: 'Drama',
@@ -1622,7 +1623,7 @@ const DS_CLASSES = [
         { id: 'spring', name: 'Circle of Spring', tag: 'Fey',
           text: 'You are a feybright who beckons pixies, nixies, and sprites from Arcadia. Your portfolio features ephemeral fey spirits surrounded by weird and powerful magic. You can communicate with creatures that have the Fey keyword even if you don’t share a language.',
           features: [
-            { name: 'Fairy Whispers', text: 'Whenever you send a minion to perform a task for you outside of combat, they can bring back a rumor from the destination to which you sent them. When the minion returns, make a Reason test. On a tier 1 outcome (≤11), you learn an undoubtedly false common rumor. On a tier 2 outcome (12–16), you learn a common rumor that is most likely true. On a tier 3 outcome (17+), you learn an obscure rumor that could either be true or false.\n\nYou gain a bane on the test for each subsequent rumor you collect either on the same day or in the same location.' },
+            { name: 'Fairy Whispers', text: 'Whenever you send a minion to perform a task for you outside of combat, they can bring back a rumor from the destination to which you sent them. When the minion returns, make a Reason test:\n\n- **≤11:** You learn an undoubtedly false common rumor.\n- **12-16:** You learn a common rumor that is most likely true.\n- **17+:** You learn an obscure rumor that could either be true or false.\n\nYou gain a bane on the test for each subsequent rumor you collect either on the same day or in the same location.' },
             { name: 'Pixie Dust', text: 'Increase your number of Recoveries by 2.\n\nWhenever one of your fey minions dies within your Summoner’s Range, you can spend a Recovery to give temporary Stamina equal to twice your Reason score to each non-minion ally adjacent to the minion when they died.', bonuses: { rec: 2 } },
           ] },
         { id: 'storms', name: 'Circle of Storms', tag: 'Elementals',
@@ -1633,33 +1634,33 @@ const DS_CLASSES = [
           ] },
       ],
       features: [
-        { name: 'Minions', text: 'You command squads of summoned creatures called minions.\n\n**The Basics**\n- You can summon and maintain up to a maximum of 8 minions, managed in up to two squads.\n- A squad can’t contain more than eight minions, and all minions in a squad must have the same name. Newly summoned minions can be organized into a new squad or distributed into other squads under your control.\n- Your minions are considered allies at your level.\n- Your Summoner’s Range — the maximum distance at which you can summon minions and use specific conjuring abilities — is equal to 5 + your Reason score. You must have line of effect to summon and give commands to minions within it.\n- Commanding a minion to take a main action or a maneuver while hidden reveals you.\n- Signature minions are special low-cost creatures you’ve become accustomed to summoning often.\n\n**Summoning in Combat**\n- At the start of a combat encounter or some other stressful situation tracked in combat rounds, you can summon up to two of your signature minions at no cost into unoccupied spaces within your Summoner’s Range (no action required).\n- At the start of each of your turns during combat, you can summon up to three of your signature minions the same way.\n- Each minion is summoned on the ground unless they can fly or hover.\n- Unless an ability specifies, you can’t summon new minions beyond your minion maximum until the same number of existing minions are dismissed or destroyed.\n\n**Squad Stamina**\n- Minions in a squad pool their Stamina together. Whenever a minion takes damage, the squad’s pool is reduced by the damage taken.\n- Each time the pool is reduced by an amount equal to a single squad member’s Stamina, one minion dies — starting with the minion that took damage, followed by the next nearest minion.\n- If there is any excess damage after all minions in the squad are dead, you take damage equal to 2 + your level.\n- Minions can’t be winded, can’t regain Stamina, and can’t gain temporary Stamina.\n- Damage from an area effect can only kill up to the minions in its area — any excess damage is ignored.\n- A squad’s pool only takes the largest single instance of damage from a strike that targets two or more minions in the squad, though any additional effects still affect the minions targeted.\n\n**Squad Actions**\n- Minions in a squad act together on your turn in any order — before, in-between, and/or after any of your actions.\n- A squad can take a move action and a main action (excluding Heal and Defend), a move action and a maneuver, or two move actions. Individual minions can also make opportunity attacks.\n- Unless otherwise specified, a minion’s free strike has a distance of Melee 1 or Ranged 5 and deals the damage value listed on the stat block, either untyped or of the listed type.\n- Whenever multiple minions strike the same target simultaneously, the damage is added together and treated as a single strike. Minions in a squad targeting the same creature with a signature ability apply only one instance of the ability, while each additional minion increases the damage by their free strike value.\n- Your minions share your pool of surges and can apply them to their strikes — whenever one of your minions would gain a surge, you gain that surge instead.\n\n**Maneuvers & Conditions**\n- Unless otherwise specified, a squad uses their maneuver together as a unit. If a maneuver targets a single creature, all minions in the squad target the same creature; if it requires a power roll, the result is 8 + the minions’ characteristic + the number of squad members within distance.\n- An individual minion can use a maneuver to alleviate their own circumstances (such as getting up from prone or escaping a grab), but then can’t take part in their squad’s main action or maneuver.\n- You resolve any saving throws on conditions affecting one or more of your minions, treating saving throws as if you had one instance of each condition.\n- If any minion in a squad has damage immunity or weakness to a damage type, apply that effect to the entire squad only once.\n- Your minions have their own characteristics for resisting potencies, maneuvers, and making tests, but you use your own characteristics where a minion’s stat block refers to an R or uses a potency.\n\n**If You Can’t Act**\nIf you are unconscious or unable to act on your turn, you can’t summon new minions, and your remaining minions can’t deal damage — they can only act to bring you to safety. At the end of combat, your minions finish their tasks (such as carrying someone to safety) and are then dismissed.\n\n**Outside of Combat**\n- You can have up to 4 minions summoned without spending essence. You can freely summon your signature minions this way.\n- For other minions, while you have a number of Victories equal to the minion’s essence cost or more, you can summon up to the set number of minions listed on their stat block.\n- Each minion can be given a simple task and a destination you’ve previously visited, and they’ll fulfill it to the best of their ability — sending messages, scouting, carrying supplies.\n- Your minions aren’t followers and can’t make project rolls.\n- When combat begins, minions summoned outside of combat finish their tasks and are then dismissed.' },
-        { name: 'Essence', text: 'You and your minions have a unique reserve of essence as your Heroic Resource. You use this magic to sculpt your forces and maintain control over the battlefield.\n\n**Gaining Essence in Combat**\n- At the start of a combat encounter or some other stressful situation tracked in combat rounds, you gain essence equal to your Victories.\n- At the start of each of your turns during combat, you gain 2 essence.\n- The first time each round that any minion (either yours or an enemy) dies unwillingly within your Summoner’s Range, you gain 1 essence.\n- You lose any remaining essence at the end of the encounter.\n\n**Sacrificing Minions**\n- Whenever you use a heroic ability or call forth a minion that costs essence, you can willingly sacrifice one or more of your minions within your Summoner’s Range to reduce the cost by 1 for each minion sacrificed.\n- You can’t kill minions this way if they used a main action or maneuver during the turn.\n- You can sacrifice more minions than you would reduce the cost by.\n\n**Outside of Combat**\nThough you can’t gain essence outside of combat, you can use your heroic abilities and effects that cost essence without spending it. Whenever you use an ability or effect outside of combat that costs essence, you can’t use that same ability or effect outside of combat again until you gain at least 1 Victory or finish a respite.' },
+        { name: 'Minions', text: 'The creatures you control are called minions. You can summon and maintain up to a maximum of 8 minions. Your minions are considered allies at your level.\n\nYou can manage up to two squads of minions. Newly summoned minions can either be organized into a new squad or be distributed into other squads under your control. A squad can\'t contain more than eight minions, and all minions in the squad must have the same name.\n\nThe maximum distance that you can summon minions and use specific conjuring abilities is called your Summoner\'s Range. Your Summoner\'s Range is equal to 5 + your Reason score. You must have line of effect to summon and give commands to minions within your Summoner\'s Range. Commanding a minion to take a main action or a maneuver while hidden reveals you.\n\nYou also have special minions at your disposal called signature minions, low-cost creatures that you\'ve become accustomed to summoning often. See Portfolio for more details about the types of minions you can summon.\n\n**Minions in Combat**\n\n**Start of Combat:** At the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you can summon up to two of your signature minions at no cost into unoccupied spaces within your Summoner\'s Range (no action required).\n\n**Start of Turn:** At the start of each of your turns during combat, you can summon up to three of your signature minions at no cost into unoccupied spaces within your Summoner\'s Range (no action required).\n\n**Summoning:** Each minion is summoned on the ground unless they can fly or hover. Unless an ability specifies, you can\'t summon any new minions beyond your minion maximum until the same number of existing minions are dismissed or destroyed.\n\n**Stamina:** Minions in a squad pool their Stamina together. Whenever a minion in a squad takes damage, the squad\'s Stamina pool is reduced by a number equal to the damage taken. Each time the pool is reduced by an amount equal to a single squad member\'s Stamina, one minion dies (starting with the minion that took damage, followed by the next nearest minion). If there is any excess damage after all minions in the squad are dead, you take damage equal to 2 + your level. Minions can\'t be winded, can\'t regain Stamina, and can\'t gain temporary Stamina.\n\n**Area Effects:** The damage from an area effect dealt to a squad\'s Stamina pool can only kill up to the minions in its area. Any excess damage is ignored.\n\n**Strikes with Multiple Targets:** A squad\'s Stamina pool only takes the largest single instance of damage from a strike that targets two or more minions in that squad. Any additional effects still affect the minions targeted by the strike.\n\n**Conditions:** You resolve any saving throws on conditions affecting one or more of your minions. Treat saving throws as if you had one instance of each condition.\n\n**Damage Immunity and Weakness:** If any minion in a squad has damage immunity or weakness to a particular damage type, apply that effect to the entire squad only once, regardless of how many minions share the same trait.\n\n**Actions:** Minions in a squad act together on your turn in any order, before, in-between, and/or after any of your actions. They can either take a move action and a main action (excluding Heal and Defend), a move action and a maneuver, or two move actions. Individual minions can also make opportunity attacks.\n\n**Free Strikes:** Unless otherwise specified, a minion\'s free strike has a distance of Melee 1 or Ranged 5 and deals the damage value listed on the stat block. The minion can choose to deal untyped damage or the damage type next to the damage value.\n\n**Damage:** Whenever multiple minions strike the same target simultaneously, the damage is added together and treated as a single strike. Minions in a squad targeting the same target with a signature ability only apply one instance of the signature ability while each additional minion increases the damage by a number equal to their free strike value.\n\n**Surges:** Your minions share your pool of surges and can apply them to their strikes. Whenever one or more of your minions would gain a surge during a turn, you gain that surge instead.\n\n**Maneuvers:** Unless otherwise specified on the minions\' stat block, a squad uses their maneuver together as a unit. If a maneuver targets a single creature, all minions in the squad target the same creature. If a maneuver requires a power roll, the result is equal to 8 + the minions\' characteristic + the number of squad members within distance of the maneuver.\n\n**Individual Maneuvers:** An individual minion can use a maneuver to alleviate their own circumstances, such as getting up from prone or escaping a grab. If they do, they can\'t take part in their squad\'s main action or maneuver.\n\n**Characteristics:** Your minions have their own characteristics for the purposes of resisting potencies, maneuvers, and making tests. You use your own characteristics where a minion\'s stat block refers to an R or uses a potency (such as M < WEAK).\n\n**Unconscious:** If you are unconscious or unable to act on your turn, you can\'t summon new minions. Additionally, your remaining minions can\'t deal damage; they can only act to bring you to safety.\n\n**End of Combat:** At the end of combat, your minions finish their tasks (such as carrying someone to safety) and are then dismissed.\n\n**Minions Outside of Combat**\n\nWhile outside of combat, you can have up to 4 minions summoned without spending essence. You can freely summon your signature minions this way. For other minions, while you have a number of Victories equal to the minion\'s essence cost or more, you can summon up to the set number of minions listed on their stat block.\n\nEach of your minions can be given a simple task and a destination you\'ve previously visited and they\'ll fulfill it to the best of their ability. Example tasks include sending messages, scouting, and carrying supplies. Your minions aren\'t followers and can\'t make project rolls until you can summon specialists (see Minion Machinations).\n\nWhen combat begins, any of your minions who were summoned outside of combat finish their tasks and are then dismissed.\n\n> **Soul-y Moley!**\n>\n> Your minions are manifestations of the magic you weave and don\'t harbor any souls of their own. They are expressions of your own soul and are more akin to dreams than sapient creatures.\n>\n> Treat your minions as if they had your soul whenever they are targeted by abilities that affect souls. Ignore any effects that trigger when a creature with a soul dies unless you\'re the one being targeted.' },
+        { name: 'Essence', text: 'You and your minions have a unique reserve of essence as your Heroic Resource. You use this magic to sculpt your forces and maintain control over the battlefield.\n\n**Essence in Combat**\n\nAt the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain essence equal to your Victories.\n\nAt the start of each of your turns during combat, you gain 2 essence.\n\nThe first time each round that any minion (either yours or an enemy) dies unwillingly within your Summoner\'s Range, you gain 1 essence.\n\nWhenever you use a heroic ability or call forth a minion that costs essence, you can willingly sacrifice one or more of your minions within your Summoner\'s Range to reduce the cost by 1. You can\'t kill minions this way if they used a main action or maneuver during the turn. You can sacrifice more minions than you would reduce the cost by.\n\nYou lose any remaining essence at the end of the encounter.\n\n**Essence Outside of Combat**\n\nThough you can\'t gain essence outside of combat, you can use your heroic abilities and effects that cost essence without spending it. Whenever you use an ability or effect outside of combat that costs essence, you can\'t use that same ability or effect outside of combat again until you gain at least 1 Victory or finish a respite.\n\n> **More Wielders of Quintessence**\n>\n> Essence is the "stuff of creation." Just as the elementalist uses essence to conjure fire, lightning, or warp space and time, the summoner uses essence to manifest skeletons, conjure pixies, and call forth demons from the Abyssal Waste.\n>\n> There may be more magicians in the future that also rely on essence for their magic.' },
         { name: 'Summoner Strike', ability: ab('Summoner Strike', { noBadge: true,
           flavor: 'A sudden burst of energy erupts from your implement and shocks your foes’ nerves.',
           keywords: ['Magic','Melee','Ranged','Strike'], type: 'Main action',
           distance: 'Melee 1 or Ranged 5', target: 'One creature or object',
-          effect: 'R damage. If the target has R < WEAK, they are slowed (save ends).\n\n**Special:** This ability has the Charge keyword when it’s used as a melee strike.\n\nThis ability replaces both your melee and ranged free strikes.' }) },
+          effect: 'R damage. If the target has R < WEAK, they are slowed (save ends).\n\n**Special:** This ability has the Charge keyword when it\'s used as a melee strike.' }) },
         { name: 'Strike For Me', ability: ab('Strike for Me', {
           flavor: 'Your minions fight in your stead.',
           keywords: ['Magic','Ranged'], type: 'Free triggered action', badge: 'TRIGGER',
           distance: 'Summoner’s Range', target: 'Each of your minions',
           trigger: 'You use a triggered action to make a free strike or use a signature ability.',
           powerRoll: 'Reason', tiers: [['≤11','Up to three targets each make a free strike'],['12–16','Up to five targets each make a free strike'],['17+','Up to seven targets each make a free strike']],
-          effect: 'Your minions act in place of you making a free strike or using a signature ability. If you were granted the triggered action against a specific target, your minions must strike the same target. If the triggered action granted you a signature ability, you have an edge on the power roll.\n\n**Special:** On a natural 19 or 20, each target makes a free strike.' }) },
+          effect: '**Special:** On a natural 19 or 20, each target makes a free strike.\n\nYour minions act in place of you making a free strike or using a signature ability. If you were granted the triggered action against a specific target, your minions must strike the same target. If the triggered action granted you a signature ability, you have an edge on the power roll.' }) },
         { name: 'Call Forth', ability: ab('Call Forth', { cost: '1+', resource: 'Essence',
           flavor: 'My power is yours, and yours, mine. I summon thee.',
           keywords: ['Magic','Ranged'], type: 'Main action',
           distance: 'Summoner’s Range', target: 'Self',
-          effect: 'You summon one or more minions from your portfolio into unoccupied spaces within distance. Choose one of the following options:\n\n**Signature Minions:** You summon one signature minion for each essence you spend on this ability.\n\n**All Other Minions:** You summon the set number of minions listed on the stat block for their essence cost.' }) },
+          effect: 'You have the following ability.' }) },
         { name: 'Minion Bridge', ability: ab('Minion Bridge', {
           flavor: 'Your minions do everything in their power to form a safe path for you to cross.',
           keywords: ['Magic'], type: 'Maneuver',
           distance: 'Melee 1', target: 'One of your minions',
-          effect: 'You shift into a square adjacent to the target, including vertically.\n\nYou can shift into squares that contain one of your minions, even if they occupy difficult terrain. Each time you shift into a square that contains one of your minions while using this maneuver, you can shift an additional square.',
+          effect: 'You shift into a square adjacent to the target, including vertically.',
           resource: 'Essence', spendCost: 1, spend: 'An adjacent ally can shift alongside you during this movement. They must end their movement in an unoccupied square adjacent to the last minion you moved through.' }) },
-        { name: 'Formation', text: 'You’ve practiced a specific formation for your minions. Choose one of the following formations: horde, platoon, elite, or leader. You can change your formation along with your quick command by performing intense study as a respite activity.', choose: 'formation' },
-        { name: 'Quick Command', text: 'You have a special command you can issue to your minions. Choose one of the following quick commands. You can change your quick command along with your formation by performing intense study as a respite activity.', choose: 'quickCommand' },
+        { name: 'Formation', text: 'You\'ve practiced a specific formation for your minions. Choose one of the following formations: horde, platoon, elite, or leader. You can change your formation along with your quick command (see Quick Command) by performing intense study as a respite activity. (*Quick Build:* Platoon Formation.)', choose: 'formation' },
+        { name: 'Quick Command', text: 'You have a special command you can issue to your minions. Choose one of the following quick commands. You can change your quick command along with your formation (see Formation) by performing intense study as a respite activity. (*Quick Build:* Shield!)', choose: 'quickCommand' },
         { name: 'Portfolio', text: 'Your portfolio comprises the minions you’ve learned to summon. Each summoner circle specializes in a portfolio of creatures with which the summoner can build their armies: the Circle of Blight draws from the Demon Portfolio, the Circle of Graves from the Undead Portfolio, the Circle of Spring from the Fey Portfolio, and the Circle of Storms from the Elemental Portfolio.\n\n- At 1st level, select two signature minions and two 3-essence minions from your circle’s portfolio.\n- Signature minions are summoned at the start of combat and at the start of your turn for free, and you can use Call Forth to summon any number of signature minions for their essence cost.\n- You can also use Call Forth to summon the listed number of your 3-essence minions for their essence cost.\n- Your circle allows you to select new minions to add to your portfolio as you gain levels.' },
       ],
       formations: [
@@ -1684,18 +1685,18 @@ const DS_CLASSES = [
           keywords: ['Magic','Melee','Strike'], type: 'Main action',
           distance: 'Melee 1', target: 'One creature',
           powerRoll: 'Reason', tiers: [['≤11','5 + R corruption damage; 2 charges (see below)'],['12–16','8 + R corruption damage; 3 charges'],['17+','11 + R corruption damage; 4 charges']],
-          effect: 'You can spend charges to activate one of the following effects. You can activate an effect multiple times. All charges disappear after using this ability.\n\n**1 charge:** You or an ally within your Summoner’s Range can spend a Recovery.\n\n**1 charge:** You or an ally within your Summoner’s Range gain a surge.\n\n**2 charges:** You call forth a signature minion into an unoccupied space within your Summoner’s Range.' }),
+          effect: 'You can spend charges to activate one of the following effects. You can activate an effect multiple times. All charges disappear after using this ability.' }),
         ab('Explosive Parade', { cost: 5, resource: 'Essence',
           flavor: 'Your minions swell with energy until they can no longer exist in this realm.',
           keywords: ['Magic','Ranged'], type: 'Main action',
           distance: 'Summoner’s Range', target: 'Special',
           powerRoll: 'Reason', tiers: [['≤11','You summon four signature minions'],['12–16','You summon five signature minions'],['17+','You summon six signature minions']],
-          effect: 'The minions are summoned within distance regardless of your minion maximum and without organizing them into squads. Each newly summoned minion immediately moves up to their speed toward a creature or object.\n\nIf they move adjacent to their target, become targeted by an opportunity attack, or stop moving, they explode, dealing 2 damage to one adjacent creature or object and pushing them 1 square. If a target is affected by two or more minions’ explosions, the effects stack. These minions activate no effects upon death, and you gain no essence from their deaths.\n\n**Special:** In addition to the minions summoned as a part of this ability, you can choose to command any number of your minions within distance, provided they haven’t used a main action or maneuver during the turn.' }),
+          effect: 'The minions are summoned within distance regardless of your minion maximum and without organizing them into squads. Each newly summoned minion immediately moves up to their speed toward a creature or object.\n\n**Special:** In addition to the minions summoned as a part of this ability, you can choose to command any number of your minions within distance, provided they haven\'t used a main action or maneuver during the turn.' }),
         ab('Distraction Tactics', { cost: 5, resource: 'Essence',
           flavor: 'Your minions do the work to draw the heat away from your allies.',
           keywords: ['Magic'], type: 'Free maneuver',
           distance: 'Self', target: 'Special',
-          effect: 'Until the end of the encounter or until you are dying, each minion under your control during the encounter is the target of the following effect:\n\nThe target’s strikes can inflict I < WEAK taunted (EoT) to enemies. The potency increases by 1 for each minion that joined the strike.' }),
+          effect: 'Until the end of the encounter or until you are dying, each minion under your control during the encounter is the target of the following effect:' }),
         ab('Rallying Cry', { cost: 5, resource: 'Essence',
           flavor: 'Show them what you’re made of!',
           keywords: ['Magic','Ranged'], type: 'Maneuver',
@@ -1783,7 +1784,7 @@ const DS_CLASSES = [
               flavor: 'You ride a cascade of ice over your foes.',
               keywords: ['Beastheart','Melee','Weapon'], type: 'Maneuver',
               distance: 'Melee 1', target: 'One creature',
-              effect: 'The target takes damage equal to 3 + your Might score, and if they have M < AVERAGE, they are knocked prone.\n\nYou can move up to 3 squares before and after you use this ability. During this movement, a prone enemy’s space doesn’t count as difficult terrain, and the first time you enter a prone enemy’s space, that enemy takes cold damage equal to your Might score.',
+              effect: 'The target takes damage equal to 3 + your Might score, and if they have M < AVERAGE, they are knocked prone.',
               resource: 'Ferocity', spendCost: 1, spend: 'If the target has M < STRONG, they are knocked prone.',
             }),
             ab('Thunderclap', {
@@ -1820,20 +1821,20 @@ const DS_CLASSES = [
       quickKit: 'Panther',
       companionRequired: true,
       features: [
-        { name: 'Companion', text: 'You gain the companionship of a wild animal who travels with you. Your companion isn’t your pet. Rather, they’ve forged a mystical bond with you—one that allows you to share your companion’s senses and primal instincts.\n\n**Stamina & Recoveries**\n- Your companion’s Stamina maximum equals your Stamina maximum.\n- Your companion has no Recoveries. When an effect would allow your companion to spend a Recovery, your companion spends one of your Recoveries.\n- A companion can become dying at 0 Stamina and die at negative half their Stamina, just like a hero.\n\n**Actions**\n- Your companion is your ally, but they take their turn as a part of your turn. For any rules element that depends on the start or end of a creature’s turn, the start and end of your turn is also the start and end of the companion’s turn.\n- You and your companion each take your own move action.\n- You can use one triggered action per round, which can be used by either you or your companion.\n- Your main action and maneuver are split between you and your companion: if you take a main action, you can’t take a maneuver but your companion can, and if you take a maneuver, you can’t take a main action but your companion can. Taking a main action doesn’t prevent you or your companion from taking free maneuvers.\n- Your companion doesn’t have a ranged free strike.\n\n**Shared Maneuvers**\nWhen you or your companion use the Catch Breath, Escape Grab, Hide, or Stand Up maneuvers, your partner can use the same maneuver as a triggered free action.\n\n**Shared Abilities**\n- If a beastheart ability has the Beastheart keyword, it can be used by only the beastheart. If it has the Companion keyword, it can be used by only the companion.\n- If an ability can be used by either you or your companion, the word “you” in the ability’s text refers to whoever uses the ability, while the word “partner” refers to whoever didn’t use the ability.\n- Within a companion’s stat block, the word “you” always refers to the beastheart. In all cases, phrases like “you both” and “you each” refer to you and your companion.\n\n**Shared Senses, Skills & Space**\n- While you are within 1 mile of each other, you and your companion can communicate telepathically as if you shared a language, although this communication uses vague images and feelings instead of words.\n- Your companion has any skill you have, and vice versa, though they can’t take any action their physiology wouldn’t allow (for instance, a wolf can’t pick locks).\n- You and your companion can move freely through and stop in each other’s spaces.\n\n**Surges**\nSurges you and your companion gain are added to a surge pool you both can spend from. When an effect would grant 1 or more surges to both you and your companion, you only gain the surges once.\n\n**Changing Your Companion**\nAs a respite activity, you can release your current companion, then gain a new companion of a different species or summon a companion you previously released.\n\n**One Hero**\nYou and your companion count as one hero for determining the difficulty of combats, montage tests, and other challenges.' },
+        { name: 'Companion', text: 'You gain the companionship of a wild animal who travels with you. Your companion isn\'t your pet. Rather, they\'ve forged a mystical bond with you—one that allows you to share your companion\'s senses and primal instincts.\n\nChoose a companion from the following options. (*Quick Build:* Wolf.)\n\n**Customizing Your Companion**\n\nWant a companion not listed here? You can often use one of these stat blocks to represent a similar beast. For instance, you could use the condor companion for an escaped Hawklord hawk, the wolf for a dog or jackal, or even the boar for a particularly ornery stag or elk.\n\nWith the Director\'s permission, you can also change the damage types of your companion\'s abilities to better match your vision. Perhaps instead of a hellhound you travel with a white wolf that deals cold damage instead of fire damage; maybe your elemental spark is an elemental ember that deals fire damage; or maybe your panther is a shadow whose Pounce maneuver deals corruption or cold damage.' },
         { name: 'Heart of the Beast', ability: ab('Heart of the Beast', {
           flavor: 'Better look away—this might not be pretty.',
           keywords: ['Magic','Ranged'], type: 'Maneuver',
           distance: 'Self', target: 'Self',
           effect: 'You must spend a Recovery without regaining Stamina. Your partner gains temporary Stamina equal to your recovery value as they leap out of your chest. Your partner teleports to your space from any distance, even if they don’t have line of effect to you.',
-          resource: 'Ferocity', spendCost: '1-5', spend: '**1 Ferocity:** Your partner can shift up to their speed.\n\n**1–5 Ferocity:** Your partner gains additional temporary Stamina equal to their Might score for each ferocity spent this way.\n\n**5 Ferocity:** You restore your dead partner to life with 1 Stamina, even if their body was destroyed. They gain no temporary Stamina if you use this ability this way.',
+          resource: 'Ferocity', spendCost: 1, spend: 'Your partner can shift up to their speed.\n\n**Spend 1–5 Ferocity:** Your partner gains additional temporary Stamina equal to their Might score for each ferocity spent this way.\n\n**Spend 5 Ferocity:** You restore your dead partner to life with 1 Stamina, even if their body was destroyed. They gain no temporary Stamina if you use this ability this way.',
         }) },
         { name: 'Feral Strike', ability: ab('Feral Strike', {
           flavor: 'Your companion lunges into the fray, attacking wildly with teeth, claws, or other weapons.',
           keywords: ['Area','Companion','Melee','Strike','Weapon'], type: 'Main action',
           distance: '1 burst', target: 'Each creature in the area',
           powerRoll: 'Might', tiers: [['≤11','1 + M damage'],['12–16','3 + M damage'],['17+','4 + M damage']],
-          effect: 'Before making the power roll, your companion moves up to a number of squares equal to their Intuition score straight toward the closest enemy they are aware of, avoiding damaging terrain and ending the movement when they are adjacent to that enemy.\n\nThis ability gains a benefit based on your wild nature.',
+          effect: 'Your companion moves up to a number of squares equal to their Intuition score straight toward the closest enemy they are aware of, avoiding damaging terrain and ending the movement when they are adjacent to that enemy.',
           riderBySub: {
             guardian: 'Each enemy target is taunted by your companion until the start of your next turn.',
             prowler: 'Each enemy target is weakened until the start of your next turn.',
@@ -1841,7 +1842,7 @@ const DS_CLASSES = [
             spark: 'This strike deals cold, fire, lightning, or sonic damage. You gain 1 surge.',
           },
         }) },
-        { name: 'Ferocity', text: 'You and your companion tap into a predator’s bloodlust that grants you a Heroic Resource called ferocity.\n\n**Gaining Ferocity in Combat**\n- At the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain ferocity equal to your Victories.\n- At the start of each of your turns during combat, you gain 1d3 ferocity.\n- The first time each combat round that a creature adjacent to your companion takes damage, you gain 2 ferocity.\n- You lose any remaining ferocity at the end of the encounter.\n\n**Outside of Combat**\n- Though you can’t gain ferocity outside of combat, you can use your heroic abilities and effects that cost ferocity without spending it.\n- Whenever you or your companion uses an ability or effect outside of combat that costs ferocity, that same ability or effect can’t be used outside of combat again until you earn 1 or more Victories or finish a respite.\n- When you or your companion uses an ability outside of combat that has a variable or unlimited ferocity cost, the ability can be used as if you had spent an amount of ferocity equal to your Victories.' },
+        { name: 'Ferocity', text: 'You and your companion tap into a predator\'s bloodlust that grants you a Heroic Resource called ferocity.\n\n**Ferocity in Combat**\n\nAt the start of a combat encounter or some other stressful situation tracked in combat rounds (as determined by the Director), you gain ferocity equal to your Victories. At the start of each of your turns during combat, you gain 1d3 ferocity.\n\nAdditionally, the first time each combat round that a creature adjacent to your companion takes damage, you gain 2 ferocity.\n\nYou lose any remaining ferocity at the end of the encounter.\n\n**Ferocity Outside of Combat**\n\nThough you can\'t gain ferocity outside of combat, you can use your heroic abilities and effects that cost ferocity without spending it. Whenever you or your companion uses an ability or effect outside of combat that costs ferocity, that same ability or effect can\'t be used outside of combat again until you earn 1 or more Victories or finish a respite.\n\nWhen you or your companion uses an ability outside of combat that has a variable or unlimited ferocity cost, the ability can be used as if you had spent an amount of ferocity equal to your Victories.' },
         { name: 'Rampage', text: 'While your ferocity sharpens your killer instinct, it can also drive your companion into a rampage, causing them to strike friends and foes alike in a blood-soaked battle frenzy. As their rampage builds, they become something more than a mortal companion, embodying a primordial spirit of destruction.\n\nYour companion has a resource called rampage. Whenever you or your companion spends ferocity, your companion gains rampage equal to the ferocity spent. Your companion loses their rampage and its effects at the end of an encounter.\n\nYour companion doesn’t spend rampage to activate abilities. Instead, when your companion gains 8 rampage, they are rampaging. As your companion’s rampage increases, they gain the listed effects from the Rampage table. Effects are cumulative.',
           table: { head: ['Rampage','Effect'], rows: [
             ['8', 'At the end of each of your turns, your companion must use their Feral Strike ability as a free maneuver. You can’t willingly decrease the power roll outcome to a lower tier. For each ally damaged this way, you gain 2 surges, which you can use on this strike.'],
@@ -1850,7 +1851,7 @@ const DS_CLASSES = [
             ['20 (7th level)', 'As a free maneuver, your companion can increase their size up to size 2, or increase their size by 1 if their original size is already 2 or larger. This size increase lasts until your companion’s rampage ends or they use a free maneuver to end it. While your companion’s size is increased, they gain a +2 bonus to speed and stability, the potencies of their abilities increase by 1, and the size of their Feral Strike ability’s burst increases by 1.', 7],
             ['24 (10th level)', 'When your companion increases their size, they can increase it up to size 3, or increase their size by 1 if their original size is already 3 or larger. Whenever they make a power roll while their size is increased this way, they can roll 3d10 and discard the lowest roll.', 10],
           ] } },
-        { name: 'Kit', text: 'You can use and gain the benefits of a kit. You and your companion both gain the benefits of the kit, with the following exceptions:\n\nOnly you can use the kit’s signature ability, not your companion.\n\nYour companion is always armed to the teeth. When choosing or changing a kit, your companion can choose between the melee damage bonus provided by the kit (if any) or a melee damage bonus of +0/+0/+4.' },
+        { name: 'Kit', text: 'You can use and gain the benefits of a kit. See the <u>Kits</u> chapter of Draw Steel: Heroes for more information.\n\nYou and your companion both gain the benefits of the kit, with the following exceptions:\n\n- Only you can use the kit\'s signature ability, not your companion.\n- Your companion is always armed to the teeth. When choosing or changing a kit, your companion can choose between the melee damage bonus provided by the kit (if any) or a melee damage bonus of +0/+0/+4.' },
       ],
       sigCount: 1,
       signatures: [
@@ -1859,7 +1860,7 @@ const DS_CLASSES = [
           keywords: ['Beastheart','Magic','Melee','Strike','Weapon'], type: 'Main action',
           distance: 'Melee 1', target: 'One creature or object',
           powerRoll: 'Intuition', tiers: [['≤11','3 + I damage'],['12–16','5 + I damage'],['17+','7 + I damage']],
-          effect: 'Before making the power roll, if you and a willing ally are standing on the ground within 10 squares of each other, you can teleport to swap places. If you do, you gain an edge on this ability.',
+          effect: 'If you and a willing ally are standing on the ground within 10 squares of each other, you can teleport to swap places. If you do, you gain an edge on this ability.',
         }),
         ab('Come On!', {
           flavor: 'You launch a flurry of attacks to cover your movement.',

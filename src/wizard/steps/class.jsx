@@ -5,12 +5,12 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button
 import { SheetStyles, StatblockCard } from '../../theme/sheet.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
-import { StepHeader } from '../StepHeader.jsx';
+import { ClassDocket } from '../ClassDocket.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-function ClassStep({ character, update }) {
+function ClassStep({ character, update, sections = [] }) {
   const sel = character.cclass.id;
   const cls = classDef(character);
   const setCls = (id) => {
@@ -70,7 +70,7 @@ function ClassStep({ character, update }) {
                 {c.role}{!c.deep && ' · BASICS ONLY'}
                 <span className="pc-resource">{c.resource.toUpperCase()}</span>
               </div>
-              <div className="pc-desc">{c.blurb}</div>
+              <div className="pc-desc-reveal"><div className="pc-desc">{c.blurb}</div></div>
             </div>
           </SelCard>
         ))}
@@ -79,6 +79,7 @@ function ClassStep({ character, update }) {
       {cls && (
         <>
           <div id="class-config" />
+          <ClassDocket className={cls.name} sections={sections} />
           <OrnDivider glyph={`❦  ${cls.name.toUpperCase()}  ❦`} />
 
           {/* Class flavor banner */}
@@ -95,6 +96,7 @@ function ClassStep({ character, update }) {
           <ClassSubclassPicker character={character} update={update} />
 
           {/* Beastheart companion picker */}
+          <div id="class-sec-companion" />
           <CompanionPicker character={character} update={update} />
 
           {/* Summoner portfolio minion picker */}
@@ -104,9 +106,11 @@ function ClassStep({ character, update }) {
           <CensorDomainPicker character={character} update={update} />
 
           {/* Class skills */}
+          <div id="class-sec-skills" />
           <ClassSkillPicker character={character} update={update} />
 
           {/* Characteristics */}
+          <div id="class-sec-chars" />
           <CharacteristicPicker character={character} update={update} />
 
           {/* Class features summary */}
@@ -124,7 +128,7 @@ function ClassStep({ character, update }) {
                   ) : (
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
-                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
+                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{renderRich(f.text)}</div>
                       {f.table && <FeatureTable table={f.table} />}
                       {PW_CONFIG[f.choose] && <PrayerWardPicker character={character} update={update} cls={cls} feature={f} />}
                     </div>
@@ -147,7 +151,7 @@ function ClassStep({ character, update }) {
                   {textFeats.map(f => (
                     <div key={f.name} className="orn-frame" style={{padding:'14px 18px'}}>
                       <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{f.name.toUpperCase()}</div>
-                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
+                      <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{renderRich(f.text)}</div>
                       {f.table && <FeatureTable table={f.table} />}
                     </div>
                   ))}
@@ -204,7 +208,7 @@ function CompanionPicker({ character, update }) {
         ))}
       </div>
       {comp?.optionChoice && (
-        <div className="sig-option-row">
+        <div className="sig-option-row" id="class-sec-companion-option">
           <span className="sig-option-label">{comp.optionChoice.label}</span>
           <select
             className="sig-option-select"
@@ -252,7 +256,7 @@ function PortfolioPicker({ character, update }) {
         const options = portfolio[listKey] || [];
         const got = chosen[tier] || [];
         return (
-          <div key={tier}>
+          <div key={tier} id={`class-sec-minions-${tier}`}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
               <H3>{portfolio.label} — {label}</H3>
               <Pill kind="gold">{got.length} / {need} CHOSEN</Pill>
@@ -292,8 +296,8 @@ function PrayerWardPicker({ character, update, cls, feature }) {
   const groups = PW_CONFIG[feature?.choose] || PW_CONFIG.prayerWard;
   const setKey = (stateKey, name) => update(c => ({ ...c, cclass: { ...c.cclass, [stateKey]: c.cclass[stateKey] === name ? null : name } }));
 
-  const Group = ({ label, options, current, onPick }) => (
-    <div>
+  const Group = ({ label, options, current, onPick, anchor }) => (
+    <div id={anchor}>
       <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>{label} <span style={{color:'var(--gold-2)'}}>· Pick 1</span></div>
       <div className="pw-grid">
         {options.map(o => {
@@ -301,7 +305,7 @@ function PrayerWardPicker({ character, update, cls, feature }) {
           return (
             <button type="button" key={o.name} className={`card-btn pw-opt ${on ? 'selected' : ''}`} aria-pressed={on} onClick={() => onPick(o.name)}>
               <div className="pw-name">{o.name}</div>
-              <div className="pw-text">{o.text}</div>
+              <div className="pw-text">{renderRich(o.text)}</div>
             </button>
           );
         })}
@@ -314,6 +318,7 @@ function PrayerWardPicker({ character, update, cls, feature }) {
       {groups.map(([label, clsKey, stateKey]) => (
         <Group
           key={stateKey}
+          anchor={`class-sec-${stateKey}`}
           label={label}
           options={cls[clsKey] || []}
           current={character.cclass[stateKey]}
@@ -382,7 +387,7 @@ function ClassSubclassPicker({ character, update }) {
     const curAbility = character.cclass.domainAbility;
     return (
       <div className="stack-22">
-        <div>
+        <div id="class-sec-domains">
           <H3>{cls.subclassName} <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 2</span></H3>
           <div className="grid-4" style={{marginTop: 10}}>
             {cls.domains.map(d => {
@@ -397,7 +402,7 @@ function ClassSubclassPicker({ character, update }) {
         </div>
 
         {ready && (
-          <div>
+          <div id="class-sec-domain-feature">
             <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
             <Deck>At 1st level you gain the 1st-level feature of one of your two domains. The other follows at 2nd level.</Deck>
             <div className="grid-2" style={{marginTop: 12, gap: 10}}>
@@ -409,7 +414,7 @@ function ClassSubclassPicker({ character, update }) {
                   <SelCard key={d} selected={on} dimmed={!!curFeature && !on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
                     <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(f.text)}</div>
                   </SelCard>
                 );
               })}
@@ -420,7 +425,7 @@ function ClassSubclassPicker({ character, update }) {
               const cur = character.cclass.domainSkill;
               const takenElsewhere = skillsTakenExcept(character, 'domain');
               return (
-                <div style={{marginTop: 16}}>
+                <div style={{marginTop: 16}} id="class-sec-domain-skill">
                   <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                     {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                   </div>
@@ -449,7 +454,7 @@ function ClassSubclassPicker({ character, update }) {
         )}
 
         {ready && (
-          <div>
+          <div id="class-sec-domain-ability">
             <H3>Domain Ability <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
             <Deck>Each domain grants a signature {cls.resource}-fueled ability. Choose one tied to your domains.</Deck>
             <div className="grid-2" style={{marginTop: 12, gap: 12}}>
@@ -474,7 +479,7 @@ function ClassSubclassPicker({ character, update }) {
   }
 
   return (
-    <div>
+    <div id="class-sec-subclass">
       <H3>{cls.subclassName}</H3>
       <div className="grid-3" style={{marginTop:10}}>
         {cls.subclasses.map(s => (
@@ -485,7 +490,7 @@ function ClassSubclassPicker({ character, update }) {
               <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em'}}>{s.name}</div>
               {s.tag && <Tag>{s.tag}</Tag>}
             </div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{s.text}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(s.text)}</div>
             {(s.skill || s.skillGroup) && <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--gold-2)', letterSpacing:'0.18em', marginTop:8, textTransform:'uppercase'}}>+ Skill: {s.skill || `one ${s.skillGroup} skill`}</div>}
           </SelCard>
         ))}
@@ -623,7 +628,7 @@ function CensorDomainPicker({ character, update }) {
 
   return (
     <div className="stack-22">
-      <div>
+      <div id="class-sec-domain">
         <H3>Deity &amp; Domain <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
         <Deck>Pick one domain from your deity&rsquo;s portfolio. It grants a 1st-level domain feature and a skill, and shapes the features you gain as you rise in level.</Deck>
         <div className="grid-4" style={{marginTop: 10}}>
@@ -644,7 +649,7 @@ function CensorDomainPicker({ character, update }) {
           <div className="orn-frame" style={{padding:'14px 18px', marginTop:10}}>
             <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{chosen}</div>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{curFeature.name}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{curFeature.text}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(curFeature.text)}</div>
           </div>
 
           {curFeature.skillGroup && (() => {
@@ -652,7 +657,7 @@ function CensorDomainPicker({ character, update }) {
             const skills = (window.DS_SKILL_GROUPS?.[group]) || [];
             const takenElsewhere = skillsTakenExcept(character, 'domain');
             return (
-              <div style={{marginTop: 16}}>
+              <div style={{marginTop: 16}} id="class-sec-domain-skill">
                 <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                   {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                 </div>
@@ -774,7 +779,7 @@ function AbilityPicker({ character, update }) {
   return (
     <div className="stack-22">
       {sigsRequired > 0 ? (
-      <div>
+      <div id="class-sec-signatures">
         <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
           <H3>Signature Abilities</H3>
           <Pill kind="gold">{sigsChosen.length} / {sigsRequired} CHOSEN</Pill>
@@ -800,7 +805,7 @@ function AbilityPicker({ character, update }) {
       ) : null}
 
       {(cls.heroic3?.length > 0) && (
-      <div>
+      <div id="class-sec-heroic3">
         <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
           <H3>3-{cls.resource} Heroic Ability</H3>
           <Pill kind="gold">{character.cclass.heroic3 ? 1 : 0} / 1 CHOSEN</Pill>
@@ -821,7 +826,7 @@ function AbilityPicker({ character, update }) {
       )}
 
       {(cls.heroic5?.length > 0) && (
-      <div>
+      <div id="class-sec-heroic5">
         <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
           <H3>5-{cls.resource} Heroic Ability</H3>
           <Pill kind="gold">{character.cclass.heroic5 ? 1 : 0} / 1 CHOSEN</Pill>
@@ -896,7 +901,7 @@ function ClassKitPicker({ character, update }) {
                   : <Tag kind="gold">{k.armor}</Tag>}
               </div>
               <div className="ac-keywords">{k.weapon} Weapon · {k.armor} Armor</div>
-              <div className="ac-flavor" style={{fontFamily:'var(--serif)', fontStyle:'normal'}}>{k.desc}</div>
+              <div className="ac-flavor" style={{fontFamily:'var(--serif)', fontStyle:'normal'}}>{renderRich(k.desc)}</div>
               <div className="kit-bonuses">
                 {k.bonuses.sta_per ? <span className="kit-stat"><span className="kit-stat-v">+{k.bonuses.sta_per}</span><span className="kit-stat-l">Stamina / lvl</span></span> : null}
                 {k.bonuses.spd ? <span className="kit-stat"><span className="kit-stat-v">+{k.bonuses.spd}</span><span className="kit-stat-l">Speed</span></span> : null}
@@ -923,7 +928,7 @@ function ClassKitPicker({ character, update }) {
                     ))}
                   </div>
                 )}
-                {sig.effect && <div className="kit-sig-effect"><b>Effect.</b> {sig.effect}</div>}
+                {sig.effect && <div className="kit-sig-effect"><b>Effect.</b> {renderRich(sig.effect)}</div>}
               </div>
             </div>
           </SelCard>
@@ -934,7 +939,8 @@ function ClassKitPicker({ character, update }) {
 
   return (
     <div className="stack-22">
-      <div>
+      <div id="class-sec-kit">
+        <div id="class-sec-kit2" />
         <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
           <H3>{dual ? 'Choose Two Kits' : 'Choose your Kit'}</H3>
           {dual
@@ -954,7 +960,7 @@ function ClassKitPicker({ character, update }) {
         {[sel, sel2].filter(Boolean).map(id => pool.find(k => k.id === id)).map(k => (k?.features || []).map(f => (
           <div key={`${k.id}-${f.name}`} className="orn-frame" style={{padding:'14px 18px', marginTop: 14}}>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--gold-2)'}}>{k.name.toUpperCase()} — {f.name.toUpperCase()}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop: 6, lineHeight:1.55}}>{renderRich(f.text)}</div>
             {f.table && <FeatureTable table={f.table} />}
           </div>
         )))}
@@ -967,4 +973,4 @@ function ClassKitPicker({ character, update }) {
 // STEP 6: COMPLICATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { ClassStep };
+export { ClassStep, PW_CONFIG };

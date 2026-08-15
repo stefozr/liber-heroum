@@ -88,7 +88,7 @@ const LEVELUP_DATA = {
       summary: 'Your judgment grows in divine power, and the dread of it settles on the guilty.',
       staminaGain: 9,
       autoFeatures: () => [
-        { name: 'Look On My Work and Despair', text: 'Whenever you use Judgment, you can spend 1 wrath; if the target has P < AVERAGE they are frightened of you (save ends). When a creature judged by you drops to 0 Stamina and you re-judge as a free triggered action, a new target with P < STRONG is frightened (save ends); if already frightened of you, they instead take holy damage equal to twice your Presence score.' },
+        { name: 'Look On My Work and Despair', text: 'Your judgment has grown in divine power, instilling fear in those you condemn. Whenever you use your Judgment ability, you can spend 1 wrath, and if the target has P < AVERAGE, they are frightened of you (save ends). Additionally, whenever a creature judged by you is reduced to 0 Stamina and you use Judgment as a free triggered action, if the new target has P < STRONG, they are frightened of you (save ends). If the target is already frightened of you, they instead take holy damage equal to twice your Presence score.' },
       ],
       choices: [
         {
@@ -150,7 +150,7 @@ const LEVELUP_DATA = {
       summary: 'You consecrate a weapon as an instrument of divine wrath that scours the wicked.',
       staminaGain: 9,
       autoFeatures: () => [
-        { name: 'Implement of Wrath', text: 'Each respite, choose one hero\u2019s weapon to become magic until your next respite: strikes deal extra holy damage equal to the wielder\u2019s highest characteristic; a struck creature with holy weakness and P < STRONG is frightened and weakened (save ends); minions struck die; and the wielder can\u2019t be made frightened.' },
+        { name: 'Implement of Wrath', text: 'Each time you finish a respite, you can choose one hero\'s weapon, including your own, to channel supernatural power as an implement of your god\'s wrath. The weapon becomes magic and gains the following benefits until your next respite:\n\n- Strikes with the weapon deal extra holy damage equal to the wielder\'s highest characteristic score.\n- Any creature struck by the weapon who has holy weakness and has P < STRONG is frightened and weakened (save ends).\n- Any minion targeted by a strike using the weapon dies. That minion\'s Stamina maximum is removed from the minion Stamina pool before any damage is applied to the rest of the squad.\n- The weapon\'s wielder can\'t be made frightened.' },
       ],
       choices: [
         {
@@ -223,7 +223,7 @@ const LEVELUP_DATA = {
       summary: 'Your implement of wrath becomes a bulwark of grace for those who fight beside you.',
       staminaGain: 9,
       autoFeatures: () => [
-        { name: 'Improved Implement of Wrath', text: 'Your Implement of Wrath also grants: the wielder and adjacent allies gain +2 to saving throws; at the end of the wielder\u2019s turns, each adjacent ally saves against each save-ends effect on them; and the wielder has corruption immunity 10.' },
+        { name: 'Improved Implement of Wrath', text: 'The weapon you target with your Implement of Wrath feature gains the following additional benefits:\n\n- The weapon\'s wielder and each ally adjacent to them gain a +2 bonus to saving throws.\n- At the end of each of the weapon wielder\'s turns, each ally adjacent to the wielder makes a saving throw against each effect on them that is ended by a saving throw.\n- The weapon\'s wielder has corruption immunity 10.' },
       ],
       choices: [
         {
@@ -240,8 +240,8 @@ const LEVELUP_DATA = {
       staminaGain: 9,
       autoFeatures: () => [
         { name: 'Characteristic Increase', text: 'Your Might and Presence scores each increase to 5.' },
-        { name: 'Templar', text: 'Whenever you use Judgment, you can use a free triggered action to use a conduit domain effect associated with your domain (or a domain accessed via Virtue), using Presence for Intuition and your censor level for conduit level. You can also open a portal to rest in your deity\u2019s presence, ask three questions, and travel to any place your deity is worshipped.' },
-        { name: 'Virtue', text: 'You gain an epic resource called virtue. Each respite you gain virtue equal to the XP you gain, and you can spend it on abilities as if it were wrath. Spend 3 virtue to access one of your deity\u2019s other domains until your next respite. Virtue remains until spent.' },
+        { name: 'Templar', text: 'You are the ultimate representation of your god\'s justice in the timescape. Whenever you use your Judgment ability, you can use a free triggered action to use a conduit domain effect (see Domain Piety and Effects in the Conduit section) associated with your chosen domain, or a domain you access with virtue (see below). If the effect calls for the use of your Intuition score, you use your Presence score instead. If the effect uses your conduit level, use your censor level instead.\n\nAdditionally, whenever you take a respite, you can open a portal to rest in the presence of your deity and bring along any allies. When you do, you can ask your deity three questions, which the Director must answer honestly if your deity knows the answers (though they might answer cryptically or incompletely). When you finish your respite, you and your allies can appear at any location in the timescape where someone worships your deity.\n\nWhile you rest in their presence, your god might also give you priority targets to enact justice upon. You and your allies each have a double edge on power rolls made against such targets. If you attempt to open a portal to your deity again before you have defeated your priority targets, you suffer your god\'s wrath, as determined by the Director.' },
+        { name: 'Virtue', text: 'You have an epic resource called virtue. Each time you finish a respite, you gain virtue equal to the XP you gain. You can spend virtue on your abilities as if it were wrath.\n\nAdditionally, you can spend 3 virtue to access one of your deity\'s domains that you usually don\'t have access to. When you do, you can use that domain\'s features until you finish another respite.\n\nVirtue remains until you spend it.' },
         { name: 'Wrath of the Gods', text: 'When you gain wrath at the start of each of your turns during combat, you gain 4 wrath instead of 3.' },
       ],
       autoCharacteristicIncrease: { Might: 5, Presence: 5, max: true },
@@ -277,10 +277,10 @@ const LEVELUP_DATA = {
       staminaGain: 9,
       autoFeatures: ({ sub }) => [
         sub === 'berserker' && {
-          name: 'Unstoppable Force', text: 'Whenever you use the Charge main action, you can use a strike signature or strike heroic ability instead of a free strike. You can also jump as part of your charge.',
+          name: 'Unstoppable Force', text: 'Whenever you use the Charge main action, you can use a strike signature ability or a strike heroic ability instead of a free strike. Additionally, you can jump as part of your charge.',
         },
         sub === 'reaver' && {
-          name: 'Inescapable Wrath', text: 'You gain a bonus to speed equal to your Agility score, and you ignore difficult terrain.',
+          name: 'Inescapable Wrath', text: 'You have a bonus to speed equal to your Agility score, and you ignore difficult terrain.',
         },
         sub === 'stormwight' && {
           name: 'Tooth and Claw', text: 'At the end of each of your turns, each enemy adjacent to you takes damage equal to your Might score.',
@@ -291,15 +291,15 @@ const LEVELUP_DATA = {
           ab('Special Delivery', {
             cost: 5, resource: 'Ferocity', flavor: 'You ready?',
             keywords: ['Melee', 'Weapon'], type: 'Maneuver',
-            distance: 'Melee 1', target: 'One ally',
+            distance: 'Melee 1', target: 'One willing ally',
             effect: 'You vertically push the target up to 4 squares. This forced movement ignores the target\u2019s stability, and the target takes no damage from colliding with creatures or objects. At the end of this movement, the target can make a free strike that deals extra damage equal to your Might score.',
           }),
           ab('Wrecking Ball', {
             cost: 5, resource: 'Ferocity', flavor: 'It\u2019s easier to destroy than to create. Much easier, in fact!',
             keywords: ['Melee', 'Weapon'], type: 'Maneuver',
-            distance: 'Self', target: 'Self',
+            distance: 'Self; see below', target: 'Self',
             tiers: { t1: 'push 1', t2: 'push 2', t3: 'push 3' },
-            effect: 'You move up to your speed in a straight line. During this movement, you can move through mundane structures, including walls, which are difficult terrain for you. You automatically destroy each square of structure you move through and leave behind a square of difficult terrain.\n\nAdditionally, you make one power roll that targets each enemy you move adjacent to during this movement.',
+            effect: 'You move up to your speed in a straight line. During this movement, you can move through mundane structures, including walls, which are difficult terrain for you. You automatically destroy each square of structure you move through and leave behind a square of difficult terrain.',
           }),
         ],
         reaver: [
@@ -309,14 +309,14 @@ const LEVELUP_DATA = {
             distance: 'Melee 1', target: 'One creature',
             tiers: {
               t1: '3 + M damage; P < WEAK, dazed and frightened (save ends)',
-              t2: '5 + M damage; M < AVERAGE, dazed and frightened (save ends)',
-              t3: '8 + M damage; M < STRONG, dazed and frightened (save ends)',
+              t2: '5 + M damage; P < AVERAGE, dazed and frightened (save ends)',
+              t3: '8 + M damage; P < STRONG, dazed and frightened (save ends)',
             },
           }),
           ab('Phalanx-Breaker', {
             cost: 5, resource: 'Ferocity', flavor: 'Organizing your forces like feckless creatures of Law. Pitiful.',
             keywords: ['Melee', 'Weapon'], type: 'Main action',
-            distance: 'Self', target: 'Self',
+            distance: 'Self; see below', target: 'Self',
             tiers: { t1: '2 damage; A < WEAK, dazed (save ends)', t2: '4 damage; A < AVERAGE, dazed (save ends)', t3: '6 damage; A < STRONG, dazed (save ends)' },
             effect: 'You shift up to your speed and make one power roll that targets up to three enemies you move adjacent to during this shift.',
           }),
@@ -326,15 +326,15 @@ const LEVELUP_DATA = {
             cost: 5, resource: 'Ferocity', flavor: 'I will hunt you down.',
             keywords: ['Melee', 'Strike', 'Weapon'], type: 'Main action',
             distance: 'Melee 1', target: 'One creature',
-            tiers: { t1: '4 + M damage; I < WEAK, slowed (save ends)', t2: '6 + M damage; M < AVERAGE, slowed (save ends)', t3: '10 + M damage; M < STRONG, slowed (save ends)' },
+            tiers: { t1: '4 + M damage; I < WEAK, slowed (save ends)', t2: '6 + M damage; I < AVERAGE, slowed (save ends)', t3: '10 + M damage; I < STRONG, slowed (save ends)' },
             effect: 'The target can\u2019t be hidden from you for 24 hours. Until the end of the encounter, whenever the target willingly moves, you can use a free triggered action to move.',
           }),
           ab('Visceral Roar', {
             cost: 5, resource: 'Ferocity', flavor: 'The sound of the storm within you staggers your opponents.',
             keywords: ['Area', 'Magic'], type: 'Main action',
             distance: '2 burst', target: 'Each enemy in the area',
-            tiers: { t1: '2 cold and corruption and fire and lightning damage; push 1; M < WEAK, dazed (save ends)', t2: '5 cold and corruption and fire and lightning damage; push 2; M < AVERAGE, dazed (save ends)', t3: '7 cold and corruption and fire and lightning damage; push 3; M < STRONG, dazed (save ends)' },
-            effect: 'This ability deals your primordial damage type.',
+            tiers: { t1: '2 damage; push 1; M < WEAK, dazed (save ends)', t2: '5 damage; push 2; M < AVERAGE, dazed (save ends)', t3: '7 damage; push 3; M < STRONG, dazed (save ends)' },
+            effect: 'This ability deals your primordial damage type (see Stormwight Kits).',
           }),
         ],
       }[sub] || []),
@@ -357,13 +357,13 @@ const LEVELUP_DATA = {
       staminaGain: 9,
       autoFeatures: ({ sub }) => [
         sub === 'berserker' && {
-          name: 'Immovable Object', text: 'You add your level to your effective size for interacting with creatures and objects (lifting, forced movement, etc.). You gain a bonus to stability equal to your Might score.',
+          name: 'Immovable Object', text: 'You add your level to your effective size for the purpose of interacting with creatures and objects, including determining whether you can lift an object, are affected by forced movement, and so forth. This has no effect on whether you can be grabbed.\n\nAdditionally, you have a bonus to stability equal to your Might score.',
         },
         sub === 'reaver' && {
-          name: 'See Through Their Tricks', text: 'Double edge on tests to search for hidden creatures, discern hidden motives, or detect lies. Also double edge on tests made to gamble.',
+          name: 'See Through Their Tricks', text: 'You have a double edge on tests made to search for hidden creatures, discern hidden motives, or detect lies. You also have a double edge on tests made to gamble!',
         },
         sub === 'stormwight' && {
-          name: 'Nature\u2019s Knight', text: 'You can speak with animals and elementals. You also automatically sense the presence of animals and elementals within 10 squares, even if hidden.',
+          name: 'Nature\u2019s Knight', text: 'You can speak with animals and elementals. Additionally, you automatically sense the presence of animals and elementals within 10 squares of you, even if they are hidden.\n\nWhen you are in a negotiation with an animal or elemental, you treat your Renown as 1 higher than usual. This stacks with the increase to your effective Renown in a negotiation with an animal of your type while in animal form (see Stormwight Kits).',
         },
       ].filter(Boolean),
       choices: [
@@ -389,7 +389,7 @@ const LEVELUP_DATA = {
               cost: 7, resource: 'Ferocity', flavor: 'See how useless their weapons are!',
               keywords: ['Magic'], type: 'Maneuver',
               distance: 'Self', target: 'Self',
-              effect: 'You gain 20 Stamina.',
+              effect: 'You gain 20 temporary Stamina.',
             }),
             ab('You Are Already Dead', {
               cost: 7, resource: 'Ferocity', flavor: 'Slash. Walk away.',
@@ -408,8 +408,8 @@ const LEVELUP_DATA = {
         { name: 'Characteristic Increase', text: 'Your Might and Agility scores each increase to 3.' },
         { name: 'Damaging Ferocity',       text: 'The first time you take damage each combat round, you gain 2 ferocity instead of 1.' },
         { name: 'Growing Ferocity Improvement I', text: 'Your Growing Ferocity feature provides additional benefits when you have 8 or more ferocity.' },
-        { name: 'Primordial Attunement',   text: 'You automatically sense damage immunities, weaknesses, and elemental sources within 10 squares.' },
-        { name: 'Primordial Strike',       text: 'As part of any strike, spend 1 ferocity to gain 1 surge for that strike. Its extra damage can be elemental (acid, cold, corruption, fire, lightning, poison, or sonic).' },
+        { name: 'Primordial Attunement',   text: 'As your ferocity manifests elemental forces created by the Primordial Chaos, you are aware of how elemental power interacts with those around you. You automatically sense whether any creature within 10 squares has damage immunity or damage weakness to acid, cold, corruption, fire, lightning, poison, or sonic damage, learning whether they have immunity or weakness, the value of that immunity or weakness, and the specific damage type. Additionally, you automatically sense any source of one of those damage types within 10 squares, such as a fire or a source of elemental power.' },
+        { name: 'Primordial Strike',       text: 'You can manifest your ferocity directly as an elemental force created by the Primordial Chaos. As part of any strike, you can spend 1 ferocity to gain 1 surge that must be used for that strike. The extra damage dealt by the surge can be acid, cold, corruption, fire, lightning, poison, or sonic (your choice).' },
       ],
       // Apply characteristic increase automatically on apply.
       autoCharacteristicIncrease: { Might: 3, Agility: 3, max: true },
@@ -453,7 +453,7 @@ const LEVELUP_DATA = {
       summary: 'Your god\u2019s attention sharpens. The lists of heaven begin to open.',
       staminaGain: 6,
       autoFeatures: () => [
-        { name: 'The Lists of Heaven', text: 'Whenever you allow another creature to spend a Recovery, you can also spend a Recovery.' },
+        { name: 'The Lists of Heaven', text: 'Your deity is aware of your growing influence, making it easier to draw their attention and power when you heal your allies. Whenever you allow another creature to spend a Recovery, you can also spend a Recovery.' },
       ],
       choices: [
         {
@@ -491,7 +491,7 @@ const LEVELUP_DATA = {
       summary: 'Your faith touches the boundary between life and death.',
       staminaGain: 6,
       autoFeatures: () => [
-        { name: 'Minor Miracle', text: 'As a respite activity, perform a ritual to restore a willing dead creature to life. They must have at least half their remains and have died within 24 hours from a non-age effect. They return at full Stamina and half Recoveries; you regain only half your Recoveries.' },
+        { name: 'Minor Miracle', text: 'As a respite activity, you can perform a religious ritual and beseech the gods to restore a dead creature to life. You must have at least half the creature\'s remains, and they must have died within the last 24 hours from an effect that isn\'t age related. The creature\'s soul must be willing to return to life for the ritual to work. If they are not willing, you instinctively understand that as you start the respite activity and can cease it immediately.\n\nA creature with a willing soul returns to life at the end of the respite with full Stamina and half their Recoveries. You regain only half your Recoveries at the end of the respite.' },
       ],
       choices: [
         {
@@ -511,7 +511,7 @@ const LEVELUP_DATA = {
               cost: 7, resource: 'Piety', flavor: 'An ally becomes the wearer of an empowered golden cloak.',
               keywords: ['Magic', 'Ranged'], type: 'Maneuver',
               distance: 'Ranged 10', target: 'One ally',
-              effect: 'The target gains ​20 Stamina and gains 3 surges.',
+              effect: 'The target gains 20 temporary Stamina and 3 surges.',
             }),
             ab('Soul Siphon', {
               cost: 7, resource: 'Piety', flavor: 'A beam of energy connects a foe to a friend, draining life from one to heal the other.',
@@ -535,8 +535,8 @@ const LEVELUP_DATA = {
       summary: 'Your patron\u2019s blessing settles into your bones. The domains bloom.',
       staminaGain: 6,
       autoFeatures: () => [
-        { name: 'Blessed Domain',       text: 'Whenever you gain piety from a domain feature, you gain 1 additional piety.' },
-        { name: 'Characteristic Increase', text: 'Your Intuition score increases to 3. Additionally, you can increase one of your characteristic scores by 1 (max 3).' },
+        { name: 'Blessed Domain',       text: 'Whenever you gain piety from a domain effect, you gain 1 additional piety.' },
+        { name: 'Characteristic Increase', text: 'Your Intuition score increases to 3. Additionally, you can increase one of your characteristic scores by 1, to a maximum of 3.' },
       ],
       autoCharacteristicIncrease: { Intuition: 3, max: true },
       choices: [
@@ -596,8 +596,8 @@ const LEVELUP_DATA = {
       summary: 'The element settles deeper into you, and a new working answers your call.',
       staminaGain: 6,
       autoFeatures: ({ sub }) => [
-        sub === 'earth' && { name: 'Disciple of Earth', text: 'Your body is strengthened by your connection to permanence. You gain a +6 bonus to Stamina, plus an additional +3 bonus to Stamina whenever you gain a level past 2nd.' },
-        sub === 'fire' && { name: 'Disciple of Fire', text: 'You have fire immunity equal to 5 + your level, and your fire damage ignores a target\u2019s fire immunity. At the start of a combat encounter, you gain surges equal to your Victories; surge damage you deal can be fire damage.' },
+        sub === 'earth' && { name: 'Disciple of Earth', text: 'Your body is strengthened by your mind\'s connection to the element of permanence. You have a +6 bonus to Stamina, and you gain an additional +3 bonus to Stamina whenever you gain a level past 2nd.' },
+        sub === 'fire' && { name: 'Disciple of Fire', text: 'Your connection to fire allows you to protect yourself from it, even as you rip away the protections of others. You have fire immunity equal to 5 plus your level. Additionally, fire damage you deal ignores a target\'s fire immunity.\n\nAt the start of a combat encounter, you gain a number of surges equal to your Victories. Whenever you spend a surge to deal extra damage, you can make that damage fire damage.' },
         sub === 'green' && { name: 'Disciple of the Green',
           text: 'You can use a maneuver to shapeshift into a type of creature on the Green Animal Forms table. While in animal form, you can speak, and you use your Reason score to make melee free strikes. Your statistics stay the same except as noted on the table.\n\nEach form has a prerequisite level that you must attain before you can adopt it. Some animal forms grant you temporary Stamina. You lose this temporary Stamina when you revert back to your true form.\n\nYou choose a specific animal and appearance while in animal form. When you take on an animal form, your equipment either melds into your new form or falls undamaged to the ground (your choice). When you return to your true form, any melded gear reappears on your person.\n\nYou can revert back to your true form as a maneuver. You can’t enter an animal form unless you are in your true form. When you are dying, you revert to your true form and can’t turn back into an animal until you are no longer dying.',
           table: { head: ['Animal Form', 'Traits'], rows: [
@@ -627,7 +627,7 @@ const LEVELUP_DATA = {
         ab('There Is No Space Between', { noBadge: true,
           flavor: 'Knowledge of the mystery reveals that two spaces are the same space.',
           keywords: ['Magic', 'Ranged', 'Void'], type: 'Maneuver', distance: 'Ranged 10', target: 'Special',
-          effect: 'You open two size 1 portals in unoccupied spaces within distance, which last until you move beyond distance from any portal, end the effect as a maneuver, or are dying. Each portal must be placed at a height of no more than 1 square above the ground. When you or any ally touch a portal, that creature can choose to be instantly teleported to an unoccupied space of their choice adjacent to the other portal. If an enemy is force moved into a portal, their forced movement ends and they emerge from the other portal in an unoccupied space chosen by the creature who force moved them.\n\nAt the start of each of your turns while the portals are active, you can open a new portal connected to the others. If three or more portals are present, you and your allies choose which portal to emerge from when entering a portal, and a creature who force moves an enemy into a portal chooses that enemy’s destination portal.',
+          effect: 'You open two size 1 portals in unoccupied spaces within distance, which last until you move beyond distance from any portal, end the effect as a maneuver, or are dying. Each portal must be placed at a height of no more than 1 square above the ground. When you or any ally touch a portal, that creature can choose to be instantly teleported to an unoccupied space of their choice adjacent to the other portal. If an enemy is force moved into a portal, their forced movement ends and they emerge from the other portal in an unoccupied space chosen by the creature who force moved them.',
         }),
       ] : []),
       choices: [
@@ -650,7 +650,7 @@ const LEVELUP_DATA = {
           options: () => [
             ab('O Flower Aid, O Earth Defend', { cost: 5, resource: 'Essence', flavor: 'Revitalizing plants and jagged stones grow, helping allies and hindering foes.',
               keywords: ['Area', 'Magic', 'Ranged', 'Earth', 'Green'], type: 'Maneuver', distance: '3 cube within 10', target: 'Special',
-              effect: 'Until the start of your next turn, the area gains the following effects:\n\n- Once as a free maneuver at the start of your turn, you allow yourself and each ally in the area to spend any number of Recoveries.\n- The area is difficult terrain for enemies.\n- Each enemy who enters the area for the first time in a combat round or starts their turn there takes damage equal to your Reason score.\n\n**Persistent 1:** The area remains until the start of your next turn. As a maneuver, you can move the area up to 5 squares. This ability ends if the area is ever not within your line of effect.' }),
+              effect: 'Until the start of your next turn, the area gains the following effects:\n\n**Persistent 1:** The area remains until the start of your next turn. As a maneuver, you can move the area up to 5 squares. This ability ends if the area is ever not within your line of effect.' }),
             ab('Subvert the Green Within', { effect: 'The target uses their signature ability against a creature of your choice. This signature ability can target the creature even if it usually wouldn’t. You then make a power roll against the target of this ability.', cost: 5, resource: 'Essence', flavor: 'Fungal spores sprout inside your enemy\u2019s brain, allowing you to control their actions.',
               keywords: ['Magic', 'Ranged', 'Strike', 'Green', 'Void'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
               tiers: { t1: '5 + R poison damage', t2: '9 + R poison damage', t3: '12 + R poison damage' } }),
@@ -659,7 +659,7 @@ const LEVELUP_DATA = {
               tiers: { t1: '3 fire damage', t2: '5 fire damage', t3: '8 fire damage' } }),
             ab('Volcano\u2019s Embrace', { cost: 5, resource: 'Essence', flavor: 'Wrap them up in fire and melting stone.',
               keywords: ['Magic', 'Ranged', 'Strike', 'Earth', 'Fire'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
-              tiers: { t1: '5 + R fire damage; A < WEAK, restrained (save ends)', t2: '9 + R fire damage; R < AVERAGE, restrained (save ends)', t3: '12 + R fire damage; R < STRONG, restrained (save ends)' } }),
+              tiers: { t1: '5 + R fire damage; A < WEAK, restrained (save ends)', t2: '9 + R fire damage; A < AVERAGE, restrained (save ends)', t3: '12 + R fire damage; A < STRONG, restrained (save ends)' } }),
           ],
         },
       ],
@@ -668,8 +668,8 @@ const LEVELUP_DATA = {
       summary: 'Your mastery sharpens, and the element teaches you a deeper secret.',
       staminaGain: 6,
       autoFeatures: ({ sub }) => [
-        sub === 'fire' && { name: 'A Conversation With Fire', text: 'Spend 1 uninterrupted minute before a fire to speak a creature\u2019s name; if willing, their image appears and you can converse as if together in person.' },
-        sub === 'void' && { name: 'Distance Is Only Memory', text: 'Each respite, you can open a two-way portal to any place you have previously been. You and allies can pass through; it remains for 1 hour or until you dismiss it (main action).' },
+        sub === 'fire' && { name: 'A Conversation With Fire', text: 'When you spend 1 uninterrupted minute in front of a fire, you can speak the name of another creature. If that creature is willing to speak to you, their image appears in the fire, and they can see you before them in a shimmering ball of light. The two of you can speak to each other through these images as if you were together in person. As a maneuver, you or the creature can end the conversation.' },
+        sub === 'void' && { name: 'Distance Is Only Memory', text: 'Each time you finish a respite, you can open a two-way portal that leads to any place you have previously been. You and your allies can pass through the portal, which remains open for 1 hour or until you dismiss it as a main action.' },
       ].filter(Boolean),
       autoAbilities: ({ sub }) => ({
         earth: [
@@ -711,8 +711,8 @@ const LEVELUP_DATA = {
       summary: 'You become a font of essence; the element radiates from you like a mantle.',
       staminaGain: 6,
       autoFeatures: ({ sub }) => [
-        { name: 'Characteristic Increase', text: 'Your Reason score increases to 3. Additionally, you can increase one of your characteristic scores by 1 (max 3).' },
-        { name: 'Font of Essence', text: 'The first time each combat round that you or a creature within 10 squares takes damage that isn\u2019t untyped or holy, you gain 2 essence instead of 1.' },
+        { name: 'Characteristic Increase', text: 'Your Reason score increases to 3. Additionally, you can increase one of your characteristic scores by 1, to a maximum of 3.' },
+        { name: 'Font of Essence', text: 'The first time each combat round that you or a creature within 10 squares takes damage that isn\'t untyped or holy damage, you gain 2 essence instead of 1.' },
         { name: 'Mantle of Essence', text: 'While you have 3+ essence and aren\u2019t dying, you exude an aura (distance = Reason) with an effect based on your specialization: Burning Grounds, Flowering Bed, Quaking Earth, or Veiling Bed.' },
         ...(MANTLE_BY_SPEC[sub] ? [MANTLE_BY_SPEC[sub]] : []),
       ],
@@ -801,16 +801,16 @@ function censorDomainFeatureOptions(ctx, featuresMap) {
 
 const CENSOR_ORDER_FEATURES_2 = {
   exorcist: [
-    { name: 'Saint\u2019s Vigilance', text: 'A creature judged by you can\u2019t use the Hide maneuver, and you gain an edge when searching for hidden creatures. If you find a hidden creature, you can use Judgment against them as a free triggered action.' },
-    { name: 'A Sense for Truth',     text: 'If a creature is of a lower level than you, you automatically know when they are lying (though not the truth behind it). You also gain an edge on tests to detect lies or hidden motives.' },
+    { name: 'Saint\u2019s Vigilance', text: 'You have honed your ability to detect sin and can use it to find those who hide from justice. Any creature judged by you can\'t use the Hide maneuver. Additionally, you gain an edge when searching for hidden creatures. If you find a hidden creature, you can use your Judgment ability against them as a free triggered action.' },
+    { name: 'A Sense for Truth',     text: 'You are trained in secret techniques from your order that allow you to discern the truth with supernatural precision. If a creature is of a lower level than you, you automatically know when they are lying, though you don\'t necessarily know the actual truth behind their lie. Additionally, you gain an edge on tests made to detect lies or hidden motives.' },
   ],
   oracle: [
-    { name: 'It Was Foretold', text: 'At the start of an encounter, you can take one main action before any other creature and before your first turn. Whenever the Director calls for a montage test, you can make one free test before the montage begins, counting as an earned success or failure.' },
-    { name: 'Judge of Character', text: 'Whenever you would make an Intuition test, you can make a Presence test instead.' },
+    { name: 'It Was Foretold', text: 'Your order has trained you to understand fragments of the visions granted to you by your deity, giving you a momentary advantage in challenging situations. At the start of an encounter, you can take one main action before any other creature and before your first turn. Additionally, whenever the Director calls for a montage test, you can make one free test before the montage begins, which counts as an earned success or failure as usual.' },
+    { name: 'Judge of Character', text: 'Your focus on your fragmentary visions grants divine insight into the world and its creatures beyond your usual senses. Whenever you would make an Intuition test, you can make a Presence test instead.' },
   ],
   paragon: [
-    { name: 'Lead by Example', text: 'While you are adjacent to a creature, your allies gain the benefits of flanking against that creature. Your allies also gain an edge on tests made to aid other creatures with their tests.' },
-    { name: 'Stalwart Icon', text: 'You gain an edge on tests made to intimidate or persuade others.' },
+    { name: 'Lead by Example', text: 'Your devotion to your deity allows you to take command of the battlefield, letting your allies benefit from your wisdom. While you are adjacent to a creature, your allies gain the benefits of flanking against that creature. Additionally, your allies gain an edge on tests made to aid other creatures with their tests.' },
+    { name: 'Stalwart Icon', text: 'You exhibit a small spark of your deity\'s power, causing creatures to trust or fear you, depending on what you need. You gain an edge on tests made to intimidate or persuade others.' },
   ],
 };
 
@@ -818,7 +818,7 @@ const CENSOR_ORDER_ABILITIES_2 = {
   exorcist: [
     ab('It Is Justice You Fear', { cost: 5, resource: 'Wrath', flavor: 'I am but a vessel. Your own deeds weigh upon you.',
       keywords: ['Magic','Ranged','Strike'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
-      powerRoll: 'Might', tiers: [['\u226411','8 + M holy damage; P < WEAK, frightened (save ends)'],['12\u201316','12 + M holy; P<AVERAGE, frightened (save)'],['17+','15 + M holy; P<STRONG, frightened (save)']],
+      powerRoll: 'Might', tiers: [['\u226411','8 + M holy damage; P < WEAK, frightened (save ends)'],['12\u201316','12 + M holy damage; P < AVERAGE, frightened (save ends)'],['17+','15 + M holy damage; P < STRONG, frightened (save ends)']],
       effect: 'If the target is already frightened of you or another creature and this ability would frighten them again, they instead take psychic damage equal to twice your Presence score.' }),
     ab('Revelator', { cost: 5, resource: 'Wrath', flavor: 'You channel holy energy to harm unbelievers and reveal those hidden from your judgment.',
       keywords: ['Area','Magic'], type: 'Maneuver', distance: '3 burst', target: 'Each enemy in the area',
@@ -845,9 +845,9 @@ const CENSOR_ORDER_ABILITIES_2 = {
 };
 
 const CENSOR_ORDER_FEATURE_5 = {
-  exorcist: { name: 'Evil Revealed', text: 'You automatically see through disguises and illusions of creatures your level or lower, and gain an edge against those of more powerful creatures. Whenever you see through a creature\u2019s disguise or illusion, you can use Judgment against them as a free triggered action.' },
-  oracle:   { name: 'Prophecy', text: 'Each time you earn Victories, make that many 2d10 rolls and record them in order. Whenever you or a creature within 10 squares makes a power roll, you can use a free triggered action to replace the dice total with your first recorded roll. Unused rolls are discarded when you finish a respite.' },
-  paragon:  { name: 'Stand Fast!', text: 'At the start of each of your turns, you can spend 1d6 Stamina to end one save-ends or end-of-turn effect on you. Any ally who starts their turn within 5 squares of you can also spend Stamina to gain this benefit.' },
+  exorcist: { name: 'Evil Revealed', text: 'Your order has taught you methods to discern the disguises of both mortals and monsters. You automatically see through disguises and illusions created by creatures of your level or lower, and you gain an edge on tests made to see through the disguises and illusions of more powerful creatures. Whenever you see through a creature\'s disguise or illusion, you can use your Judgment ability against them as a free triggered action.' },
+  oracle:   { name: 'Prophecy', text: 'You can better sift through the constant fragmentary visions from your deity and act to make them manifest. Each time you earn 1 or more Victories, you can make a number of 2d10 rolls equal to the number of Victories you earned. Record each roll in order. Then whenever you or a creature within 10 squares makes a power roll, you can use a free triggered action to replace the total on the dice with your first recorded roll.\n\nYou discard each roll as it is used, and each time you earn Victories, you add new rolls to the bottom of the list. Any unused rolls are discarded when you finish a respite.' },
+  paragon:  { name: 'Stand Fast!', text: 'Your divine spark grows in power, allowing you and your allies to focus and endure. At the start of each of your turns, you can spend 1d6 Stamina to end one effect on you that is ended by a saving throw or that ends at the end of your turn. Any ally who starts their turn within 5 squares of you can also spend Stamina to gain this benefit.' },
 };
 
 const CENSOR_ORDER_ABILITIES_6 = {
@@ -863,7 +863,7 @@ const CENSOR_ORDER_ABILITIES_6 = {
   oracle: [
     ab('Burden of Evil', { cost: 9, resource: 'Wrath', flavor: 'You reveal a vision of your enemies’ fate that causes them to scramble as it staggers them.',
       keywords: ['Magic','Ranged','Strike'], type: 'Maneuver', distance: 'Ranged 10', target: 'Three enemies',
-      powerRoll: 'Presence', tiers: [['\u226411','slide 3; I < WEAK, dazed (save ends)'],['12\u201316','Slide 5; I<AVERAGE, dazed (save)'],['17+','Slide 7; I<STRONG, dazed (save)']] }),
+      powerRoll: 'Presence', tiers: [['\u226411','slide 3; I < WEAK, dazed (save ends)'],['12\u201316','Slide 5; I < AVERAGE, dazed (save ends)'],['17+','Slide 7; I < STRONG, dazed (save ends)']] }),
     ab('Edict of Peace', { cost: 9, resource: 'Wrath', flavor: 'You anticipate your foes\u2019 moves and deny them.',
       keywords: ['Area','Magic'], type: 'Maneuver', distance: '3 aura', target: 'Each enemy in the area',
       effect: 'Until the end of the encounter or until you are dying, whenever any target takes a triggered action or a free triggered action, that action is negated and the target takes holy damage equal to your Presence score.' }),
@@ -881,9 +881,9 @@ const CENSOR_ORDER_ABILITIES_6 = {
 };
 
 const CENSOR_ORDER_FEATURE_8 = {
-  exorcist: { name: 'Demonologist', text: 'You treat your Renown as 2 higher when dealing with demons, devils, and other agents of chaos. If you complete a negotiation with one, you gain an edge on power rolls against them and can use Judgment against them as a free triggered action before an encounter begins.' },
-  oracle:   { name: 'Their Past Revealed', text: 'While speaking with any creature, you can make a medium Presence test to see visions of their past. Success: a clear view of any subject you wish. Success with a consequence: two visions, one false and one true. Failure: lose 2d6 Stamina.' },
-  paragon:  { name: 'Vow', text: 'Your words carry your deity\u2019s authority. If you convince a creature to take an oath, they can\u2019t break it for 7 days. If you take an oath, you can\u2019t break it for 7 days.' },
+  exorcist: { name: 'Demonologist', text: 'The most esoteric secrets of your order teach you that to defeat your enemy, you must understand them. You treat your Renown as 2 higher than usual when dealing with demons, devils, and other agents of chaos. If you successfully complete a negotiation with one of these creatures, you gain an edge on power rolls made against them and can use your Judgment ability against them as a free triggered action before an encounter begins.' },
+  oracle:   { name: 'Their Past Revealed', text: 'Your constant fragmentary visions become clearer, and can be honed to understand the past of creatures you interact with. While speaking with any creature, you can make a medium Presence test to see visions from their past. On a success, you see a clear view of any subject related to the creature\'s past that you wish to understand. On a success with a consequence, you see two visions, one false and one true. On a failure, you lose 2d6 Stamina.' },
+  paragon:  { name: 'Vow', text: 'Your words take on the power of your deity, with all the authority that entails. If you convince a creature to take an oath, they can\'t break it for 7 days. If you take an oath, you can\'t break it for 7 days.' },
 };
 
 const CENSOR_ORDER_ABILITIES_9 = {
@@ -910,7 +910,7 @@ const CENSOR_ORDER_ABILITIES_9 = {
   paragon: [
     ab('Apostate', { cost: 11, resource: 'Wrath', flavor: 'You channel holy energy to seal an enemy\u2019s fate.',
       keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
-      powerRoll: 'Might', tiers: [['\u226411','13 + M holy'],['12\u201316','19 + M holy'],['17+','26 + M holy']],
+      powerRoll: 'Might', tiers: [['\u226411','13 + M holy damage'],['12\u201316','19 + M holy damage'],['17+','26 + M holy damage']],
       effect: 'Until the end of the encounter or until you are dying, the target has damage weakness 10.' }),
     ab('Edict of Unyielding Resolve', { cost: 11, resource: 'Wrath', flavor: 'You and your allies are clad in shimmering armor.',
       keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Self and each ally in the area',
@@ -924,7 +924,7 @@ const CENSOR_WRATH_7 = [
     effect: 'Until the end of the encounter or until you are dying, each target takes holy damage equal to your Presence score at the end of each of your turns. A target takes an extra 2d6 holy damage if they are judged by you or if they are adjacent to any enemy.' }),
   ab('Edict of Perfect Order', { cost: 7, resource: 'Wrath', flavor: 'Within the area of your divine presence, your enemies will regret using their fell abilities.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
-    effect: 'Until the end of the encounter or until you are dying, whenever a target uses an ability that costs **Malice**, they take holy damage equal to three times your Presence score. A target judged by you takes an extra 2d6 holy damage.' }),
+    effect: 'Until the end of the encounter or until you are dying, whenever a target uses an ability that costs Malice (see *Draw Steel: Monsters*), they take holy damage equal to three times your Presence score. A target judged by you takes an extra 2d6 holy damage.' }),
   ab('Edict of Purifying Pacifism', { cost: 7, resource: 'Wrath', flavor: 'You shed a righteous energy that punishes enemies who would harm you or your allies.',
     keywords: ['Area','Magic'], type: 'Maneuver', distance: '2 aura', target: 'Each enemy in the area',
     effect: 'Until the end of the encounter or until you are dying, whenever a target makes a strike, they take holy damage equal to twice your Presence score. A target judged by you takes an extra 2d6 holy damage.' }),
@@ -953,7 +953,7 @@ const CENSOR_WRATH_9 = [
 const CENSOR_WRATH_11 = [
   ab('Excommunication', { cost: 11, resource: 'Wrath', flavor: 'You curse your foe to become a bane to their allies.',
     keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
-    powerRoll: 'Might', tiers: [['\u226411','9 + M damage; I < WEAK, weakened (save ends)'],['12\u201316','13 + M; I<AVERAGE, weakened (save)'],['17+','18 + M; I<STRONG, weakened (save)']],
+    powerRoll: 'Might', tiers: [['\u226411','9 + M damage; I < WEAK, weakened (save ends)'],['12\u201316','13 + M damage; I < AVERAGE, weakened (save ends)'],['17+','18 + M damage; I < STRONG, weakened (save ends)']],
     effect: 'At the end of each of your turns, a target weakened this way deals holy damage equal to twice your Presence score to each enemy within 2 squares of them. Additionally, a target weakened this way can’t be targeted by their allies’ abilities.' }),
   ab('Hand of the Gods', { cost: 11, resource: 'Wrath', flavor: 'You use your foe as a tool against your enemies.',
     keywords: ['Ranged','Strike','Weapon'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
@@ -961,75 +961,75 @@ const CENSOR_WRATH_11 = [
     effect: 'Until the end of the encounter, while the target is judged by you, you can choose to make them the source of any of your abilities. Additionally, the target counts as an ally for the purpose of flanking.' }),
   ab('Pillar of Holy Fire', { cost: 11, resource: 'Wrath', flavor: 'Your enemy\u2019s guilt fuels a holy flame that burns your foes.',
     keywords: ['Melee','Strike','Weapon'], type: 'Main action', distance: 'Melee 1', target: 'One creature',
-    powerRoll: 'Might', tiers: [['\u226411','9 + M damage; I < WEAK, dazed (save ends)'],['12\u201316','13 + M; I<AVERAGE, dazed (save)'],['17+','18 + M; I<STRONG, dazed (save)']],
+    powerRoll: 'Might', tiers: [['\u226411','9 + M damage; I < WEAK, dazed (save ends)'],['12\u201316','13 + M damage; I < AVERAGE, dazed (save ends)'],['17+','18 + M damage; I < STRONG, dazed (save ends)']],
     effect: 'At the end of each of your turns, a target dazed this way deals holy damage equal to twice your Presence score to each enemy within 2 squares of them.' }),
   ab('Your Allies Turn on You!', { cost: 11, resource: 'Wrath', flavor: 'You turn your enemies\u2019 ire to the target.',
     keywords: ['Ranged','Strike','Weapon'], type: 'Main action', distance: 'Ranged 10', target: 'One creature',
-    powerRoll: 'Presence', tiers: [['\u226411','5 + P damage; I < WEAK, slowed (save ends)'],['12\u201316','9 + P; I<AVERAGE, slowed (save)'],['17+','12 + P; I<STRONG, slowed (save)']],
+    powerRoll: 'Presence', tiers: [['\u226411','5 + P damage; I < WEAK, slowed (save ends)'],['12\u201316','9 + P damage; I < AVERAGE, slowed (save ends)'],['17+','12 + P damage; I < STRONG, slowed (save ends)']],
     effect: 'While the target is slowed this way, each of their allies who starts their turn within 5 squares of them must use a free maneuver to make a free strike against the target. Additionally, while the target is slowed this way, each of their allies within 5 squares of them who can make a triggered free strike against a different creature must make the free strike against the target instead.' }),
 ];
 
 // 1st-level domain features — Censor wording (Presence-based; from censor.md), with the
 // skill group each domain grants. Used by the wizard's Censor domain picker.
 const CENSOR_DOMAIN_1 = {
-  Creation:   { name: 'Hands of the Maker', skillGroup: 'crafting', text: 'Maneuver (Self): create a mundane object of size 1S or smaller. You can maintain a number of objects created this way equal to your Presence score, and destroy any of them with a thought (no action required).' },
-  Death:      { name: 'Grave Speech', skillGroup: 'lore', text: 'Maneuver (Melee 1): speak with one creature who died within the last 24 hours and spoke a language you know, for 1 minute. They regard you as they would have in life. You can\u2019t use this on the same creature twice.' },
-  Fate:       { name: 'Oracular Visions', skillGroup: 'lore', text: 'Each time you earn Victories, you gain an equal number of fate points. Whenever you or a creature within 10 squares makes a test, you can spend 1 fate point to grant that creature an edge. Unused fate points are lost when you finish a respite.' },
-  Knowledge:  { name: 'Blessing of Comprehension', skillGroup: 'lore', text: 'You can interpret diagrams and charts in any language, and are considered fluent in all languages for the purpose of understanding the project source of any crafting or research project.' },
-  Life:       { name: 'Revitalizing Ritual', skillGroup: 'exploration', text: 'Each time you finish a respite, choose yourself or one ally who shared it to gain a bonus to their recovery value equal to your level until you finish another respite.' },
-  Love:       { name: 'Blessing of Compassion', skillGroup: 'interpersonal', text: 'You gain an edge on any test made to assist another creature. When you are present at the start of a negotiation, one NPC of your choice has their patience increased by 1 (max 5), and the first test made to influence them gains an edge.' },
-  Nature:     { name: 'Faithful Friend', skillGroup: 'exploration', text: 'Main action (Self): conjure an incorporeal animal spirit you\u2019ve seen (speed 5, can fly). While within 10 squares of it you sense everything that animal would. Dismiss it any time; if it takes damage it is dismissed and you take 1d10 irreducible psychic damage.' },
-  Protection: { name: 'Protective Circle', skillGroup: 'exploration', text: 'Spend 10 uninterrupted minutes to create a protective circle holding one size-1 creature (lasts 24 hours, until you make another, or until dismissed). Only creatures you designate can enter or exit, and a creature within can\u2019t be targeted by strikes.' },
-  Storm:      { name: 'Blessing of Fortunate Weather', skillGroup: 'exploration', text: 'Each respite, set the weather within 100 squares — Clear (Search/Navigate), Foggy (Hide), Overcast (Endurance), or Precipitation (Track) — granting you and your allies an edge on the related tests until your next respite.' },
-  Sun:        { name: 'Inner Light', skillGroup: 'lore', text: 'Each time you finish a respite, grant yourself or one ally who shared it a +1 bonus to saving throws until you finish another respite.' },
-  Trickery:   { name: 'Inspired Deception', skillGroup: 'intrigue', text: 'Whenever you make a test using a skill you have from the intrigue skill group, you can use Presence on the test instead of another characteristic.' },
-  War:        { name: 'Sanctified Weapon', skillGroup: 'exploration', text: 'As a respite activity, bless a weapon: any creature wielding it gains a +1 bonus to rolled damage with abilities that use the weapon, until you finish another respite.' },
+  Creation:   { name: 'Hands of the Maker', skillGroup: 'crafting', text: 'You have the following ability.' },
+  Death:      { name: 'Grave Speech', skillGroup: 'lore', text: 'You have the following ability.' },
+  Fate:       { name: 'Oracular Visions', skillGroup: 'lore', text: 'Your deity rewards you with hazy visions of things to come. Each time you earn 1 or more Victories, you earn an equal number of fate points. Whenever you or a creature within 10 squares makes a test, you can spend 1 fate point to tap into a vision of the outcome, granting that creature an edge on the test. You lose any remaining fate points when you finish a respite.' },
+  Knowledge:  { name: 'Blessing of Comprehension', skillGroup: 'lore', text: 'You can interpret diagrams and charts even if you don\'t understand the language associated with them. You are considered fluent in all languages for the purpose of understanding the project source for any crafting or research project (see Chapter 12: Downtime Projects).' },
+  Life:       { name: 'Revitalizing Ritual', skillGroup: 'exploration', text: 'Each time you finish a respite, you can choose yourself or one ally who is also finishing a respite to gain the benefit of a divine ritual. The chosen character gains a bonus to their recovery value equal to your level that lasts until you finish another respite.' },
+  Love:       { name: 'Blessing of Compassion', skillGroup: 'interpersonal', text: 'You exude a magic presence that can soothe those willing to socially engage with you. You gain an edge on any test made to assist another creature with a test.\n\nAdditionally, when you are present at the start of a negotiation, one NPC of your choice has their patience increased by 1 (to a maximum of 5), and the first test made to influence them gains an edge.' },
+  Nature:     { name: 'Faithful Friend', skillGroup: 'exploration', text: 'You have the following ability.' },
+  Protection: { name: 'Protective Circle', skillGroup: 'exploration', text: 'You can spend 10 uninterrupted minutes to create a protective circle on the ground large enough to hold one size 1 creature. The circle lasts for 24 hours, until you create another, or until you dismiss it (no action required). Only creatures you designate at the time of drawing the circle can enter and exit the area. While in the protective circle, a creature can\'t be targeted by strikes.' },
+  Storm:      { name: 'Blessing of Fortunate Weather', skillGroup: 'exploration', text: 'Each time you finish a respite, you can decide the weather conditions within 100 squares. Until you finish another respite, the weather conditions you establish follow you through any mundane outdoor locations. Choose one of the following types of weather, each of which grants a benefit to you and your allies:\n\n**Clear:** You and your allies gain an edge on tests that use the Search or Navigate skills.\n\n**Foggy:** You and your allies gain an edge on tests that use the Hide skill.\n\n**Overcast:** You and your allies gain an edge on tests that use the Endurance skill.\n\n**Precipitation:** When the ground is muddy or snowy, you and your allies gain an edge on tests that use the Track skill.\n\nIf you are in the same area as a creature using this or a similar feature who has chosen a different weather effect, the features negate each other where their areas overlap.' },
+  Sun:        { name: 'Inner Light', skillGroup: 'lore', text: 'Each time you finish a respite, you can choose yourself or one ally who is also finishing a respite to gain the benefit of a divine ritual. You place a ray of morning light into the chosen character\'s soul, granting them a +1 bonus to saving throws that lasts until you finish another respite.' },
+  Trickery:   { name: 'Inspired Deception', skillGroup: 'intrigue', text: 'The gods favor your thievery with magic. Whenever you make a test that uses a skill you have from the intrigue skill group, you can use Presence on the test instead of another characteristic.' },
+  War:        { name: 'Sanctified Weapon', skillGroup: 'exploration', text: 'As a respite activity, you can bless a weapon. Any creature who wields the weapon gains a +1 bonus to rolled damage with abilities that use the weapon. This benefit lasts until you finish another respite.' },
 };
 
 const CENSOR_DOMAIN_4 = {
-  Creation:   { name: 'Improved Hands of the Maker', text: 'When you use Hands of the Maker, you can create a mundane object that is size 2 or smaller.' },
-  Death:      { name: 'Seance',          text: 'As a respite activity, speak the name of a non-undead dead creature. If their spirit is free and willing, they appear and converse with you as they would have in life.' },
-  Fate:       { name: 'Oracular Warning', text: 'Each respite, share dreams of the future with allies who rested with you, granting each temporary Stamina equal to 10 + your level until they finish another respite.' },
-  Knowledge:  { name: 'Saint\u2019s Epiphany', text: 'At the start of a respite, inspire yourself or another resting creature: if they make a project roll during the respite, they add 1d10 + your Presence to it.' },
-  Life:       { name: 'Blessing of Life', text: 'Whenever an ally within distance of your My Life for Yours ability regains Stamina, they regain additional Stamina equal to your Presence score.' },
-  Love:       { name: 'Invocation of the Heart', text: 'As a main action, forge a bond with one willing creature you touch: telepathically speak across any distance and assist any test they make regardless of proximity. One bond at a time.' },
-  Nature:     { name: 'Wode Road',       text: 'As a main action, touch a living tree to add it to your transportation network (up to your Presence score of trees). Touch any tree in the network to teleport yourself and willing creatures within 10 squares to another tree on the same world.' },
-  Protection: { name: 'Impervious Touch', text: 'As a maneuver, touch an object size \u2264 your Presence and give it immunity all to untyped damage. Maintain on a number of objects equal to your Presence, plus optionally one larger building or vehicle.' },
-  Storm:      { name: 'Windwalk',        text: 'While you have 5 or more Victories, you can fly. If you can already fly, you gain a +2 bonus to speed while flying instead.' },
+  Creation:   { name: 'Improved Hands of the Maker', text: 'When you use your Hands of the Maker ability, you can create a mundane object that is size 2 or smaller.' },
+  Death:      { name: 'Seance',          text: 'You can commune with a network of spirits. As a respite activity, you speak the name of a creature who died and isn\'t undead. If the creature\'s spirit is free and willing to speak with you, they appear and you can have a conversation with them. During this time, the creature responds to you as they would have in life. If the creature isn\'t free or willing to appear, you can speak another name or choose another respite activity.' },
+  Fate:       { name: 'Oracular Warning', text: 'Each time you finish a respite, you can share the vague dreams of the future granted to you by the gods with allies who finished the respite with you. These premonitions help you and your allies stay alive, granting each of you temporary Stamina equal to 10 + your level that lasts until you finish another respite.' },
+  Knowledge:  { name: 'Saint\u2019s Epiphany', text: 'At the start of a respite, you can inspire yourself or another creature taking the same respite with divine knowledge. If the target makes a project roll during this respite, they can add 1d10 plus your Presence score to the roll.' },
+  Life:       { name: 'Blessing of Life', text: 'Your divine presence causes those you deem worthy to recover quickly from a fight. Whenever an ally within distance of your My Life for Yours ability regains Stamina, they regain additional Stamina equal to your Presence score.' },
+  Love:       { name: 'Invocation of the Heart', text: 'As a main action, you forge a bond of love and friendship with one willing creature you touch. While this bond is active, you can telepathically speak with the creature over any distance, including across different worlds. Additionally, while this bond is active, you can attempt to assist the creature with any test they make regardless of their proximity to you. You can maintain only one bond at a time, and you can end a bond at any time (no action required).' },
+  Nature:     { name: 'Wode Road',       text: 'As a main action, you touch a living tree and make it part of a divine transportation network. You can maintain a number of trees in your network equal to your Presence score. Whenever you touch any tree in your network, you can use a main action to teleport yourself and any willing creatures within 10 squares of you to a tree in your network on the same world. If a tree in your network dies, it is no longer part of the network. You can remove a tree from your network no matter your distance from it, including across different worlds (no action required).' },
+  Protection: { name: 'Impervious Touch', text: 'As a maneuver, you can touch an object with a size equal to your Presence score or smaller and place a protective spell on it. The object has immunity all to untyped damage. You can maintain this spell on a number of objects equal to your Presence score, and you can end the spell on any object at any time (no action required).\n\nAdditionally, you can place this spell on a building or vehicle (or a similar structure with the Director\'s approval) that is of a size larger than your Presence score. You can place the spell on only one such target at a time, and you can maintain the spell on a larger target and a number of objects equal to your Presence score simultaneously.' },
+  Storm:      { name: 'Windwalk',        text: 'While you have 5 or more Victories, you can fly. If you can already fly, you have a +2 bonus to speed while flying instead.' },
   Sun:        { name: 'Light of Revelation',
     ability: { name: 'Light of Revelation', noBadge: true,
       flavor: 'Your inner light burns through every shadow.',
       keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-      effect: 'You shine brightly through any darkness in a 5-square radius until you dismiss the light (no action required). Hidden creatures in the area are automatically revealed and none can hide, and you gain an edge on tests to notice hidden objects, entrances, and illusions.' } },
+      effect: 'As a maneuver, you make your body shine brightly, illuminating your space and each square within 5 squares until you dismiss the light (no action required). This light shines through any darkness. Hidden creatures in the area are automatically revealed, and creatures in the light, including you, can\'t hide. While this feature is active, you gain an edge on tests made to notice hidden objects and entrances and to detect supernatural illusions.' } },
   Trickery:   { name: 'Blessing of Secrets',
     ability: { name: 'Blessing of Secrets', noBadge: true,
       flavor: 'You project an illusory aura that makes you and allies harder to notice.',
       keywords: ['Magic'], type: 'Maneuver', distance: '3 aura', target: 'Self and each ally in the area',
-      effect: 'Each target has a double edge on tests made to hide or sneak. The aura lasts until you end it (no action required) or until a target harms or deals damage to a creature or object.' } },
+      effect: 'Each creature in the area has a double edge on tests made to hide or sneak. The aura lasts until you end it (no action required) or until a target harms or deals damage to a creature or object.' } },
   War:        { name: 'Improved Sanctified Weapon', text: 'The weapon improved by your Sanctified Weapon feature grants a +3 bonus to rolled damage instead of +1.' },
 };
 
 const CENSOR_DOMAIN_7 = {
-  Creation:   { name: 'Divine Quartermaster', text: 'Each respite, choose a treasure with a project goal \u2264 50 times your level. You gain a divine version of it until your next respite or until it is consumed.' },
-  Death:      { name: 'Word of Death Deferred', text: 'When an ally within distance of My Life for Yours dies and you are not dying, you can use a free triggered action to instead have them fall unconscious until they regain Stamina. Your abilities also deal an extra 5 damage to winded creatures.' },
-  Fate:       { name: 'Word of Fate Denied', text: 'When an ally within 10 squares takes damage that would leave them dying, you can use a free triggered action to make yourself or another willing creature within 10 squares the target instead. That damage can\u2019t be reduced.' },
-  Knowledge:  { name: 'Gods\u2019 Library', text: 'You no longer need research materials for crafting and research projects and add your level to those project rolls. You gain all lore skills you lack, plus that many skills from other groups.' },
-  Life:       { name: 'Font of Grace', text: 'Each time you use My Life for Yours, you gain 1 wrath usable only on that ability that turn, and the target gains 10 temporary Stamina.' },
-  Love:       { name: 'Covenant of the Heart', text: 'You can maintain Invocation of the Heart bonds with up to three creatures.',
+  Creation:   { name: 'Divine Quartermaster', text: 'Each time you finish a respite, you can choose a treasure with a project goal equal to 50 times your level or less. You gain a divine version of this treasure that lasts until you finish another respite or it is consumed.' },
+  Death:      { name: 'Word of Death Deferred', text: 'You can stop death from taking your allies. When an ally within distance of your My Life for Yours ability dies and you are not dying, you can use a free triggered action to instead have that ally fall unconscious until they regain Stamina.\n\nAdditionally, your abilities deal an extra 5 damage to winded creatures.' },
+  Fate:       { name: 'Word of Fate Denied', text: 'When an ally within 10 squares takes damage that would leave them dying, you can use a free triggered action to make yourself or another willing creature within 10 squares of you the target of the triggering damage instead. The creature you choose takes the damage and suffers any effects associated with it, and that damage can\'t be reduced in any way.' },
+  Knowledge:  { name: 'Gods\u2019 Library', text: 'You can gain access to information you need through prayer, so that you no longer require research materials for crafting and research projects (see Chapter 12: Downtime Projects). Additionally, you add your level to project rolls you make for crafting and research projects. You also have any skills in the lore skill group you don\'t already have, and you gain a number of skills from any other skill groups equal to the number of skills you had in the lore skill group before you gained this feature.' },
+  Life:       { name: 'Font of Grace', text: 'Each time you use your My Life for Yours ability, you gain 1 wrath that can be spent only on that ability during the same turn. If you don\'t use this wrath, it is lost. Additionally, the target of My Life for Yours gains 10 temporary Stamina.' },
+  Love:       { name: 'Covenant of the Heart', text: 'You can maintain bonds with up to three willing creatures using your Invocation of the Heart feature. Additionally, you have the following ability.',
     ability: { name: 'Guided to Your Side', noBadge: true,
       flavor: 'You concentrate on a friend and teleport to them.',
       keywords: ['Magic', 'Ranged'], type: 'Main action', distance: 'Ranged 10', target: 'Self and each ally',
-      effect: 'Each target is teleported to unoccupied spaces within 5 squares of a willing creature you are bonded to with your Invocation of the Heart feature. You don’t need line of effect to the bonded creature, but you must be on the same world.' } },
-  Nature:     { name: 'Nature\u2019s Bounty', text: 'When you finish a respite, prepare a magic meal for companions who rested with you: choose two benefits (damage immunity equal to level, 20 temp Stamina, +1 speed, +1 saves, or an edge to influence) lasting until they finish another respite.' },
-  Protection: { name: 'Blessing of Iron', text: 'While you are not dying, enemies take a bane on strikes against you or any ally within 3 squares of you.' },
-  Storm:      { name: 'Ride the Lightning', text: 'Your rolled-damage abilities deal extra lightning damage equal to your Presence. Forced movement you cause gains a bonus equal to your Presence. While using Windwalk, you gain a bonus to flying speed equal to your Might.' },
-  Sun:        { name: 'Light of the Burning Sun', text: 'Your rolled-damage abilities deal an extra 5 fire damage (15 vs. undead). You have fire immunity equal to your level, added to any other fire immunity.' },
+      effect: 'Each target is teleported to unoccupied spaces within 5 squares of a willing creature who you are bonded to with your Invocation of the Heart feature. You don\'t need line of effect to the bonded creature but you must be on the same world.' } },
+  Nature:     { name: 'Nature\u2019s Bounty', text: 'When you finish a respite, you can prepare a magic meal using local flora for any companions who rested with you. Choose two of the following benefits for creatures who consume the meal:\n\n- Each creature gains immunity to acid, cold, corruption, fire, lightning, poison, or sonic damage equal to your level. You can choose this benefit twice, choosing a different damage immunity each time.\n- Each creature gains 20 temporary Stamina.\n- Each creature gains a +1 bonus to speed.\n- Each creature gains a +1 bonus to saving throws.\n- Each creature gains an edge on tests made to influence other creatures.\n\nEach benefit lasts until the creature who gains it finishes another respite.' },
+  Protection: { name: 'Blessing of Iron', text: 'The gods send divine favor to you and your allies. While you are not dying, enemies take a bane on strikes against you or any ally within 3 squares of you.' },
+  Storm:      { name: 'Ride the Lightning', text: 'Lightning and thunder infuse your body. Whenever you use an ability to deal rolled damage to another creature, the ability deals extra lightning damage equal to your Presence score. Additionally, if you use an ability that force moves a creature, the forced movement distance gains a bonus equal to your Presence score. While you are under the effect of your Windwalk feature, lightning enhances your locomotion to grant you a bonus to speed equal to your Might score. If Windwalk already grants you a bonus to speed, this bonus adds to that.' },
+  Sun:        { name: 'Light of the Burning Sun', text: 'Sun infuses your body. Whenever you use an ability to deal rolled damage to another creature, that ability deals an extra 5 fire damage, or an extra 15 fire damage if the creature is undead. Additionally, you have fire immunity equal to your level, which is added to any other fire immunity you have.' },
   Trickery:   { name: 'Trinity of Trickery',
     ability: { name: 'Trinity of Trickery', cost: 9, resource: 'Wrath',
       flavor: 'Hey! I\u2019m over here. No, here, numbskull.',
       keywords: ['Magic', 'Ranged'], type: 'Maneuver', distance: 'Ranged 10', target: 'Self or one ally',
-      effect: 'You create two illusory duplicates of the target, which appear anywhere within distance and last until the end of the encounter. On each of their turns, the target can move each duplicate up to their speed. When the target is targeted by an ability, they can use a free triggered action to switch places with a duplicate in their line of effect, making the duplicate the target instead. When either duplicate takes damage, it is destroyed.' } },
-  War:        { name: 'Your Triumphs Are Remembered', text: 'Whenever you finish a respite, you and any heroes who rested with you regain 1 Victory after Victories are converted to XP. This Victory isn\u2019t converted at a later respite.' },
+      effect: 'You create two illusory duplicates of the target, which appear anywhere within distance. These duplicates last until the end of the encounter. On each of their turns, the target can move each duplicate up to their speed. If the target is targeted by an ability, they can use a free triggered action to switch places with a duplicate within their line of effect, making the duplicate the target of the ability instead. When either duplicate takes damage, it is destroyed.' } },
+  War:        { name: 'Your Triumphs Are Remembered', text: 'The gods allow you and your companions to bask in the glory of past successes. Whenever you finish a respite, you and any other heroes who rested with you regain 1 Victory after your Victories are converted to XP. This Victory isn\'t converted into XP at the end of a subsequent respite.' },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1313,7 +1313,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
               {autoFeatures.map(f => (
                 <div key={f.name}>
                   <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
+                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{renderRich(f.text)}</div>
                 </div>
               ))}
             </div>
@@ -1546,7 +1546,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
             {autoFeatures.map(f => (
               <div key={f.name}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{f.text}</div>
+                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.5, marginTop:3}}>{renderRich(f.text)}</div>
               </div>
             ))}
           </div>
@@ -1567,7 +1567,7 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
                     {pick.map(o => (
                       <div key={o.name || o.id}>
                         <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)'}}>{o.name}</div>
-                        {o.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{o.body}</div>}
+                        {o.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{renderRich(o.body)}</div>}
                         {o.ability && <div style={{marginTop:8}}><AbilityCard ability={normalizeCardTiers(o.ability)} kind="heroic" /></div>}
                       </div>
                     ))}
@@ -1583,10 +1583,10 @@ function LvlReview({ data, picks, choices, cls, nextLevel, character, isEditing 
                     ? <>{pick.chosen} <span style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.18em', marginLeft:6}}>({pick.name || pick})</span></>
                     : (pick.name || pick)}
                 </div>
-                {pick.chosen && pick.chosenText && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.chosenText}</div>}
-                {!pick.chosen && pick.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{pick.body}</div>}
+                {pick.chosen && pick.chosenText && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{renderRich(pick.chosenText)}</div>}
+                {!pick.chosen && pick.body && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.5}}>{renderRich(pick.body)}</div>}
                 {pick.ability && <div style={{marginTop:8}}><AbilityCard ability={normalizeCardTiers(pick.ability)} kind="heroic" /></div>}
-                {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{pick.effect}</div>}
+                {pick.effect && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-3)', marginTop:4, lineHeight:1.5, fontStyle:'italic'}}>{renderRich(pick.effect)}</div>}
               </div>
             );
           })}
@@ -1649,8 +1649,6 @@ const LEVELUP_CSS = `
 .lvl-opt-body {
   font-family: var(--serif); font-size: var(--fs-6); color: var(--ink-2);
   line-height: 1.55; margin-top: 6px;
-  /* Rules text carries real paragraph and bullet breaks — honour them. */
-  white-space: pre-line;
 }
 .skill-pick-grid {
   /* Skill names vary in length, so a bare 1fr would floor each track at the
@@ -1664,4 +1662,4 @@ ${MQ.phone} { .skill-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)
 function LevelUpStyles() { return <style>{LEVELUP_CSS}</style>; }
 
 Object.assign(window, { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 });
-export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, collectLevelUpFeatures, levelChoicesFor, applyLevelUp, deleteLevelProgression, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1 };
+export { LEVELUP_DATA, LevelUpFlow, LevelUpStyles, makeContext, collectLevelUpFeatures, levelChoicesFor, applyLevelUp, deleteLevelProgression, deriveGroupName, DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1, CENSOR_DOMAIN_4, CENSOR_DOMAIN_7 };

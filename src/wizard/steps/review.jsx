@@ -167,7 +167,7 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
               <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6}}>{character.career.incident}</div>
             )}
             {incident?.text && (
-              <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{incident.text}</div>
+              <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(incident.text)}</div>
             )}
             {character.career.perk && (
               <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6}}>Perk: {character.career.perk}</div>
@@ -227,8 +227,8 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
         <ReviewBlock title="Complication" onEdit={editStep('complication')} body={comp ? (
           <>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:600}}>{comp.name}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>+ {comp.benefit}</div>
-            <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>
+            <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>{comp.combined ? '±' : '+'} {renderRich(comp.benefit)}</div>
+            {!comp.combined && <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', marginTop:6, lineHeight:1.45}}>− {comp.drawback}</div>}
             {character.complication.custom && (
               <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6, lineHeight:1.5}}>{character.complication.custom}</div>
             )}
@@ -286,7 +286,7 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
             {featureRows.map(f => (
               <div key={f.name} style={{padding:'8px 0'}}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{f.name}</div>
-                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55, whiteSpace:'pre-line'}}>{renderRich(f.text)}</div>
+                <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:4, lineHeight:1.55}}>{renderRich(f.text)}</div>
                 {f.table && <FeatureTable table={f.table} />}
               </div>
             ))}

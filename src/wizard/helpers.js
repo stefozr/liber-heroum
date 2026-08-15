@@ -409,6 +409,22 @@ function resolvedAncestryTraits(c) {
   return out;
 }
 
+// Display order for the trait cards. Grid rows stretch every card to the tallest
+// in the row, so one runaway trait doubles the height of whatever sits beside it.
+// Two traits are outliers of that kind — the hakaan's Doomsight (1,162 chars against
+// a 258-char runner-up) and the revenant's Vengeance Mark (697 against 200) — and
+// both ancestries hold an odd number of traits, so moving the outlier to the end
+// leaves it alone on the last row with nothing to distort. The ratio test is what
+// keeps this to those two: every other ancestry's longest trait is under twice its
+// runner-up, and short enough that sharing a row costs nothing.
+function orderTraitCards(traits) {
+  if (!traits || traits.length < 3) return traits || [];
+  const len = (t) => (t.text || '').length;
+  const [longest, runnerUp] = traits.map(len).sort((a, b) => b - a);
+  if (longest <= runnerUp * 2) return traits;
+  return [...traits.filter(t => len(t) !== longest), ...traits.filter(t => len(t) === longest)];
+}
+
 // STEP 5: COMPLICATION (Kit folded into Class step for steel-wielders)
 
 // Scroll the wizard body to an anchored section — used after picking a class or
@@ -428,4 +444,4 @@ function scrollWizardTo(id) {
   });
 }
 
-export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent, scrollWizardTo };
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent, orderTraitCards, scrollWizardTo };

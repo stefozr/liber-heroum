@@ -29,8 +29,9 @@ for (const [key, value] of Object.entries((official as any).items)) {
 }
 
 const slug = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-// The compendium uses UK spelling for a couple of names the book prints in US spelling.
-const respell = (k: string) => k.replace(/judgment/g, 'judgement');
+// The compendium uses UK spelling for a couple of names the book prints in US spelling,
+// and spells "Seance" with a circumflex ("Sêance") that the book does not print.
+const respell = (k: string) => k.replace(/judgment/g, 'judgement').replace(/seance/g, 's-ance');
 
 function findDoc(type: string, name: string, scope: string[] = []): Doc | null {
   for (const key of [`${type}:${slug(name)}`, `${type}:${respell(slug(name))}`]) {
@@ -205,6 +206,27 @@ const MANUALLY_VERIFIED: Record<string, string[]> = {
   // Heroes p.50 prints the potency + prone rider only at tier 3; the compendium's
   // applied-effect data carries a dangling potency (no effect text) at tiers 1-2.
   'Concussive Slam': ['tier'],
+  // Book-verified against reference/rulebook after the unified-repo alignment
+  // (scripts/audit-unified.mjs): in each case the app matches the printed tier line
+  // and the compendium disagrees — usually a potency rendered with the roll
+  // characteristic instead of the printed one, or a damage-type list the book
+  // prints as plain "damage" with the type chosen in the effect text.
+  'Behold the Face of Justice!': ['tier'],   // p.99: "P < WEAK/AVERAGE/STRONG"; compendium says M
+  "Judgment's Hammer": ['tier'],             // book: "A < …, prone"; compendium says I
+  "Corruption's Curse": ['tier'],            // book: "M < …"; compendium says I
+  'Hit and Run': ['tier'],                   // book prints no potency at tiers 1-2
+  'Death ... Death!': ['tier'],              // book: "P < …"; compendium says M
+  'Apex Predator': ['tier'],                 // book: "4/6/10 + M damage; I < …"; compendium says M <
+  'Visceral Roar': ['tier'],                 // book: plain "damage"; compendium lists every selectable type
+  'Hurl Element': ['tier'],                  // p.130: plain "+ R damage"; compendium lists every type
+  'Combustion Deferred': ['tier'],           // book: "17 + R fire damage"; compendium drops the type, appends the name
+  'Setup': ['tier'],                         // book: "R < …"; compendium says A
+  'Volcano’s Embrace': ['tier'],             // book: "A < …, restrained"; compendium says R
+  'Mind Game': ['tier'],                     // compendium carries literal "[weak]" placeholder tokens
+  'Choke': ['tier'],                         // book: "M < …"; compendium says R
+  'Slow': ['tier'],                          // book tier 3: "slowed …, or if P < STRONG, speed is 0"; compendium swaps the halves
+  'Tough Crowd': ['tier'],                   // book: "M < …"; compendium says P
+  'Dragon Breath': ['tier'],                 // book: plain "damage"; compendium lists every selectable type
 };
 
 const exempt = (name: string, field: string) =>

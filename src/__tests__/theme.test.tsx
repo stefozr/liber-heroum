@@ -50,6 +50,37 @@ describe('theme primitives render', () => {
   }
 });
 
+describe('rules prose inside an ability card', () => {
+  // The design constraint: a leading paragraph is emitted unwrapped so it keeps
+  // running on from its "Effect." label. Wrapping it would push every one-line
+  // effect in the app onto its own line.
+  it('leaves a single-paragraph effect inline after its label', () => {
+    const { container } = render(<AbilityCard ability={ability} kind="signature" />);
+    const eff = container.querySelector('.ac-effect')!;
+    expect(eff.textContent).toBe('Effect. It works.');
+    expect(eff.querySelector('.rt-p')).toBeNull();
+  });
+
+  it('breaks a multi-block effect into paragraphs and a bulleted list', () => {
+    const rich = { ...ability, effect: 'Lead in.\n\nThen:\n\n- **One:** first\n- second' };
+    const { container } = render(<AbilityCard ability={rich} kind="signature" />);
+    const eff = container.querySelector('.ac-effect')!;
+    // Lead paragraph inline, second paragraph wrapped, list separate.
+    expect(eff.querySelectorAll('.rt-p')).toHaveLength(1);
+    expect(eff.querySelectorAll('.rt-li')).toHaveLength(2);
+    expect(eff.querySelector('.rt-li b')!.textContent).toBe('One:');
+    expect(eff.textContent).toContain('Effect. Lead in.');
+  });
+
+  it('bolds a characteristic marker in tier text instead of leaking asterisks', () => {
+    const rows: Array<[string, string]> = [['≤ 11', '8 + **A** psychic damage'], ['12–16', '2'], ['17+', '3']];
+    const { container } = render(<PowerRoll rows={rows} />);
+    const first = container.querySelector('.ac-roll .e')!;
+    expect(first.textContent).toBe('8 + A psychic damage');
+    expect(first.querySelector('b')!.textContent).toBe('A');
+  });
+});
+
 describe('SelCard dimmed state', () => {
   it('adds the dimmed class but stays clickable', () => {
     const { container } = render(<SelCard dimmed onClick={() => {}}>Faded</SelCard>);

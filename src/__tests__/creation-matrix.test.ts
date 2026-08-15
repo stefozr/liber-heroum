@@ -6,7 +6,7 @@ import {
   DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS,
   DS_SKILL_GROUPS, DS_STEPS, kitPoolFor,
 } from '../data.jsx';
-import { isStepValid, stepIssues } from '../wizard.jsx';
+import { isStepValid, stepIssues, classSections } from '../wizard.jsx';
 import { collectSkillPicks, normalizeSkills, skillsTakenExcept } from '../app.jsx';
 import { PERKS, parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, charBudget, classGrantCollisions } from '../wizard/helpers.js';
 import { buildValidCharacter, hero, resolveGrantSwaps } from './helpers/factories';
@@ -45,6 +45,47 @@ describe('every class × subclass', () => {
           expect(pool.some((k: any) => k.id === c.kit.id)).toBe(true);
         }
         expectComplete(c, `${cls.id}/${sub}`);
+      });
+    }
+  }
+});
+
+// ─── The class docket agrees with the validity rules ───
+// classSections() restates the 'class' branch of stepIssues as one entry per
+// on-screen decision, so the two can drift apart silently — a docket that says
+// "8 of 8 chosen" over a step the wizard still calls incomplete is worse than no
+// docket. This pins them together over every class and subclass.
+describe('classSections mirrors class-step validity', () => {
+  for (const cls of DS_CLASSES as any[]) {
+    const subs = (cls.subclasses || [null]).map((s: any) => s && (s.id || s.name));
+    for (const sub of subs) {
+      it(`${cls.id}${sub ? ` / ${sub}` : ''}: all required sections done ⇔ step valid`, () => {
+        const complete = buildValidCharacter({ cls: cls.id, subclass: sub });
+        const required = (c: any) => classSections(c).filter((s: any) => s.required);
+        expect(required(complete).filter((s: any) => !s.done).map((s: any) => s.label))
+          .toEqual([]);
+        expect(isStepValid(complete, CLASS_STEP)).toBe(true);
+
+        // …and the other direction: strip one decision at a time and the docket
+        // must go incomplete exactly when the wizard does.
+        for (const section of required(complete)) {
+          const c = JSON.parse(JSON.stringify(complete));
+          const key = section.id.replace('class-sec-', '');
+          if (key === 'skills') c.cclass.skills = [];
+          else if (key === 'kit') c.kit = { id: null };
+          else if (key === 'kit2') c.kit2 = { id: null };
+          else if (key === 'chars') c.cclass.characteristics = {};
+          else if (key === 'domains' || key === 'domain') c.cclass.domains = [];
+          else if (key.startsWith('minions-')) c.cclass.minions[key.slice(8)] = [];
+          else if (key === 'signatures') c.cclass.signatures = [];
+          else if (key === 'companion-option') c.cclass.companionOptions = {};
+          else if (key === 'domain-feature') c.cclass.domainFeature = null;
+          else if (key === 'domain-skill') c.cclass.domainSkill = null;
+          else if (key === 'domain-ability') c.cclass.domainAbility = null;
+          else c.cclass[key] = null;   // subclass, companion, prayer, ward, heroic3/5, …
+          expect(isStepValid(c, CLASS_STEP), `${cls.id}: clearing ${section.label} should invalidate`).toBe(false);
+          expect(required(c).every((s: any) => s.done), `${cls.id}: docket should flag ${section.label}`).toBe(false);
+        }
       });
     }
   }

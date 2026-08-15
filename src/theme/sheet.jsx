@@ -4,7 +4,7 @@
 // never mounts PlayStyles, can render them styled.
 import React from 'react';
 import { MQ } from './breakpoints.js';
-import { AbilityCard } from './primitives.jsx';
+import { AbilityCard, renderRich } from './primitives.jsx';
 import { DS_ANCESTRIES } from '../data.jsx';
 import { parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, normalizeAbilityTiers } from '../wizard/helpers.js';
 
@@ -24,8 +24,6 @@ const SHEET_CSS = `
 .cost-tag { border-color: var(--line-2); color: var(--ink-3); }
 .trait-text {
   font-family: var(--serif); font-size: var(--fs-7); color: var(--ink-2); line-height: 1.55; margin-top: 6px;
-  /* Rules text carries real paragraph and bullet breaks — honour them. */
-  white-space: pre-line;
 }
 .sig-option-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .sig-option-label { font-family: var(--mono); font-size: var(--fs-3); color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase; }
@@ -85,7 +83,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
       {ancestrySignatures(anc).map(sig => (
         <div className="trait-block" key={sig.name}>
           <div className="trait-name">{sig.name} <span className="sig-tag">SIG</span></div>
-          <div className="trait-text">{sig.text}</div>
+          <div className="trait-text">{renderRich(sig.text)}</div>
           {sig.name === 'Former Life' && formerLifeDef(character) && (
             <div className="trait-text" style={{ marginTop: 6 }}>
               Former Life: <b>{formerLifeDef(character).name}</b> — Size {formerLifeDef(character).size}
@@ -109,7 +107,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
                     <span className="sig-option-select" style={{ cursor: 'default' }}>{picked[0] || '—'}</span>
                   )}
                 </div>
-                {active && active.text && <div className="trait-text" style={{marginTop:6}}>{active.text}</div>}
+                {active && active.text && <div className="trait-text" style={{marginTop:6}}>{renderRich(active.text)}</div>}
               </>
             );
           })()}
@@ -121,7 +119,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
             {t.name} <span className="cost-tag">{t.cost} PT</span>
             {t.borrowedFrom && <span className="sig-tag">PREVIOUS LIFE — {t.borrowedFrom.toUpperCase()}</span>}
           </div>
-          <div className="trait-text">{t.text}</div>
+          <div className="trait-text">{renderRich(t.text)}</div>
           {t.chosen?.length > 0 && (
             <div className="trait-text" style={{ marginTop: 6 }}>
               {t.choiceLabel}: <b>{t.chosen.join(', ')}</b>
@@ -146,7 +144,7 @@ function KitDetails({ kit, divider = false }) {
       <div className="trait-block" style={divider ? {marginTop:18, paddingTop:18, borderTop:'1px dashed var(--line)'} : undefined}>
         <div className="trait-name">{kt.name}</div>
         <div className="kit-meta-line">{kt.weapon} Weapon · {kt.armor} Armor</div>
-        <div className="trait-text">{kt.desc}</div>
+        <div className="trait-text">{renderRich(kt.desc)}</div>
       </div>
       <div className="trait-block">
         <div className="kv-row">
@@ -182,7 +180,7 @@ function KitDetails({ kit, divider = false }) {
               ))}
             </div>
           )}
-          {sig.effect && <div className="kit-sig-effect"><b>Effect.</b> {sig.effect}</div>}
+          {sig.effect && <div className="kit-sig-effect"><b>Effect.</b> {renderRich(sig.effect)}</div>}
         </div>
       </div>
     </React.Fragment>
@@ -214,7 +212,7 @@ function StatblockCard({ block, costLabel, level, staminaNote, children }) {
         </span>
       </div>
       {b.keywords?.length > 0 && <div className="kit-meta-line">{b.keywords.join(' · ')}</div>}
-      {b.flavor && <div className="trait-text" style={{ fontStyle: 'italic' }}>{b.flavor}</div>}
+      {b.flavor && <div className="trait-text" style={{ fontStyle: 'italic' }}>{renderRich(b.flavor)}</div>}
       <div className="sb-stats">
         <div className="sb-stat"><div className="lbl">Size</div><div className="val">{b.size}</div></div>
         <div className="sb-stat"><div className="lbl">Speed</div><div className="val">{b.speed}</div></div>
@@ -246,7 +244,7 @@ function StatblockCard({ block, costLabel, level, staminaNote, children }) {
       {(b.traits || []).map((t) => (
         <div className="trait-block" key={t.name}>
           <div className="trait-name">{t.name}</div>
-          <div className="trait-text">{t.text}</div>
+          <div className="trait-text">{renderRich(t.text)}</div>
         </div>
       ))}
       {b.advancements && Object.entries(b.advancements).map(([lvl, adv]) => {
@@ -254,7 +252,7 @@ function StatblockCard({ block, costLabel, level, staminaNote, children }) {
         return (
           <div className={`trait-block${gated ? ' sb-adv-gated' : ''}`} key={lvl}>
             <div className="trait-name">{adv.name} <span className="cost-tag">LV {lvl}</span></div>
-            <div className="trait-text">{adv.text}</div>
+            <div className="trait-text">{renderRich(adv.text)}</div>
           </div>
         );
       })}

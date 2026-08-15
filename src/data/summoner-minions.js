@@ -144,7 +144,7 @@ export const SUMMONER_PORTFOLIOS = {
         flavor: 'The violents are lanky, oily bipeds with bright red flesh that contort and snap their bodies into unassuming objects. Their mimicry is particularly precise, to the point where it’s unclear whether their victims die from the surprise or the violent transformation process first.',
         traits: [
           { name: 'Transforming Strike', text: 'The violent’s melee free strikes deal an additional 2 damage to each adjacent enemy from whom they were hidden. The violent loses their disguise after striking.' },
-          { name: 'Mimicry', text: 'The violent uses the Hide maneuver at the start of their turn as a free maneuver, disguising themselves as a size 1M or smaller object.' },
+          { name: 'Mimicry', text: 'The violent uses the Hide maneuver at the start of their turn as a free maneuver, disguising themselves as a a size 1M or smaller object.' },
           { name: 'Soulsight', text: 'Each creature adjacent to the violent can’t be hidden from them.' },
         ],
       },
@@ -236,7 +236,7 @@ export const SUMMONER_PORTFOLIOS = {
       size: '2', speed: '5', stamina: 'Your maximum Stamina', stability: '2', freeStrike: '9', freeStrikeType: 'Corruption',
       immunity: 'Corruption 5', movement: 'Teleport',
       characteristics: { Might: 2, Agility: 5, Reason: 5, Intuition: 2, Presence: 2 },
-      flavor: 'Your champion is an Aspect of a demon lord. They have borne witness to your exploits and struck a deal with you: Allow their children to feed and you can call forth a modicum of their power. Morality is none of their concern, but certainly a hero is enough of an arbiter of whose souls deserve to be fed to demons, right?\n\nThe demon lord’s Aspect enjoys bringing enemies in close with their appendages or flinging victims and throwing them to the gnashing horde. They’re willing to put your connection to this world at risk if it means taking one more bite.',
+      flavor: 'Stamina: Your maximum Stamina',
       abilities: [
         ab('Grasping Appendages', {
           keywords: ['Melee', 'Strike', 'Weapon'], type: 'Main action',
@@ -249,7 +249,7 @@ export const SUMMONER_PORTFOLIOS = {
           type: 'Free triggered action', badge: 'TRIGGER',
           distance: 'Self', target: 'Self',
           trigger: 'The Aspect takes damage from an enemy.',
-          effect: 'The Aspect has a double edge on their next power roll. They can choose to give this benefit to an ally within your Summoner’s Range instead.',
+          effect: '**Trigger:** The Aspect takes damage from an enemy.\n**Effect:** The Aspect has a double edge on their next power roll. They can choose to give this benefit to an ally within your Summoner\'s Range instead.',
         }),
       ],
       traits: [
@@ -498,7 +498,7 @@ export const SUMMONER_PORTFOLIOS = {
       size: '2', speed: '6', stamina: 'Your maximum Stamina', stability: '3', freeStrike: '9', freeStrikeType: 'Holy',
       immunity: 'Corruption 5, poison 5', movement: 'Fly',
       characteristics: { Might: 5, Agility: 2, Reason: 5, Intuition: 2, Presence: 2 },
-      flavor: 'Your champion is an Avatar of death. The number of creatures you and your army have laid to rest now hangs above your head and threatens to crush your skull at any moment. You were unable to gain the power of the ultimate force of nature without a memento mori to keep you humble.\n\nThe Avatar of death weighs down their foes with conditions so their army can take care of the rest. If an enemy can’t handle it, well then maybe they should just die.',
+      flavor: 'Stamina: Your maximum Stamina',
       abilities: [
         ab('Culling Scythe', {
           keywords: ['Melee', 'Strike', 'Weapon'], type: 'Main action',
@@ -511,7 +511,7 @@ export const SUMMONER_PORTFOLIOS = {
           keywords: ['Area'], type: 'Free triggered action', badge: 'TRIGGER',
           distance: '1 burst', target: 'Each enemy in the burst',
           trigger: 'The Avatar takes damage.',
-          effect: 'M < AVERAGE, weakened (EoT).',
+          effect: '**Trigger:** The Avatar takes damage.\n**Effect:** M < AVERAGE weakened (EoT).',
         }),
       ],
       traits: [
@@ -702,7 +702,7 @@ export const SUMMONER_PORTFOLIOS = {
         traits: [
           { name: 'Water Weird', text: 'Once per turn during their move action, each nixie under your control can teleport to a body of water within 6. The corallia can’t teleport into water created by their own seafoam pool.' },
           { name: 'Seafoam Pool', text: 'The area within 2 squares of the corallia is filled with purifying saltwater that disables the effects of difficult terrain created by enemies. At the end of the corallia’s turn, the corallia can scrub you or an ally in the affected area and end one condition.' },
-          { name: 'Minuscule', text: 'The corallia has cover while occupying a larger creature’s space.' },
+          { name: 'Minuscule', text: 'The coralia has cover while occupying a larger creature\'s space.' },
         ],
       },
       {
@@ -769,7 +769,7 @@ export const SUMMONER_PORTFOLIOS = {
       size: '2', speed: '7', stamina: 'Your maximum Stamina', stability: '0', freeStrike: '9', freeStrikeType: 'Poison',
       immunity: 'Damage 2', movement: 'Fly, hover',
       characteristics: { Might: 2, Agility: 2, Reason: 5, Intuition: 2, Presence: 5 },
-      flavor: 'Your champion is an Attendant of a celestial. Whenever you call on their assistance, you must formally welcome and introduce them to the occasion. You can’t be certain if this is truly the blessing of a celestial you’ve previously allied yourself with, or if you’ve received someone else’s power—neither circumstance puts you in any less danger.\n\nThe celestial Attendant wants to swarm the map with pixies while limiting their foes’ ability to do anything about it. A single neurotoxic strike is all it takes to move everyone into position.',
+      flavor: 'Stamina: Your maximum Stamina',
       abilities: [
         ab('Pixie Swarm', {
           keywords: ['Magic', 'Ranged', 'Strike'], type: 'Main action',
@@ -782,7 +782,7 @@ export const SUMMONER_PORTFOLIOS = {
           type: 'Free triggered action', badge: 'TRIGGER',
           distance: 'Self', target: 'Self',
           trigger: 'The Attendant takes damage from an enemy.',
-          effect: 'The Attendant rings a bell, and you summon a signature minion into an unoccupied space adjacent to the Attendant.',
+          effect: '**Trigger:** The Attendant takes damage from an enemy.\n**Effect:** The Attendant rings a bell, and you summon a signature minion into an unoccupied space adjacent to the Attendant.',
         }),
       ],
       traits: [
@@ -1048,7 +1048,7 @@ export const SUMMONER_PORTFOLIOS = {
       size: '2', speed: '6', stamina: 'Your maximum Stamina', stability: '4', freeStrike: '9', freeStrikeType: 'Affinity',
       immunity: 'Affinity 5', movement: 'Fly',
       characteristics: { Might: 2, Agility: 2, Reason: 5, Intuition: 5, Presence: 2 },
-      flavor: 'Your champion is a Portent of a dragon yet to manifest. Through defending the innocent, you have made yourself and your elementals a close neighbor to the malice that threatens them. The dragon desires you bring their creation about and lends you strength to see your justice through.\n\nAs a harbinger of ruin, the dragon’s Portent has incredibly potent impact and control of the environment. Their final shape has yet to be determined; use this to your advantage and call upon the affinity that will end conflict the quickest.',
+      flavor: 'Stamina: Your maximum Stamina',
       abilities: [
         ab('Elemental Tail Swing', {
           keywords: ['Charge', 'Melee', 'Strike', 'Weapon'], type: 'Main action',
