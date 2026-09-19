@@ -286,7 +286,9 @@ create policy characters_delete on public.characters
 -- owner_id back to their stored values for them instead of raising, so a
 -- legitimate save never errors and never flips owner-only settings.
 -- campaign_id is deliberately NOT coerced: the Director rewrites it when kicking
--- a member, and the on-delete-set-null FK rewrites it on campaign disband.
+-- a member or unbinding a hero (via the release_hero / kick_member RPCs below —
+-- WITH CHECK cannot see the old campaign), and the on-delete-set-null FK
+-- rewrites it on campaign disband.
 -- auth.uid() is null for the service role / SQL editor — trusted, left untouched.
 create or replace function public.protect_character_columns()
 returns trigger
@@ -392,6 +394,76 @@ begin
   new_code := public.gen_invite_code();
   update public.campaigns set invite_code = new_code where id = p_campaign;
   return new_code;
+end;
+$$;
+
+-- ─── RPC: unbind one hero from its campaign (owner, Director or admin) ────────
+-- Why an RPC: characters_update's WITH CHECK looks at the NEW row, whose
+-- campaign_id is null — so is_director()/is_member() are false there and a
+-- Director's plain UPDATE to release another player's hero is refused. The
+-- owner could do it directly, but every unbind goes through here so the client
+-- has one path. The jsonb copy of campaignId is kept in step with the column.
+
+create or replace function public.release_hero(p_char text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ch public.characters;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+  if not public.is_allowed() then
+    raise exception 'This chronicle is invite-only.';
+  end if;
+  select * into ch from public.characters where id = p_char;
+  if ch.id is null then
+    raise exception 'No such hero.';
+  end if;
+  if not (ch.owner_id = auth.uid() or public.is_director(ch.campaign_id) or public.is_admin()) then
+    raise exception 'Only the hero''s owner or the Director may unbind it.';
+  end if;
+  update public.characters
+     set campaign_id = null,
+         data        = jsonb_set(data, '{campaignId}', 'null'::jsonb),
+         updated_at  = now()
+   where id = p_char;
+end;
+$$;
+
+-- ─── RPC: kick a member (Director only) ──────────────────────────────────────
+-- Releases the member's heroes first (same WITH CHECK problem as above — the
+-- client used to attempt this as a plain UPDATE, which RLS refused), then
+-- drops the membership row, atomically.
+
+create or replace function public.kick_member(p_campaign uuid, p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+  if not public.is_allowed() then
+    raise exception 'This chronicle is invite-only.';
+  end if;
+  if not public.is_director(p_campaign) then
+    raise exception 'Only the Director may remove a member.';
+  end if;
+  if p_user = auth.uid() then
+    raise exception 'The Director cannot kick themselves; disband the campaign instead.';
+  end if;
+  update public.characters
+     set campaign_id = null,
+         data        = jsonb_set(data, '{campaignId}', 'null'::jsonb),
+         updated_at  = now()
+   where campaign_id = p_campaign and owner_id = p_user;
+  delete from public.campaign_members where campaign_id = p_campaign and user_id = p_user;
 end;
 $$;
 

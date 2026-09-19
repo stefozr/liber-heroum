@@ -16,7 +16,10 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
   const [rulesOpen, setRulesOpen] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState(null);
   const [assignFor, setAssignFor] = React.useState(null);
+  const [pendingUnbind, setPendingUnbind] = React.useState(null);
   const pendingName = pendingDelete && (pendingDelete.identity?.name || pendingDelete.name || 'Unnamed Hero');
+  const unbindName = pendingUnbind && (pendingUnbind.identity?.name || pendingUnbind.name || 'Unnamed Hero');
+  const unbindCampaign = pendingUnbind && (campById[pendingUnbind.campaignId] || 'its campaign');
 
   return (
     <div className="roster">
@@ -86,8 +89,31 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
         campaigns={userCampaigns}
         onClose={() => setAssignFor(null)}
         onAssign={(charId, campId) => { onAssign(charId, campId); setAssignFor(null); }}
+        // Close the assign dialog first, then confirm — Modal does not stack.
+        onUnbind={(c) => { setAssignFor(null); setPendingUnbind(c); }}
         onSetVisibility={onSetVisibility}
       />
+
+      <Modal
+        open={!!pendingUnbind}
+        onClose={() => setPendingUnbind(null)}
+        title="Remove from Campaign?"
+        width={460}
+        footer={(
+          <>
+            <Button kind="ghost" onClick={() => setPendingUnbind(null)}>◂ KEEP</Button>
+            <div style={{flex:1}}></div>
+            <Button kind="danger" onClick={() => { const id = pendingUnbind.id; setPendingUnbind(null); onAssign(id, null); }}>REMOVE</Button>
+          </>
+        )}
+      >
+        <div style={{textAlign:'center'}}>
+          <div style={{fontFamily:'var(--display)', fontSize: '1.5rem', color:'var(--gold-2)', letterSpacing:'0.08em', marginBottom:14}}>{unbindName}</div>
+          <div style={{fontFamily:'var(--serif)', fontSize: '0.9375rem', color:'var(--ink-2)', lineHeight:1.6, maxWidth:340, margin:'0 auto'}}>
+            Remove {unbindName} from <b style={{color:'var(--gold-2)'}}>{unbindCampaign}</b>? The hero stays yours and remains on your roster; only its place at this table is removed.
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={!!pendingDelete}
@@ -171,7 +197,9 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete, onSetVi
           <button
             className="hc-camp"
             onClick={(e) => { e.stopPropagation(); onAssign && onAssign(); }}
-            title={campaignName ? 'Move to another campaign' : 'Add to a campaign'}>
+            title={campaignName ? 'Move to another campaign, or remove from this one' : 'Add to a campaign'}>
+            {/* Label stays short: "move · unbind" squeezes the status text to an
+                ellipsis on three-column desktop grids. The dialog title carries it. */}
             {campaignName ? '⚚ move' : '✦ campaign'}
           </button>
           {/* Visibility only matters once the hero sits at a table. */}
@@ -197,7 +225,9 @@ function HeroCard({ character, campaignName, onOpen, onAssign, onDelete, onSetVi
 // ───────── Add / move a hero to one of your campaigns ─────────
 // Lists the campaigns you belong to; the one the hero already sits in is shown
 // as "Already here" and cannot be re-picked.
-function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign, onSetVisibility }) {
+// onUnbind(character) hands the hero to the caller for a confirm step rather than
+// unbinding on the spot — the footer button used to do it in one click.
+function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign, onUnbind, onSetVisibility }) {
   if (!character) return null;
   const name = character.identity?.name || character.name || 'this hero';
   const current = character.campaignId || null;
@@ -224,14 +254,14 @@ function AssignToCampaignModal({ character, campaigns = [], onClose, onAssign, o
     <Modal
       open={!!character}
       onClose={onClose}
-      title={current ? 'Move to a Campaign' : 'Add to a Campaign'}
+      title={current ? 'Move or Remove' : 'Add to a Campaign'}
       width={520}
       footer={(
         <>
           <Button kind="ghost" onClick={onClose}>◂ CLOSE</Button>
           <div style={{ flex: 1 }}></div>
           {current && (
-            <Button kind="danger" small onClick={() => onAssign(character.id, null)}>Unbind from campaign</Button>
+            <Button kind="danger" small onClick={() => (onUnbind ? onUnbind(character) : onAssign(character.id, null))}>Remove from campaign</Button>
           )}
         </>
       )}

@@ -636,9 +636,14 @@ function App() {
     if (!before) return;
     const next = { ...before, campaignId, lastModified: Date.now() };
     setCharacters(prev => prev.map(c => (c.id === charId ? next : c)));
-    DS.upsertCharacter(next).catch(e => {
-      console.error('Assign failed', e);
-      reportSyncError('COULD NOT MOVE HERO — CHANGE UNDONE');
+    // Unbinding (campaignId null) goes through the release_hero RPC: a Director
+    // releasing another player's hero cannot do it with a row upsert, because the
+    // characters_update WITH CHECK sees a row with no campaign and refuses it.
+    const unbinding = campaignId == null;
+    const write = unbinding ? DS.releaseHero(charId) : DS.upsertCharacter(next);
+    write.catch(e => {
+      console.error(unbinding ? 'Unbind failed' : 'Assign failed', e);
+      reportSyncError(unbinding ? 'COULD NOT REMOVE HERO FROM CAMPAIGN — CHANGE UNDONE' : 'COULD NOT MOVE HERO — CHANGE UNDONE');
       setCharacters(prev => prev.map(c => (c.id === charId ? { ...c, campaignId: before.campaignId ?? null } : c)));
     });
   }, [characters, reportSyncError]);

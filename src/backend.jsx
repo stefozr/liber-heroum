@@ -306,9 +306,18 @@ async function leaveCampaign(id) {
 }
 
 async function removeMember(campaignId, userId) {
-  // Director-only (enforced by RLS). Release the kicked member's heroes first.
-  await supabase.from('characters').update({ campaign_id: null }).eq('campaign_id', campaignId).eq('owner_id', userId);
-  const { error } = await supabase.from('campaign_members').delete().eq('campaign_id', campaignId).eq('user_id', userId);
+  // Director-only (checked inside the RPC). Releases the kicked member's heroes
+  // and drops the membership atomically. A plain UPDATE of campaign_id to null
+  // on someone else's hero is refused by the characters_update WITH CHECK, so
+  // this cannot be done from the client directly.
+  const { error } = await supabase.rpc('kick_member', { p_campaign: campaignId, p_user: userId });
+  if (error) throw new Error(error.message);
+}
+
+async function releaseHero(charId) {
+  // Unbind one hero from its campaign. Owner, that campaign's Director, or an
+  // admin — see release_hero() in migration.sql for why this is an RPC.
+  const { error } = await supabase.rpc('release_hero', { p_char: charId });
   if (error) throw new Error(error.message);
 }
 
@@ -326,7 +335,7 @@ const DS = {
   loadAll,
   upsertCharacter, upsertCharacterKeepalive, deleteCharacter, subscribeCharacters, uploadPortrait,
   createCampaign, joinByCode, updateCampaign, regenInviteCode,
-  leaveCampaign, removeMember, disbandCampaign,
+  leaveCampaign, removeMember, releaseHero, disbandCampaign,
 };
 
 if (typeof window !== 'undefined') window.DS = DS;

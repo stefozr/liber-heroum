@@ -126,6 +126,20 @@ const CAMPAIGN_CSS = `
 .ph-card .ph-status.wip { color: var(--rubric-2); }
 .ph-card .ph-edit { font-family: var(--mono); font-size: var(--fs-1); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); border: 1px solid var(--gold-deep); padding: 2px 6px; }
 
+/* Card + its "remove from campaign" ✕. The wrapper takes the grid cell; the
+   card fills it; the ✕ sits in the top-right corner over the body, so the
+   name's ellipsis is pushed left to clear it. */
+.ph-wrap { position: relative; display: flex; min-width: 0; }
+.ph-wrap > .ph-card { flex: 1; min-width: 0; }
+.ph-wrap .ph-body { padding-right: 36px; }
+.ph-unbind {
+  position: absolute; top: 6px; right: 8px; z-index: 1;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-4); font-size: var(--fs-7); line-height: 1; padding: 2px 4px;
+  transition: color .12s;
+}
+.ph-unbind:hover { color: var(--rubric-2); }
+
 .add-hero-card {
   border: 1px dashed var(--line-2); background: transparent; cursor: pointer;
   display: grid; place-items: center; min-height: 92px; text-align: center; padding: 14px;
@@ -182,7 +196,7 @@ ${MQ.phone} {
 
 /* Micro-controls sat over card art: keep the visual size, grow the hit area. */
 .mc-kick, .sg-copy { position: relative; }
-.mc-kick::after, .sg-copy::after { content: ''; position: absolute; inset: -9px; }
+.mc-kick::after, .sg-copy::after, .ph-unbind::after { content: ''; position: absolute; inset: -9px; }
 
 ${MQ.touch} {
   /* iOS holds :hover after a tap, so these lifts stick until you tap elsewhere. */
@@ -208,11 +222,14 @@ function heroPortrait(c) {
 // ───────── Compact party hero card ─────────
 // editLabel names WHY you can edit ("Edit", "Edit · Director", "Edit · Admin") —
 // the same chip used to mean three different things across two screens.
-function PartyHeroCard({ character, canEdit, onOpen, editLabel = 'Edit' }) {
+// onRemove (optional) adds a ✕ that unbinds the hero from the campaign. The card
+// is itself a <button>, so the ✕ is a sibling inside a positioned wrapper rather
+// than a nested control. Without onRemove (admin screen) the card renders bare.
+function PartyHeroCard({ character, canEdit, onOpen, onRemove, editLabel = 'Edit' }) {
   const c = character;
   const bg = heroPortrait(c);
   const wip = c.status !== 'complete';
-  return (
+  const card = (
     <button type="button" className="card-btn ph-card" onClick={onOpen}>
       <div className={`ph-img ${bg ? '' : 'empty'}`} style={bg ? { backgroundImage: `url(${bg})` } : {}}>{bg ? '' : '✠'}</div>
       <div className="ph-body">
@@ -225,6 +242,18 @@ function PartyHeroCard({ character, canEdit, onOpen, editLabel = 'Edit' }) {
         </div>
       </div>
     </button>
+  );
+  if (!onRemove) return card;
+  return (
+    <div className="ph-wrap">
+      {card}
+      <button
+        type="button"
+        className="ph-unbind"
+        title="Remove from campaign"
+        aria-label={`Remove ${heroName(c)} from campaign`}
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}>✕</button>
+    </div>
   );
 }
 
@@ -376,7 +405,7 @@ function CampaignDetail({
   const [copied, setCopied] = useCmpState(false);
   const [settingsOpen, setSettingsOpen] = useCmpState(false);
   const [assignOpen, setAssignOpen] = useCmpState(false);
-  const [confirm, setConfirm] = useCmpState(null); // {kind:'leave'|'delete'|'kick', userId?}
+  const [confirm, setConfirm] = useCmpState(null); // {kind:'leave'|'delete'|'kick'|'unbind', userId?, charId?}
   const [editName, setEditName] = useCmpState(campaign.name);
   const [editDesc, setEditDesc] = useCmpState(campaign.description || '');
 
@@ -475,7 +504,10 @@ function CampaignDetail({
                   // editable by them too — not just the owner and the Director.
                   const heroCanEdit = canEdit || c.visibility === 'public';
                   const editLabel = isMe ? 'Edit' : isGM ? 'Edit · Director' : 'Edit · Public';
-                  return <PartyHeroCard key={c.id} character={c} canEdit={heroCanEdit} editLabel={editLabel} onOpen={() => onOpenHero(c.id)} />;
+                  // Only the owner or the Director may send a hero home — a fellow
+                  // player editing a public hero may not.
+                  const onRemove = (isMe || isGM) ? () => setConfirm({ kind: 'unbind', charId: c.id }) : undefined;
+                  return <PartyHeroCard key={c.id} character={c} canEdit={heroCanEdit} editLabel={editLabel} onOpen={() => onOpenHero(c.id)} onRemove={onRemove} />;
                 })}
                 {isMe && (
                   <button type="button" className="card-btn add-hero-card" onClick={() => (myUnassigned.length ? setAssignOpen(true) : onCreateHero(campaign.id))}>
@@ -585,6 +617,7 @@ function CampaignDetail({
               if (c.kind === 'delete') onDelete(campaign.id);
               else if (c.kind === 'leave') onLeave(campaign.id);
               else if (c.kind === 'kick') onRemoveMember(campaign.id, c.userId);
+              else if (c.kind === 'unbind') onAssign(c.charId, null);
             }}>
               {confirm?.kind === 'delete' ? 'DISBAND ✕' : confirm?.kind === 'leave' ? 'LEAVE' : 'REMOVE'}
             </Button>
@@ -592,9 +625,16 @@ function CampaignDetail({
         )}
       >
         <div style={{ textAlign: 'center', fontFamily: 'var(--serif)', fontSize: '0.9375rem', color: 'var(--ink-2)', lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
-          {confirm?.kind === 'delete' && <>This dissolves <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b> for everyone. Heroes return to their owners' rosters, unbound. This cannot be undone.</>}
-          {confirm?.kind === 'leave' && <>You'll leave <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b>. Your heroes return to your roster, unbound from this table.</>}
+          {confirm?.kind === 'delete' && <>This dissolves <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b> for everyone. Every hero returns to its owner's roster, still theirs. This cannot be undone.</>}
+          {confirm?.kind === 'leave' && <>You'll leave <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b>. Your heroes stay yours and return to your roster.</>}
           {confirm?.kind === 'kick' && <>Remove <b style={{ color: 'var(--gold-2)' }}>{userById[confirm.userId]?.displayName}</b> from the campaign? Their heroes return to their own roster.</>}
+          {confirm?.kind === 'unbind' && (() => {
+            const hero = chars.find(h => h.id === confirm.charId);
+            const mine = hero?.ownerId === user.id;
+            return <>Remove <b style={{ color: 'var(--gold-2)' }}>{hero ? heroName(hero) : 'this hero'}</b> from <b style={{ color: 'var(--gold-2)' }}>{campaign.name}</b>? {mine
+              ? 'The hero stays yours and remains on your roster; only its place at this table is removed.'
+              : 'The hero stays with its owner and remains on their roster.'}</>;
+          })()}
         </div>
       </Modal>
     </div>
