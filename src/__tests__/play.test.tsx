@@ -137,6 +137,17 @@ describe('PlayView renders the character sheet', () => {
     expect(container.querySelector('.prog-edit')).toBeNull();
   });
 
+  it('the exit action defaults to ◂ ROSTER and takes an exitLabel for the campaign route', () => {
+    const { getAllByText, rerender } = render(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} />
+    );
+    expect(getAllByText('◂ ROSTER').length).toBeGreaterThan(0);
+    rerender(
+      <PlayView character={completedCharacter()} update={noop} onExit={noop} canEdit={false} exitLabel="◂ CAMPAIGN" />
+    );
+    expect(getAllByText('◂ CAMPAIGN').length).toBeGreaterThan(0);
+  });
+
   it('an admin gets a VIEW READ-ONLY preview toggle in the top bar', () => {
     const onToggle = vi.fn();
     const { getAllByText, queryByText } = render(

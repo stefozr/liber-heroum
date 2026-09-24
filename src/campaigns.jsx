@@ -125,6 +125,7 @@ const CAMPAIGN_CSS = `
 .ph-card .ph-status { font-family: var(--mono); font-size: var(--fs-1); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-left: auto; white-space: nowrap; }
 .ph-card .ph-status.wip { color: var(--rubric-2); }
 .ph-card .ph-edit { font-family: var(--mono); font-size: var(--fs-1); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2); border: 1px solid var(--gold-deep); padding: 2px 6px; }
+.ph-card .ph-edit.ph-view { color: var(--ink-3); border-color: var(--line-2); }
 
 /* Card + its "remove from campaign" ✕. The wrapper takes the grid cell; the
    card fills it; the ✕ sits in the top-right corner over the body, so the
@@ -237,7 +238,9 @@ function PartyHeroCard({ character, canEdit, onOpen, onRemove, editLabel = 'Edit
         <div className="ph-meta">{heroSummary(c)}</div>
         <div className="ph-foot">
           <span className="ph-lvl">LVL {c.level || 1}</span>
-          {canEdit && <span className="ph-edit">{wip ? 'Resume' : editLabel}</span>}
+          {canEdit
+            ? <span className="ph-edit">{wip ? 'Resume' : editLabel}</span>
+            : <span className="ph-edit ph-view" title="Open this sheet read-only">👁 View</span>}
           <span className={`ph-status ${wip ? 'wip' : ''}`} title={wip ? 'Chapters of the creation wizard remain' : 'This hero is complete and ready for play'}>{wip ? 'In Progress' : 'Chronicled'}</span>
         </div>
       </div>
@@ -413,7 +416,11 @@ function CampaignDetail({
 
   const campChars = chars.filter(c => c.campaignId === campaign.id);
   const myUnassigned = chars.filter(c => c.ownerId === user.id && c.campaignId !== campaign.id);
-  const members = campaign.memberIds.map(id => userById[id]).filter(Boolean);
+  // A member whose profile has not loaded (or a hero owner no longer at the
+  // table) still gets a seat under a placeholder name: dropping them would hide
+  // their heroes while the counts above still tally them.
+  const memberOf = (id) => userById[id] || { id, displayName: 'Fellow member' };
+  const members = campaign.memberIds.map(memberOf);
 
   const copyCode = () => {
     const t = campaign.inviteCode;
@@ -423,11 +430,13 @@ function CampaignDetail({
 
   // Order party groups: the Director first, then everyone else; current user's
   // own heroes always reachable via the "add" affordance even with none yet.
-  const ownerOrder = [campaign.gmId, ...campaign.memberIds.filter(id => id !== campaign.gmId)];
+  const seated = [campaign.gmId, ...campaign.memberIds.filter(id => id !== campaign.gmId)];
+  const strays = campChars.map(c => c.ownerId).filter(id => id && !seated.includes(id));
+  const ownerOrder = [...seated, ...new Set(strays)];
   const groups = ownerOrder.map(ownerId => ({
-    owner: userById[ownerId],
+    owner: memberOf(ownerId),
     heroes: campChars.filter(c => c.ownerId === ownerId),
-  })).filter(g => g.owner);
+  }));
 
   return (
     <div className="cmp-screen">

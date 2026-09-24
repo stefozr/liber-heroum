@@ -282,6 +282,30 @@ async function joinByCode(code) {
   return hydrateCampaign(data, (mems || []).map(m => m.user_id));
 }
 
+// Everything the campaign page needs to render the party for one campaign: its
+// member ids, the heroes bound to it, and the profiles of members and hero
+// owners. loadAll fetches all this at boot; this is the targeted refresh for a
+// campaign that was joined mid-session, whose party the boot load could not see.
+async function loadCampaignParty(campaignId) {
+  const [memsRes, charsRes] = await Promise.all([
+    supabase.from('campaign_members').select('user_id').eq('campaign_id', campaignId),
+    supabase.from('characters').select('*').eq('campaign_id', campaignId),
+  ]);
+  if (memsRes.error) throw new Error(memsRes.error.message);
+  if (charsRes.error) throw new Error(charsRes.error.message);
+  const memberIds = (memsRes.data || []).map(m => m.user_id);
+  const characters = (charsRes.data || []).map(hydrateChar);
+  const ids = new Set(memberIds);
+  characters.forEach(c => { if (c.ownerId) ids.add(c.ownerId); });
+  let profiles = [];
+  if (ids.size) {
+    const { data: profRows, error } = await supabase.from('profiles').select('*').in('id', [...ids]);
+    if (error) throw new Error(error.message);
+    profiles = (profRows || []).map(p => ({ id: p.id, displayName: p.display_name, provider: p.provider, avatar: p.avatar }));
+  }
+  return { memberIds, characters, profiles };
+}
+
 async function updateCampaign(id, patch) {
   const upd = {};
   if (patch.name !== undefined) upd.name = patch.name;
@@ -334,7 +358,7 @@ const DS = {
   signInWithProvider, signOut, setDisplayName,
   loadAll,
   upsertCharacter, upsertCharacterKeepalive, deleteCharacter, subscribeCharacters, uploadPortrait,
-  createCampaign, joinByCode, updateCampaign, regenInviteCode,
+  createCampaign, joinByCode, loadCampaignParty, updateCampaign, regenInviteCode,
   leaveCampaign, removeMember, releaseHero, disbandCampaign,
 };
 

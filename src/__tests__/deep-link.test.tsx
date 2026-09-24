@@ -34,6 +34,7 @@ const mockDS = vi.hoisted(() => {
     deleteCharacter: vi.fn(async () => {}),
     createCampaign: vi.fn(),
     joinByCode: vi.fn(),
+    loadCampaignParty: vi.fn(),
     updateCampaign: vi.fn(),
     regenInviteCode: vi.fn(),
     leaveCampaign: vi.fn(),

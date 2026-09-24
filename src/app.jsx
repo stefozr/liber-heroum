@@ -743,10 +743,38 @@ function App() {
   const joinCampaign = useCallback(async (code) => {
     if (!currentUser) return;
     const camp = await DS.joinByCode(code);   // throws with a friendly message if not found
-    setCampaigns(prev => (prev.some(c => c.id === camp.id)
-      ? prev.map(c => c.id === camp.id ? camp : c)
-      : [...prev, camp]));
-    setActiveCampaignId(camp.id);
+    // The boot load only saw campaigns this user was already in, so the new
+    // table's party — fellow members' profiles and their bound heroes — is not
+    // in local state yet. Fetch it now, or the campaign page would show nobody
+    // until the next reload. The join itself has already succeeded, so a failed
+    // party fetch only logs; the page renders placeholders for unknown members.
+    let party = null;
+    try { party = await DS.loadCampaignParty(camp.id); }
+    catch (e) { console.error('Failed to load the campaign party', e); }
+    const joined = party && party.memberIds.length ? { ...camp, memberIds: party.memberIds } : camp;
+    setCampaigns(prev => (prev.some(c => c.id === joined.id)
+      ? prev.map(c => c.id === joined.id ? joined : c)
+      : [...prev, joined]));
+    if (party) {
+      setUsers(prev => {
+        const byId = new Map(prev.map(u => [u.id, u]));
+        // Merge over any known row so the signed-in user's own entry keeps its email.
+        party.profiles.forEach(p => byId.set(p.id, { ...(byId.get(p.id) || {}), ...p }));
+        return [...byId.values()];
+      });
+      setCharacters(prev => {
+        let next = prev;
+        for (const row of party.characters) {
+          if (shouldSkipRealtimeMerge(row.id, activeIdRef.current,
+                pendingSave.current ? pendingSave.current.id : null, inFlightSaveId.current)) continue;
+          const merged = normalizeSkills(normalizeLanguages(migrateCharacterChars(row)));
+          const i = next.findIndex(c => c.id === row.id);
+          next = i === -1 ? [...next, merged] : next.map(c => (c.id === row.id ? merged : c));
+        }
+        return next;
+      });
+    }
+    setActiveCampaignId(joined.id);
     setView('campaign');
   }, [currentUser]);
 
@@ -975,6 +1003,7 @@ function App() {
                 character={active}
                 update={editable ? updateActive : NOOP_UPDATE}
                 onExit={goBackFromHero}
+                exitLabel={backView && backView.view === 'campaign' ? '◂ CAMPAIGN' : '◂ ROSTER'}
                 onEdit={editable ? () => setView('wizard') : null}
                 canEdit={editable}
                 saveState={editable ? saveState : null}

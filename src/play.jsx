@@ -109,7 +109,7 @@ function TopBarMenu({ items }) {
   );
 }
 
-function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState = null, owner = null, isOwner = true, canSetVisibility = false, onSetVisibility = null, canPreviewReadonly = false, previewReadonly = false, onTogglePreviewReadonly = null, onError = () => {} }) {
+function PlayView({ character, update, onExit, exitLabel = '◂ ROSTER', onEdit, canEdit = true, saveState = null, owner = null, isOwner = true, canSetVisibility = false, onSetVisibility = null, canPreviewReadonly = false, previewReadonly = false, onTogglePreviewReadonly = null, onError = () => {} }) {
   const cls = classDef(character);
   const anc = ancestryDef(character);
   const kit = kitDef(character);
@@ -404,7 +404,7 @@ function PlayView({ character, update, onExit, onEdit, canEdit = true, saveState
       onClick: () => onSetVisibility(character.visibility === 'public' ? 'private' : 'public'),
     },
     canEdit && onEdit && { id: 'edit', label: 'EDIT', onClick: onEdit },
-    { id: 'exit', label: '◂ ROSTER', onClick: onExit },
+    { id: 'exit', label: exitLabel, onClick: onExit },
   ].filter(Boolean);
 
   return (
