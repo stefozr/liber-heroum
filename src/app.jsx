@@ -1533,7 +1533,7 @@ Object.assign(window, {
 export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions };
 export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
-export { collectSkillEntries, duplicateSkillPicks, normalizeSkills };
+export { collectSkillEntries, duplicateSkillPicks, normalizeSkills, charBonusPicksAt };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
 export { canEditCharacterFor, canSetVisibilityFor, shouldSkipRealtimeMerge };
 export { parseHash, navToHash };

@@ -134,7 +134,13 @@ const DS_ANCESTRIES = [
             effect: 'A tolerance for pain and distress allows you to push through difficult situations. If you are frightened, slowed, or weakened, you can use a maneuver to immediately end one of those conditions.' }),
         ] },
       { name: 'Perseverance', cost: 1, text: 'Giving up is for other people. You gain an edge on tests made using the Endurance skill. Additionally, when you are slowed, your speed is reduced to 3 instead of 2.' },
-      { name: 'Resist the Unnatural', cost: 1, text: 'Your instinctive resilience protects you from injuries beyond the routine. Whenever you take damage that isn\'t untyped, you can use a triggered action to take half the damage.' },
+      { name: 'Resist the Unnatural', cost: 1, text: 'Your instinctive resilience protects you from injuries beyond the routine. Whenever you take damage that isn\'t untyped, you can use a triggered action to take half the damage.',
+        // draw-steel 1.1.2 models the triggered action as an ability granted by the trait.
+        abilities: [
+          ab('Resist the Unnatural', { keywords: ['—'], type: 'Triggered', badge: 'TRIGGER', distance: 'Self', target: 'Self',
+            trigger: 'You take damage that isn\'t untyped.',
+            effect: 'You halve the damage.' }),
+        ] },
       { name: 'Staying Power', cost: 2, text: 'Your human physiology allows you to fight, run, and stay awake longer than others. You increase your number of Recoveries by 2.', bonuses: { rec: 2 } },
     ],
   },

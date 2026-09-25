@@ -2,14 +2,25 @@
 // (MetaMorphic-Digital/draw-steel) into public/foundry-items.json, used by the
 // FoundryVTT exporter to embed official compendium items instead of generated ones.
 //
-// Usage: node scripts/extract-foundry-official.mjs [ref]   (default ref: 1.1.x)
+// Usage: node scripts/extract-foundry-official.mjs [ref] [--allow-branch]
+//   default ref: the 1.1.2 release tag. The ref must be a release tag (x.y.z) so the
+//   index matches an installable system version exactly — a moving branch drifts from
+//   the release within weeks (the 1.1.x branch snapshot of 2026-07 differed from the
+//   1.1.2 tag in 276 documents). Pass --allow-branch to override for experiments.
 // Optional: set GITHUB_TOKEN to authenticate the single tree-listing API call.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO = 'MetaMorphic-Digital/draw-steel';
-const REF = process.argv[2] || '1.1.x';
+const SYSTEM_ID = 'draw-steel';
+const args = process.argv.slice(2);
+const allowBranch = args.includes('--allow-branch');
+const REF = args.find(a => !a.startsWith('--')) || '1.1.2';
+if (!allowBranch && !/^\d+\.\d+\.\d+$/.test(REF)) {
+  console.error(`Ref "${REF}" is not a release tag (x.y.z). Pass --allow-branch to build from a branch anyway.`);
+  process.exit(1);
+}
 const PACKS = ['abilities', 'classes', 'character-options', 'origins'];
 const TYPES = new Set([
   'ability', 'class', 'subclass', 'feature', 'kit', 'perk', 'complication',
@@ -89,10 +100,14 @@ async function main() {
     delete doc.sort;
     for (const e of doc.effects || []) delete e.folder;
     counts[doc.type] = (counts[doc.type] || 0) + 1;
+    const segs = path.split('/');
+    // Provenance: the compendium UUID of the source document. Embedded as-is by the
+    // exporter, it gives Foundry the item's source link and "Update from compendium".
+    // (The pack is the first directory under src/packs.)
+    doc._stats = { compendiumSource: `Compendium.${SYSTEM_ID}.${segs[2]}.Item.${doc._id}` };
     // Scope: normalized dir segments between the pack root and the file, ids stripped —
     // used by the exporter to break ties (e.g. domain features under Censor vs Conduit).
-    const segs = path.split('/');
-    const scope = segs.slice(2, -1).map(s => norm(s.replace(/_[a-zA-Z0-9]{16}$/, '')));
+    const scope = segs.slice(3, -1).map(s => norm(s.replace(/_[a-zA-Z0-9]{16}$/, '')));
     const entry = { scope, doc };
     const keys = new Set([norm(doc.system?._dsid || doc.name), norm(doc.name)]);
     for (const k of keys) if (k) register(`${doc.type}:${k}`, entry);

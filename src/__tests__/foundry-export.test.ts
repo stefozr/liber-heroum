@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { newCharacter, computeDerived } from '../app.jsx';
-import { DS_CLASSES, DS_KITS, DS_COMPLICATIONS } from '../data.jsx';
+import { DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_SKILL_GROUPS } from '../data.jsx';
 import {
   characterToFoundryHero, officialOrGenerated, parseTiers, parseTierClause,
   parseDistance, parseTarget, skillId, langId, randomId, dsid,
@@ -345,12 +345,14 @@ describe('officialOrGenerated (fake index)', () => {
   };
   const generated = { _id: 'genGENgenGENgen1', name: 'X', type: 'ability', system: {} };
 
-  it('substitutes the official doc with a fresh _id and no pack-only fields', () => {
+  it('substitutes the official doc, keeping its compendium _id, without pack-only fields', () => {
     const out: any = officialOrGenerated(fakeIndex, 'ability', 'Halt Miscreant!', generated);
     expect(out.img).toBe('icons/official.webp');
     expect(out.system._dsid).toBe('halt-miscreant');
-    expect(out._id).toMatch(/^[a-zA-Z0-9]{16}$/);
-    expect(out._id).not.toBe('OFFICIALIDXXXXXX');
+    // Foundry creates hero items from the compendium with keepId; advancement parent
+    // links and "Update from compendium" both rely on the id being the official one.
+    expect(out._id).toBe('OFFICIALIDXXXXXX');
+    expect(out).not.toBe(officialAbility); // a copy, not the index entry
     expect(out._key).toBeUndefined();
     expect(out.folder).toBeUndefined();
     expect(officialAbility._key).toBe('!items!OFFICIALIDXXXXXX'); // source not mutated
@@ -483,6 +485,216 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     }
   });
 
+  // The index must be built from a release tag (a branch snapshot drifted from the
+  // 1.1.2 release in 276 documents) and match the system version the export targets —
+  // and, when a local Foundry install is present, the version actually installed.
+  it('was built from a release tag matching the installed draw-steel version', () => {
+    expect(index.ref).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(index.version).toBe(index.ref);
+    const systemJson = `${process.env.FOUNDRY_DATA || 'D:/FoundryVTT/Data'}/systems/draw-steel/system.json`;
+    if (existsSync(systemJson)) {
+      expect(JSON.parse(readFileSync(systemJson, 'utf8')).version, 'rebuild: node scripts/extract-foundry-official.mjs <version>')
+        .toBe(index.version);
+    }
+  });
+
+  it('records each document’s compendium source', () => {
+    const halt = index.items['ability:halt-miscreant'];
+    expect(halt._stats.compendiumSource).toBe(`Compendium.draw-steel.abilities.Item.${halt._id}`);
+    expect(index.items['class:censor']._stats.compendiumSource).toMatch(/^Compendium\.draw-steel\.classes\.Item\./);
+  });
+
+  const DS_FLAG = 'draw-steel';
+  const advFlags = (item: any) => item.flags?.[DS_FLAG]?.advancement || {};
+  const skillOptionCount = (a: any) => {
+    const groups: string[] = a.skills?.groups || [];
+    const choices: string[] = a.skills?.choices || [];
+    if (!groups.length && !choices.length) return Infinity;
+    return new Set([...choices,
+      ...Object.entries(DS_SKILL_GROUPS).filter(([g]) => groups.includes(g)).flatMap(([, n]: any) => n.map(skillId))]).size;
+  };
+  // Every advancement Foundry would have asked about by this level, that the file
+  // leaves unanswered. Purchased ancestry traits are a points budget (chooseN = points).
+  function advancementGaps(doc: any, level: number) {
+    const gaps: string[] = [];
+    for (const i of doc.items) {
+      for (const a of Object.values<any>(i.system?.advancements || {})) {
+        const L = a.requirements?.level;
+        if (L != null && L > level) continue;
+        const sel: any[] = advFlags(i)[a._id]?.selected || [];
+        const tag = `${i.name}/${a.name || a.type}@${L}`;
+        if (a.type === 'itemGrant') {
+          if (a.additional?.type === 'ancestryTrait') continue;
+          if (a.pool?.length && a.chooseN == null && sel.length < a.pool.length) gaps.push(`auto ${tag} ${sel.length}/${a.pool.length}`);
+          if (a.chooseN != null && sel.length < a.chooseN) gaps.push(`choice ${tag} ${sel.length}/${a.chooseN}`);
+        } else if (a.type === 'skill') {
+          if (a.chooseN != null && a.chooseN < skillOptionCount(a) && sel.length < a.chooseN) gaps.push(`skill ${tag} ${sel.length}/${a.chooseN}`);
+        } else if (a.type === 'language') {
+          if (a.chooseN != null && sel.length < a.chooseN) gaps.push(`language ${tag} ${sel.length}/${a.chooseN}`);
+        } else if (a.type === 'characteristic') {
+          if (!sel.length) gaps.push(`characteristic ${tag}`);
+        }
+      }
+    }
+    return gaps;
+  }
+  // Official data the app cannot answer: the Conduit's 2nd-level domain-feature pool
+  // points at documents absent from the 1.1.2 release, and its 5th-level pool repeats
+  // the 4th-level one (the app grants one domain feature at 4th).
+  const KNOWN_GAPS = new Set([
+    'choice Conduit/2nd-Level Domain Feature@2 0/1',
+    'choice Conduit/5th-Level Domain Feature@5 0/1',
+  ]);
+  const unexpectedGaps = (doc: any, level: number) => advancementGaps(doc, level).filter(g => !KNOWN_GAPS.has(g));
+
+  const DEFAULT_ABILITIES = ['Aid Attack', 'Catch Breath', 'Charge', 'Defend', 'Escape Grab', 'Grab', 'Heal',
+    'Knockback', 'Melee Free Strike', 'Ranged Free Strike', 'Stand Up', 'Advance', 'Disengage', 'Ride'];
+
+  it('embeds the 14 default basic abilities with their compendium ids', () => {
+    const doc: any = characterToFoundryHero(buildValidCharacter({ cls: 'fury' }), index);
+    for (const name of DEFAULT_ABILITIES) {
+      const official = index.items[`ability:${dsid(name)}`];
+      const item = doc.items.find((i: any) => i.type === 'ability' && i.name === name);
+      expect(item, name).toBeTruthy();
+      expect(item._id).toBe(official._id);
+    }
+    expect(doc.items.filter((i: any) => i.name === 'Defend')).toHaveLength(1);
+    // Generated exports (no index) cannot embed them — and must not crash.
+    const offline: any = characterToFoundryHero(buildValidCharacter({ cls: 'fury' }), null);
+    expect(offline.items.find((i: any) => i.name === 'Defend')).toBeUndefined();
+  });
+
+  it('keeps compendium ids and provenance on official items, unique within the export', () => {
+    const doc: any = characterToFoundryHero(levelTo(buildValidCharacter({ cls: 'fury', subclass: 'berserker' }), 5), index);
+    const ids = doc.items.map((i: any) => i._id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const cls = doc.items.find((i: any) => i.type === 'class');
+    expect(cls._id).toBe(index.items['class:fury']._id);
+    expect(cls._stats.compendiumSource).toBe(`Compendium.draw-steel.classes.Item.${cls._id}`);
+    for (const i of doc.items) {
+      expect(i._id).toMatch(/^[a-zA-Z0-9]{16}$/);
+      if (i._stats) expect(i._stats.compendiumSource).toBe(`Compendium.draw-steel.${i._stats.compendiumSource.split('.')[2]}.Item.${i._id}`);
+      else expect(i.img).toBe(''); // generated items carry no provenance
+    }
+    expect(doc.system.hero.preferredKit).toBe(doc.items.find((i: any) => i.type === 'kit')._id);
+  });
+
+  it('fills the advancement bookkeeping for a level-10 Fury and a level-5 Conduit', () => {
+    for (const [c, level] of [
+      [levelTo(buildValidCharacter({ cls: 'fury', subclass: 'berserker', career: 'agent' }), 10), 10],
+      [levelTo(buildValidCharacter({ cls: 'conduit', career: 'agent' }), 5), 5],
+    ] as Array<[any, number]>) {
+      const doc: any = characterToFoundryHero(c, index);
+      expect(unexpectedGaps(doc, level), `${c.cclass.id} L${level}`).toEqual([]);
+      // Granted items point back at the advancement that granted them, on an exported parent.
+      const byId = new Map(doc.items.map((i: any) => [i._id, i]));
+      let granted = 0;
+      for (const i of doc.items) {
+        const f = advFlags(i);
+        if (!f.parentId) continue;
+        granted++;
+        const parent = byId.get(f.parentId);
+        expect(parent, `${i.name} parent`).toBeTruthy();
+        const adv = parent.system.advancements[f.advancementId];
+        expect(adv, `${i.name} advancement on ${parent.name}`).toBeTruthy();
+        expect(advFlags(parent)[adv._id].selected).toContain(i._stats.compendiumSource);
+      }
+      expect(granted).toBeGreaterThan(10);
+      // The subclass hangs off the class; the class itself is granted by nothing.
+      expect(advFlags(doc.items.find((i: any) => i.type === 'subclass')).parentId).toBe(doc.items.find((i: any) => i.type === 'class')._id);
+      expect(advFlags(doc.items.find((i: any) => i.type === 'class')).parentId).toBeUndefined();
+    }
+  });
+
+  it('pulls in automatically granted official features the app does not model', () => {
+    const doc: any = characterToFoundryHero(buildValidCharacter({ cls: 'fury' }), index);
+    const ferocity = doc.items.find((i: any) => i.type === 'feature' && i.name === 'Ferocity');
+    expect(ferocity).toBeTruthy();
+    expect(advFlags(ferocity).parentId).toBe(doc.items.find((i: any) => i.type === 'class')._id);
+  });
+
+  it('exports base characteristics plus flagged increases that reproduce the app totals', () => {
+    const c: any = levelTo(buildValidCharacter({ cls: 'fury', subclass: 'berserker' }), 10);
+    const doc: any = characterToFoundryHero(c, index);
+    const cls = doc.items.find((i: any) => i.type === 'class');
+    const value: Record<string, number> = {};
+    for (const [k, v] of Object.entries<any>(doc.system.characteristics)) value[k] = v.value;
+    expect(value.might).toBe(c.cclass.characteristics.Might); // base, not the derived 5
+    // Replay Foundry's prepareBaseData: +1 per selected key, capped at the advancement max.
+    const advs = Object.values<any>(cls.system.advancements).filter(a => a.type === 'characteristic')
+      .sort((a, b) => a.requirements.level - b.requirements.level);
+    expect(advs.map(a => a.requirements.level)).toEqual([4, 7, 10]);
+    for (const a of advs) for (const k of advFlags(cls)[a._id].selected) value[k] = Math.min(value[k] + 1, a.max);
+    const derived = computeDerived(c).chars;
+    for (const k of ['Might', 'Agility', 'Reason', 'Intuition', 'Presence']) expect(value[k.toLowerCase()], k).toBe(derived[k]);
+    // Choice-bearing increase: the Conduit's level-4 pick lands in the selection.
+    const cd: any = levelTo(buildValidCharacter({ cls: 'conduit' }), 4);
+    const cdoc: any = characterToFoundryHero(cd, index);
+    const ccls = cdoc.items.find((i: any) => i.type === 'class');
+    const l4 = Object.values<any>(ccls.system.advancements).find(a => a.type === 'characteristic' && a.requirements.level === 4);
+    expect(advFlags(ccls)[l4._id].selected).toContain('intuition');
+    expect(advFlags(ccls)[l4._id].selected.length).toBe(2);
+    // Generated classes have no advancements, so they keep exporting the totals.
+    const s: any = levelTo(buildValidCharacter({ cls: 'summoner' }), 4);
+    const sdoc: any = characterToFoundryHero(s, index);
+    expect(sdoc.system.characteristics.might.value).toBe(computeDerived(s).chars.Might);
+  });
+
+  it('drops the Characteristic Increase summary when the class is official, keeps it otherwise', () => {
+    const c: any = levelTo(buildValidCharacter({ cls: 'fury' }), 4);
+    expect(characterToFoundryHero(c, index).items.map((i: any) => i.name)).not.toContain('Characteristic Increase');
+    expect(characterToFoundryHero(c, null).items.map((i: any) => i.name)).toContain('Characteristic Increase');
+  });
+
+  it('gives a composite culture the official advancement shape and fills it', () => {
+    const c: any = buildValidCharacter({ environment: 'urban', organization: 'bureaucratic', upbringing: 'noble' });
+    const doc: any = characterToFoundryHero(c, index);
+    const culture = doc.items.find((i: any) => i.type === 'culture');
+    expect(culture._stats).toBeUndefined();
+    const advs = Object.values<any>(culture.system.advancements);
+    expect(advs.map(a => a.type).sort()).toEqual(['language', 'skill', 'skill', 'skill']);
+    expect(advs.map(a => a.name)).toEqual(expect.arrayContaining(['Any Language', 'Urban', 'Bureaucratic', 'Noble']));
+    for (const a of advs) expect(a._id).toMatch(/^[a-zA-Z0-9]{16}$/);
+    expect(unexpectedGaps(doc, 1).filter(g => g.startsWith('skill Culture') || g.startsWith('language Culture'))).toEqual([]);
+    for (const [slot, name] of Object.entries<any>(c.culture.skills)) {
+      const aspectName = slot === 'environment' ? 'Urban' : slot === 'organization' ? 'Bureaucratic' : 'Noble';
+      const adv = advs.find(a => a.name === aspectName);
+      expect(advFlags(culture)[adv._id].selected, slot).toEqual([skillId(name)]);
+    }
+  });
+
+  it('exports Conduit domains as official subclass documents and skips the Domains summary', () => {
+    const c: any = buildValidCharacter({ cls: 'conduit' });
+    const doc: any = characterToFoundryHero(c, index);
+    for (const d of c.cclass.domains) {
+      const item = doc.items.find((i: any) => i.type === 'subclass' && i.name === d);
+      expect(item, d).toBeTruthy();
+      expect(advFlags(item).parentId).toBe(doc.items.find((i: any) => i.type === 'class')._id);
+    }
+    expect(doc.items.map((i: any) => i.name)).not.toContain('Domains');
+  });
+
+  it('resolves abilities that are feature documents officially', () => {
+    const generated = { name: 'gen', type: 'ability', system: {} };
+    for (const name of ['Umbral Form', 'Mind Projection', "Allow Me to Introduce Tonight's Players",
+      'Fix It in Post', 'Deleted Scene', 'Verbal Duel', 'Bolstering Banter']) {
+      const out: any = officialOrGenerated(index, 'ability', name, generated);
+      expect(out, name).not.toBe(generated);
+      expect(out.type).toBe('feature');
+    }
+  });
+
+  it("exports the human's Resist the Unnatural as trait plus official granted ability", () => {
+    const c: any = buildValidCharacter({ ancestry: 'human', traits: ['Resist the Unnatural'] });
+    const doc: any = characterToFoundryHero(c, index);
+    const trait = doc.items.find((i: any) => i.type === 'ancestryTrait' && i.name === 'Resist the Unnatural');
+    const ability = doc.items.find((i: any) => i.type === 'ability' && i.name === 'Resist the Unnatural');
+    expect(trait).toBeTruthy();
+    expect(ability).toBeTruthy();
+    expect(ability.img).toMatch(/^(icons|systems|assets)\//);
+    expect(advFlags(ability).parentId).toBe(trait._id);
+  });
+
   it('exports a Censor with official documents embedded', () => {
     const doc: any = characterToFoundryHero(censor(), index);
     const halt = doc.items.find((i: any) => i.name === 'Halt Miscreant!');
@@ -594,26 +806,30 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
   // Fury regression below caught for one class; this pins it for all of them.
   const INTENTIONALLY_GENERATED = new Set([
     'culture :: Culture',                  // aspect-combo cultures (only archetypes are official)
-    'feature :: Domain',                   // chosen-domain summary (censor)
-    'feature :: Domains',                  // chosen-domain summary (conduit)
     'feature :: Discipline Mastery',       // null: summary of the mastery table inside official Discipline
+    // Level-up text the compendium folds into other documents (no doc of their own).
+    'feature :: One',                      // elementalist 10
+    'feature :: Zeitgeist',                // troubadour 7
+    'feature :: Second Album',             // troubadour virtuoso
+    'feature :: Crowd Favorites',          // troubadour virtuoso
   ]);
   // Supplement classes (Summoner, Beastheart) have no compendium docs at all — their
   // whole export is app-generated, so the unmatched check is meaningless for them.
   // The presence assertions below still run. Mirrors SUPPLEMENT_CLASSES in
   // official-fidelity.test.ts, which guards that the compendium still lacks them.
   const SUPPLEMENT_CLASSES = new Set(['summoner', 'beastheart']);
-  it('every class × subclass build exports with zero unexpected unmatched items', () => {
+  it('every class × subclass build exports with zero unexpected unmatched items, at level 1 and 10', () => {
     for (const cls of DS_CLASSES as any[]) {
       const subs = (cls.subclasses || [null]).map((s: any) => s && (s.id || s.name));
-      for (const sub of subs) {
-        const c = buildValidCharacter({ cls: cls.id, subclass: sub });
+      for (const sub of subs) for (const level of [1, 10]) {
+        const c = levelTo(buildValidCharacter({ cls: cls.id, subclass: sub }), level);
         const doc: any = characterToFoundryHero(c, index);
         const unmatched = doc.items
           .filter((i: any) => !/^(icons|systems|assets)\//.test(i.img || ''))
           .map((i: any) => `${i.type} :: ${i.name}`)
           .filter((k: string) => !INTENTIONALLY_GENERATED.has(k));
-        if (!SUPPLEMENT_CLASSES.has(cls.id)) expect(unmatched, `${cls.id}/${sub} unmatched items`).toEqual([]);
+        if (!SUPPLEMENT_CLASSES.has(cls.id)) expect(unmatched, `${cls.id}/${sub} L${level} unmatched items`).toEqual([]);
+        if (level === 1 && !SUPPLEMENT_CLASSES.has(cls.id)) expect(unexpectedGaps(doc, 1), `${cls.id}/${sub} L1 advancement gaps`).toEqual([]);
         // Presence: expected picks must actually appear (a dropped item passes the
         // unmatched check above, so absence has to be pinned separately).
         const names = doc.items.map((i: any) => i.name);
@@ -674,9 +890,12 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     const mm = doc.items.find((i: any) => i.system._dsid === 'minor-miracle');
     expect(mm).toBeTruthy();
     expect(mm.img).toMatch(/^(icons|systems|assets)\//);
-    // Every level-up feature is present, under its own or its official (bare) name.
+    // Every level-up feature is present, under its own or its official (bare) name —
+    // except Characteristic Increase, which the official class carries as an advancement.
     const names = doc.items.map((i: any) => i.name);
+    expect(names).not.toContain('Characteristic Increase');
     for (const f of collectLevelUpFeatures(c)) {
+      if (f.name === 'Characteristic Increase') continue;
       const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
       expect(names.includes(f.name) || names.includes(bare), `level ${f.level} feature ${f.name}`).toBe(true);
     }

@@ -2,9 +2,9 @@
 
 exports[`game data tables > DS_ANCESTRIES is present and unchanged 1`] = `
 {
-  "bytes": 37261,
+  "bytes": 37476,
   "count": 12,
-  "hash": "705c5d53",
+  "hash": "39685217",
 }
 `;
 

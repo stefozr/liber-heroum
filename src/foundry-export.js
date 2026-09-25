@@ -1,15 +1,24 @@
 // foundry-export.js — convert a character into a FoundryVTT actor document importable
-// via the actor sidebar's "Import Data", targeting the Draw Steel system v1.1.x
+// via the actor sidebar's "Import Data", targeting the Draw Steel system 1.1.2
 // (MetaMorphic-Digital/draw-steel, Foundry v14). Pure module: no React, no DOM except
 // downloadJson. Only *persisted* Foundry fields are written — derived values (stamina
-// max, recoveries max, potency) are recomputed by Foundry from the embedded class item.
+// max, recoveries max, potency, characteristic increases) are recomputed by Foundry
+// from the embedded items.
+//
+// Import replaces the hero's whole item list without running item creation hooks, so
+// the file must look like a hero built inside Foundry from the compendium: official
+// documents are embedded with their compendium _id and _stats.compendiumSource, the
+// system's default basic abilities travel along, and the advancement bookkeeping
+// (flags.draw-steel.advancement) that ties grants to their source is filled in.
+// The portrait is embedded as a data: URI — it works, but bloats the world database.
 import {
   classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef,
   computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
+  collectSkillEntries, collectLanguagePicks, charBonusPicksAt,
 } from './app.jsx';
 import { parseKitSig, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
-import { collectLevelUpFeatures } from './levelup.jsx';
+import { collectLevelUpFeatures, LEVELUP_DATA } from './levelup.jsx';
 import { DS_CULTURES } from './data/cultures.js';
 import { DS_SKILL_GROUPS } from './data/skills.js';
 import { parseBlocks, blocksToHtml } from './rich-text.js';
@@ -262,6 +271,14 @@ function officialOrGenerated(index, type, name, generated, ctx = [], level = 1, 
       if (entry) break;
     }
   }
+  if (!entry && type === 'ability') {
+    // And the reverse: Umbral Form, Mind Projection and the Troubadour's performance
+    // abilities are feature documents officially (their ability lives inside).
+    for (const candidate of candidates) {
+      entry = lookupOfficial(index, 'feature', candidate);
+      if (entry) break;
+    }
+  }
   if (!entry) return generated;
 
   let doc = entry;
@@ -274,8 +291,12 @@ function officialOrGenerated(index, type, name, generated, ctx = [], level = 1, 
     }
     doc = best.doc;
   }
+  // The clone keeps its compendium _id and _stats.compendiumSource: Foundry itself
+  // creates hero items from the compendium with keepId, advancement parent links
+  // (flags.draw-steel.advancement.parentId) are by embedded id, and the source UUID
+  // drives the sheet's source link and "Update from compendium". Collisions within
+  // one export are resolved by add() in characterToFoundryHero.
   const clone = JSON.parse(JSON.stringify(doc));
-  clone._id = randomId();
   delete clone._key;
   delete clone.folder;
   if (clone.type === 'class') clone.system.level = level;
@@ -471,8 +492,19 @@ function characterToFoundryHero(c, officialIndex = null) {
 
   // ── embedded items ──
   const items = [];
+  const usedIds = new Set();
   let sort = 0;
-  const add = (item) => { if (item) { item.sort = ++sort * 100; items.push(item); } return item; };
+  const add = (item) => {
+    if (!item) return item;
+    // Official clones keep their compendium _id; two exports of one document (or a
+    // random-id clash) fall back to a fresh id without provenance, so Foundry never
+    // links two embedded items to the same source.
+    if (usedIds.has(item._id)) { item._id = randomId(); delete item._stats; }
+    usedIds.add(item._id);
+    item.sort = ++sort * 100;
+    items.push(item);
+    return item;
+  };
 
   if (cls) {
     const generated = descriptionItem(cls.name, 'class', 0, para(cls.longBlurb || cls.blurb), {
@@ -489,6 +521,11 @@ function characterToFoundryHero(c, officialIndex = null) {
     generated.system._dsid = cls.id;
     add(official('class', cls.name, generated));
   }
+  // Official class documents carry the level-up bookkeeping (characteristic increases,
+  // perk/skill/feature grants) as advancements; several export decisions below hinge
+  // on whether the class resolved officially (Summoner/Beastheart never do).
+  const classItem = items.find(i => i.type === 'class') || null;
+  const classOfficial = !!classItem?._stats?.compendiumSource;
 
   const sub = subDef;
   if (sub) {
@@ -496,6 +533,14 @@ function characterToFoundryHero(c, officialIndex = null) {
       .concat((sub.features || []).map(f => section(f.name, f.text)));
     add(official('subclass', sub.name, descriptionItem(sub.name, 'subclass', 0, parts.join(''))));
   }
+
+  // Chosen domains are official documents carrying the domain skill grant and the
+  // per-level domain feature pools: subclass docs for the Conduit (two domains), feature
+  // docs for the Censor (one). When every chosen domain resolves, the app's
+  // "Domain(s)" summary feature is redundant and skipped below.
+  const domainType = cls?.pickOneDomain ? 'feature' : 'subclass';
+  const domainDocs = (c.cclass?.domains || []).map(d => add(official(domainType, d, null)));
+  const domainsOfficial = domainDocs.length > 0 && domainDocs.every(Boolean);
 
   if (anc) {
     add(official('ancestry', anc.name, descriptionItem(anc.name, 'ancestry', 0, para(anc.desc))));
@@ -533,8 +578,10 @@ function characterToFoundryHero(c, officialIndex = null) {
         upb ? section(`Upbringing — ${upb.name}`, upb.desc) : '',
         cu.language ? para(`Language: ${cu.language}`) : '',
       ].join('');
-      // Only archetype cultures have official counterparts; aspect composites stay generated.
+      // Only archetype cultures have official counterparts; aspect composites stay
+      // generated but carry the same advancement structure so Foundry treats them alike.
       const generated = descriptionItem(cu.archetype || 'Culture', 'culture', 0, html);
+      if (!cu.archetype) generated.system.advancements = compositeCultureAdvancements([env, org, upb]);
       add(cu.archetype ? official('culture', cu.archetype, generated) : generated);
     }
   }
@@ -628,6 +675,7 @@ function characterToFoundryHero(c, officialIndex = null) {
   const seenFeatures = new Set();
   for (const f of (benefits.features || [])) {
     if (f.name === 'Heroic Resource' || f.name === subComposite || expandedComposites.has(f.name)) continue;
+    if (domainsOfficial && (f.name === 'Domain' || f.name === 'Domains')) continue;
     seenFeatures.add(f.name);
     // Domain features arrive as "Creation: Hands of the Maker" — the official
     // items key off the bare name, so try it stripped of the domain prefix too.
@@ -641,6 +689,10 @@ function characterToFoundryHero(c, officialIndex = null) {
   // don't count) — 'Characteristic Increase' style entries recur across levels.
   for (const f of collectLevelUpFeatures(c)) {
     if (seenFeatures.has(f.name)) continue;
+    // The official class document models characteristic increases as advancements
+    // (levels 4/7/10, flagged by applyAdvancements) — the app's summary feature would
+    // only duplicate them as a text item.
+    if (f.name === 'Characteristic Increase' && classOfficial) continue;
     seenFeatures.add(f.name);
     const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
     const names = bare !== f.name ? [f.name, bare] : [f.name];
@@ -684,6 +736,18 @@ function characterToFoundryHero(c, officialIndex = null) {
   }
   for (const kt of [kit, kit2].filter(Boolean)) addAbility(kitSigAbility(kt), 'signature');
 
+  // Every hero owns the system's default basic abilities (Foundry adds them in the
+  // hero's _preCreate hook). Import replaces the whole items array and never runs
+  // that hook, so they must travel in the file or the imported hero has no Free
+  // Strikes, Charge, Defend, Advance, …
+  if (officialIndex) {
+    for (const name of DEFAULT_ABILITIES) {
+      const doc = lookupOfficial(officialIndex, 'ability', name);
+      if (!doc || Array.isArray(doc) || usedIds.has(doc._id)) continue;
+      add(officialOrGenerated(officialIndex, 'ability', name, null));
+    }
+  }
+
   // ── skills / languages ──
   // collectSkillPicks covers class-granted skills, the subclass's fixed skill, and every
   // chosen slot; quickSkills only backfill legacy saves made before the class skill picker.
@@ -700,9 +764,19 @@ function characterToFoundryHero(c, officialIndex = null) {
   const languages = [...new Set([...langNames].map(langId).filter(Boolean))];
 
   // ── actor system ──
+  // Characteristics: when the official class document is embedded, Foundry re-applies
+  // its characteristic advancements (levels 4/7/10, selections flagged below) on top of
+  // the stored scores at data-prep time — so store the level-1 base, not the derived
+  // totals, or every increase counts twice. Generated classes have no advancements and
+  // keep exporting the totals.
+  const hasCharAdvancements = classOfficial
+    && Object.values(classItem.system.advancements || {}).some(a => a.type === 'characteristic');
+  const chars = hasCharAdvancements
+    ? { Might: 0, Agility: 0, Reason: 0, Intuition: 0, Presence: 0, ...(c.cclass?.characteristics || {}) }
+    : derived.chars;
   const system = {
     characteristics: Object.fromEntries(
-      Object.entries(derived.chars).map(([k, v]) => [k.toLowerCase(), { value: v }])),
+      Object.entries(chars).map(([k, v]) => [k.toLowerCase(), { value: v || 0 }])),
     stamina: { value: c.play?.stamina ?? derived.staminaMax, temporary: 0 },
     recoveries: { value: Math.max(0, derived.recoveries - (c.play?.recoveriesUsed || 0)) },
     hero: {
@@ -740,7 +814,7 @@ function characterToFoundryHero(c, officialIndex = null) {
 
   // No prototypeToken: Foundry v14's import validation requires a complete token
   // schema (e.g. texture.depth), so we let Foundry fill its own defaults instead.
-  return {
+  const hero = {
     name,
     type: 'hero',
     img,
@@ -750,6 +824,245 @@ function characterToFoundryHero(c, officialIndex = null) {
     flags: {},
     ownership: { default: 0 },
   };
+  applyAdvancements(hero, c, officialIndex, add);
+  return hero;
+}
+
+// ───────── advancement bookkeeping ─────────
+// Foundry records what each official document granted in flags["draw-steel"].advancement:
+// the granting item stores `<advId>.selected` (pool UUIDs, skill/language ids or
+// characteristic keys) and each granted item stores `{ advancementId, parentId }`.
+// Without them the sheet marks every skill/language advancement as unfilled, level-up
+// and reconfigure cannot find previously granted items, and characteristic increases
+// are silently missing. The picks come from the app's own bookkeeping; anything that
+// cannot be attributed stays in skills.value / biography.languages, which Foundry
+// unions with the advancement selections.
+
+const DS_FLAG = 'draw-steel';
+
+// Basic abilities every hero owns (ds.CONFIG.hero.defaultItems in draw-steel 1.1.2).
+const DEFAULT_ABILITIES = [
+  'Aid Attack', 'Catch Breath', 'Charge', 'Defend', 'Escape Grab', 'Grab', 'Heal', 'Knockback',
+  'Melee Free Strike', 'Ranged Free Strike', 'Stand Up', 'Advance', 'Disengage', 'Ride',
+];
+
+// skill id → groups it belongs to (a few skills sit in two groups).
+const SKILL_GROUPS_OF = {};
+for (const [group, names] of Object.entries(DS_SKILL_GROUPS)) {
+  for (const n of names) (SKILL_GROUPS_OF[skillId(n)] ||= []).push(group);
+}
+
+// Foundry ids are 16 alphanumerics; pad a readable stem deterministically.
+const padId = (stem) => (stem.replace(/[^A-Za-z0-9]/g, '') + '0'.repeat(16)).slice(0, 16);
+
+// Official archetype cultures carry one language advancement plus one skill advancement
+// per aspect (skills.groups from the aspect). Composite cultures get the same shape.
+function compositeCultureAdvancements(aspects) {
+  const advancements = {};
+  const base = (id, type, name, sort) => ({
+    _id: id, type, name, img: null, sort, description: '', requirements: { level: null }, chooseN: 1, repick: {},
+  });
+  const lang = base(padId('cultureLanguage'), 'language', 'Any Language', 0);
+  lang.languages = [];
+  advancements[lang._id] = lang;
+  aspects.filter(Boolean).forEach((a, i) => {
+    const adv = base(padId('cult' + a.id), 'skill', a.name, (i + 1) * 100000);
+    const groups = [...(a.skillGroups || [])];
+    adv.skills = { groups, choices: groups.length ? [] : (a.skills || []).map(skillId) };
+    advancements[adv._id] = adv;
+  });
+  return advancements;
+}
+
+function advancementFlags(item) {
+  item.flags = item.flags || {};
+  item.flags[DS_FLAG] = item.flags[DS_FLAG] || {};
+  item.flags[DS_FLAG].advancement = item.flags[DS_FLAG].advancement || {};
+  return item.flags[DS_FLAG].advancement;
+}
+function setSelected(item, adv, selected) {
+  const flags = advancementFlags(item);
+  flags[adv._id] = { ...(flags[adv._id] || {}), selected };
+}
+
+// Skill ids a skill advancement offers (choices ∪ groups; neither = any skill).
+function skillOptions(adv) {
+  const groups = adv.skills?.groups || [];
+  const choices = adv.skills?.choices || [];
+  if (!groups.length && !choices.length) return FOUNDRY_SKILL_IDS;
+  const out = new Set(choices);
+  for (const [id, gs] of Object.entries(SKILL_GROUPS_OF)) if (gs.some(g => groups.includes(g))) out.add(id);
+  return out;
+}
+
+const ITEM_ORDER = { class: 0, subclass: 1, ancestry: 2, culture: 3, career: 4, complication: 5, kit: 6 };
+
+// `addItem` appends an item to the hero (sort + id bookkeeping): automatic grants whose
+// target the app has no notion of (the Fury's Ferocity feature, the Conduit's Piety)
+// are pulled in from the index exactly as Foundry would grant them at class creation.
+function applyAdvancements(hero, c, index, addItem) {
+  if (!index) return;
+  const level = c.level || 1;
+  const items = hero.items;
+  const cls = classDef(c);
+
+  const indexById = new Map();
+  for (const v of Object.values(index.items || {})) {
+    for (const e of (Array.isArray(v) ? v : [{ doc: v }])) if (e.doc?._id) indexById.set(e.doc._id, e.doc);
+  }
+  const byUuid = new Map();
+  for (const it of items) if (it._stats?.compendiumSource) byUuid.set(it._stats.compendiumSource, it);
+  const pullIn = (uuid) => {
+    const doc = indexById.get(uuid.split('.').pop());
+    if (!doc) return null;
+    const clone = JSON.parse(JSON.stringify(doc));
+    delete clone._key;
+    delete clone.folder;
+    addItem(clone);
+    if (clone._stats?.compendiumSource) byUuid.set(clone._stats.compendiumSource, clone);
+    return clone;
+  };
+  const byType = (type) => items.filter(i => i.type === type);
+  const findItem = (type, name) => byType(type).find(i => dsid(i.name) === dsid(name)) || null;
+  const classItem = byType('class')[0] || null;
+  const careerItem = byType('career')[0] || null;
+  const cultureItem = byType('culture')[0] || null;
+  const compItem = byType('complication')[0] || null;
+
+  // A granted item belongs to exactly one advancement; parents are processed first so
+  // the class claims its subclass before a sibling pool could.
+  const claimed = new Set();
+  const claim = (target, parent, adv) => {
+    if (target === parent || claimed.has(target._id)) return false;
+    claimed.add(target._id);
+    Object.assign(advancementFlags(target), { advancementId: adv._id, parentId: parent._id });
+    return true;
+  };
+  const reached = (adv) => adv.requirements?.level == null || adv.requirements.level <= level;
+  const advLevel = (adv) => adv.requirements?.level ?? 1;
+
+  // ── app-side picks, attributed to the exported document that grants them ──
+  const cu = c.culture || {};
+  const aspectName = (list, id) => (list || []).find(x => x.id === id || x.name === id)?.name || null;
+  const cultureAspects = {
+    environment: aspectName(DS_CULTURES.environments, cu.environment),
+    organization: aspectName(DS_CULTURES.organizations, cu.organization),
+    upbringing: aspectName(DS_CULTURES.upbringings, cu.upbringing),
+  };
+  // '*' = unattributed pick, offered to any document's unfilled advancement (reusable,
+  // since the same skill may be listed by both a domain and its feature).
+  const skillOwner = (key) => {
+    let m;
+    if (key === 'class') return { item: classItem, level: 1 };
+    if (key === 'domain') return { item: '*' };
+    if ((m = key.match(/^lvl:(\d+):/))) return { item: classItem, level: +m[1] };
+    if (key === 'career') return { item: careerItem };
+    if ((m = key.match(/^culture:(.+)$/))) return { item: cultureItem, aspect: cultureAspects[m[1]] || null };
+    if (key.startsWith('comp:')) return { item: compItem };
+    if ((m = key.match(/^(?:sig|trait):(.+)$/))) return { item: findItem('ancestryTrait', m[1]) };
+    return null;
+  };
+  const skillPicks = collectSkillEntries(c)
+    .filter(e => e.kind === 'pick')
+    .map(e => ({ id: skillId(e.name), owner: skillOwner(e.key), used: false }))
+    .filter(e => e.owner?.item);
+
+  const langOwner = { culture: cultureItem, career: careerItem, complication: compItem };
+  const langPicks = collectLanguagePicks(c)
+    .map(p => ({ id: langId(p.name), item: langOwner[p.key] || null, used: false }))
+    .filter(p => p.id && p.item);
+
+  const perkOwner = (key) => {
+    let m;
+    if (key === 'career') return { item: careerItem };
+    if ((m = key.match(/^lvl:(\d+):/))) return { item: classItem, level: +m[1] };
+    return null;
+  };
+  const perkPicks = collectPerkPicks(c)
+    .map(p => ({ item: findItem('perk', p.name), owner: perkOwner(p.key) }))
+    .filter(p => p.item?._stats && p.owner?.item);
+
+  // Items pulled in by automatic grants join the end of the queue (they may grant too).
+  const queue = [...items].sort((a, b) => (ITEM_ORDER[a.type] ?? 9) - (ITEM_ORDER[b.type] ?? 9));
+  for (let qi = 0; qi < queue.length; qi++) {
+    const item = queue[qi];
+    // Level order first: a feature listed in both the level-4 and level-5 pools must be
+    // claimed by the level it was actually gained at.
+    const advs = Object.values(item.system?.advancements || {})
+      .filter(reached)
+      .sort((a, b) => (advLevel(a) - advLevel(b)) || ((a.sort || 0) - (b.sort || 0)));
+    for (const adv of advs) {
+      const levelMatches = (owner) => item !== classItem || owner.level === advLevel(adv);
+      const take = (n, cands) => (n == null ? cands : cands.slice(0, n));
+
+      if (adv.type === 'itemGrant') {
+        const selected = [];
+        if (adv.pool?.length) {
+          for (const { uuid } of adv.pool) {
+            let target = byUuid.get(uuid);
+            if (!target && adv.chooseN == null) {
+              target = pullIn(uuid);
+              if (target) queue.push(target);
+            }
+            if (target && claim(target, item, adv)) selected.push(uuid);
+          }
+        } else if (adv.additional?.type === 'perk') {
+          const cands = perkPicks.filter(p => p.owner.item === item && levelMatches(p.owner) && !claimed.has(p.item._id));
+          for (const p of take(adv.chooseN, cands)) if (claim(p.item, item, adv)) selected.push(p.item._stats.compendiumSource);
+        } else if (adv.additional?.type === 'kit') {
+          const cands = byType('kit').filter(k => k._stats && !claimed.has(k._id));
+          for (const k of take(adv.chooseN, cands)) if (claim(k, item, adv)) selected.push(k._stats.compendiumSource);
+        }
+        if (selected.length) setSelected(item, adv, selected);
+      } else if (adv.type === 'language') {
+        if (adv.chooseN == null) continue;
+        const allowed = adv.languages?.length ? new Set(adv.languages) : null;
+        const cands = langPicks.filter(p => !p.used && p.item === item && (!allowed || allowed.has(p.id)));
+        const chosen = take(adv.chooseN, cands);
+        chosen.forEach(p => { p.used = true; });
+        if (chosen.length) setSelected(item, adv, chosen.map(p => p.id));
+      } else if (adv.type === 'characteristic' && item === classItem) {
+        // Guaranteed keys (1) are always selected; a choosable key (0) comes from the
+        // app's char-bonus pick at that level.
+        const entries = Object.entries(adv.characteristics || {});
+        const guaranteed = entries.filter(([, v]) => v === 1).map(([k]) => k);
+        const choosable = new Set(entries.filter(([, v]) => v === 0).map(([k]) => k));
+        const data = cls && LEVELUP_DATA[cls.id]?.[advLevel(adv)];
+        const picks = data
+          ? charBonusPicksAt(data, c, advLevel(adv)).map(p => p.key.toLowerCase()).filter(k => choosable.has(k))
+          : [];
+        setSelected(item, adv, [...guaranteed, ...picks]);
+      }
+    }
+  }
+
+  // Skills last, most constrained advancement first: the app stores a subclass's skill
+  // among the class picks, and a "choose one lore skill" must not lose it to the
+  // class's broader "choose two from interpersonal or lore" going first.
+  const skillAdvs = [];
+  for (const item of queue) {
+    for (const adv of Object.values(item.system?.advancements || {})) {
+      if (adv.type !== 'skill' || !reached(adv)) continue;
+      const options = skillOptions(adv);
+      // Fixed grants (chooseN ≥ options) are applied by Foundry without a selection.
+      if (adv.chooseN == null || adv.chooseN >= options.size) continue;
+      skillAdvs.push({ item, adv, options });
+    }
+  }
+  skillAdvs.sort((a, b) => a.options.size - b.options.size);
+  for (const { item, adv, options } of skillAdvs) {
+    const eligible = (p) => {
+      if (p.owner.item === item) return item !== classItem || p.owner.level === advLevel(adv);
+      // Level-1 class picks also serve the subclass's own skill advancement.
+      return p.owner.item === classItem && p.owner.level === 1 && item.type === 'subclass';
+    };
+    const owned = skillPicks.filter(p => !p.used && options.has(p.id) && eligible(p)
+      && (item !== cultureItem || !p.owner.aspect || p.owner.aspect === adv.name));
+    const wild = skillPicks.filter(p => p.owner.item === '*' && options.has(p.id));
+    const chosen = [...owned, ...wild].slice(0, adv.chooseN);
+    chosen.forEach(p => { if (p.owner.item !== '*') p.used = true; });
+    if (chosen.length) setSelected(item, adv, chosen.map(p => p.id));
+  }
 }
 
 // ───────── download helper ─────────
