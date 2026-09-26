@@ -77,6 +77,33 @@ function shouldSkipRealtimeMerge(rowId, activeId, pendingId, inFlightId) {
   return rowId === activeId && (rowId === pendingId || rowId === inFlightId);
 }
 
+// A row whose data blob never arrived — only the column fields (id, owner, status,
+// level…) are present. Realtime does this for rows over 1 MiB (see backend.jsx
+// subscribeCharacters); such a row is never merged into state, because it would
+// render blank and, on the next edit, be saved back over the real hero. Exported
+// for unit testing.
+const CORE_SECTIONS = ['ancestry', 'career', 'cclass'];
+function isHollowHero(c) {
+  return !c || CORE_SECTIONS.every(k => !c[k]);
+}
+
+// Fill in any top-level section a stored hero lacks, so every screen can read
+// c.career.id, c.cclass.subclass and friends without guards. Identity-preserving
+// when nothing is missing. Exported for unit testing.
+const SHAPE_SECTIONS = ['ancestry', 'culture', 'career', 'cclass', 'kit', 'kit2', 'complication', 'identity', 'levelChoices', 'play'];
+function ensureShape(c) {
+  if (!c) return c;
+  let out = c;
+  let defaults = null;
+  for (const k of SHAPE_SECTIONS) {
+    if (out[k] != null) continue;
+    if (!defaults) defaults = newCharacter();
+    if (out === c) out = { ...c };
+    out[k] = defaults[k];
+  }
+  return out;
+}
+
 function uid() {
   return 'c' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 }
@@ -132,12 +159,14 @@ function newCharacter(ownerId = null, campaignId = null) {
 }
 
 // ───────── Derived stats ─────────
-function classDef(c) { return c.cclass.id ? DS_CLASSES.find(x => x.id === c.cclass.id) : null; }
-function ancestryDef(c) { return c.ancestry.id ? DS_ANCESTRIES.find(x => x.id === c.ancestry.id) : null; }
-function kitDef(c) { return c.kit.id ? DS_KITS.find(x => x.id === c.kit.id) : null; }
+// Sections are read optionally: a hero should always have them (ensureShape runs
+// on everything loaded), but a lookup must never be what blanks the whole app.
+function classDef(c) { return c.cclass?.id ? DS_CLASSES.find(x => x.id === c.cclass.id) : null; }
+function ancestryDef(c) { return c.ancestry?.id ? DS_ANCESTRIES.find(x => x.id === c.ancestry.id) : null; }
+function kitDef(c) { return c.kit?.id ? DS_KITS.find(x => x.id === c.kit.id) : null; }
 function kit2Def(c) { return c.kit2?.id ? DS_KITS.find(x => x.id === c.kit2.id) : null; }
-function careerDef(c) { return c.career.id ? DS_CAREERS.find(x => x.id === c.career.id) : null; }
-function complicationDef(c) { return c.complication.id ? DS_COMPLICATIONS.find(x => x.id === c.complication.id) : null; }
+function careerDef(c) { return c.career?.id ? DS_CAREERS.find(x => x.id === c.career.id) : null; }
+function complicationDef(c) { return c.complication?.id ? DS_COMPLICATIONS.find(x => x.id === c.complication.id) : null; }
 
 // ───────── Characteristic level bonuses (derived, never baked into the point-buy) ─────────
 // The wizard's point-buy lives in c.cclass.characteristics as the level-1 base. Level-up
@@ -437,7 +466,7 @@ function App() {
   const refreshStore = useCallback(async () => {
     const { profiles, characters: chs, campaigns: cps } = await DS.loadAll();
     setUsers(profiles);
-    setCharacters(chs.map(c => normalizeSkills(normalizeLanguages(migrateCharacterChars(c)))));
+    setCharacters(chs.map(normalizeLoaded));
     setCampaigns(cps);
   }, []);
 
@@ -472,13 +501,17 @@ function App() {
   // else — including the open sheet while idle — is applied, which is what lets two
   // members share a public hero live. (An own-save echo arriving while idle re-applies
   // identical content: a no-op.) Truly simultaneous edits remain last-write-wins.
+  // A hollow row (its data blob missing — see isHollowHero) is ignored outright:
+  // the backend already refetches oversized rows, so this is the last line of
+  // defence against replacing a real hero with an empty shell.
   useEffect(() => {
     if (booting || !currentUser || !currentUser.isAllowed) return;
     const off = DS.subscribeCharacters(
       (row) => setCharacters(prev => {
+        if (isHollowHero(row)) return prev;
         if (shouldSkipRealtimeMerge(row.id, activeIdRef.current,
               pendingSave.current ? pendingSave.current.id : null, inFlightSaveId.current)) return prev;
-        const merged = normalizeSkills(normalizeLanguages(migrateCharacterChars(row)));
+        const merged = normalizeLoaded(row);
         const i = prev.findIndex(c => c.id === row.id);
         return i === -1 ? [...prev, merged] : prev.map(c => (c.id === row.id ? merged : c));
       }),
@@ -594,6 +627,35 @@ function App() {
       return next;
     }));
   }, [activeId, queueSave]);
+
+  // ── one-time migration: inline portraits → Storage ──
+  // Portraits used to be kept in the hero blob as base64 data URLs, which can push
+  // the row past Realtime's 1 MiB record cap and break live sync for that hero
+  // (see backend.jsx subscribeCharacters). The first time such a hero is opened by
+  // someone who may edit it, the image is uploaded to the portraits bucket and the
+  // blob keeps only the URL. The write goes through updateActive, so it is skipped
+  // if the user has moved to another hero by the time the upload finishes — the
+  // hero simply migrates on its next open.
+  const migratingPortraits = React.useRef(new Set());
+  useEffect(() => {
+    const ch = active;
+    if (!ch || typeof ch.portrait !== 'string' || !ch.portrait.startsWith('data:')) return;
+    if (!canEditCharacter(ch) || migratingPortraits.current.has(ch.id)) return;
+    migratingPortraits.current.add(ch.id);
+    const inline = ch.portrait;
+    (async () => {
+      try {
+        const blob = await (await fetch(inline)).blob();
+        const url = await DS.uploadPortrait(blob);
+        if (activeIdRef.current !== ch.id) return;
+        updateActive(c => (c.portrait === inline ? { ...c, portrait: url } : c));
+      } catch (e) {
+        console.warn('Portrait migration failed; the hero keeps its inline portrait for now', e);
+      } finally {
+        migratingPortraits.current.delete(ch.id);
+      }
+    })();
+  }, [active, canEditCharacter, updateActive]);
 
   const createCharacter = useCallback((campaignId = null, back = { view: 'roster' }) => {
     if (!currentUser) return;
@@ -765,9 +827,10 @@ function App() {
       setCharacters(prev => {
         let next = prev;
         for (const row of party.characters) {
+          if (isHollowHero(row)) continue;
           if (shouldSkipRealtimeMerge(row.id, activeIdRef.current,
                 pendingSave.current ? pendingSave.current.id : null, inFlightSaveId.current)) continue;
-          const merged = normalizeSkills(normalizeLanguages(migrateCharacterChars(row)));
+          const merged = normalizeLoaded(row);
           const i = next.findIndex(c => c.id === row.id);
           next = i === -1 ? [...next, merged] : next.map(c => (c.id === row.id ? merged : c));
         }
@@ -1522,6 +1585,14 @@ function normalizeSkills(c) {
   }
 }
 
+// Everything a hero from the store passes through before it reaches state: fill
+// missing sections, then the one-time migrations and repair passes above. The
+// boot load applies it to hollow rows too (a hero the DB itself holds hollow can
+// only be rendered by filling it); the live merges drop hollow rows first.
+function normalizeLoaded(c) {
+  return normalizeSkills(normalizeLanguages(migrateCharacterChars(ensureShape(c))));
+}
+
 // Expose helpers globally for other files
 Object.assign(window, {
   newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived,
@@ -1535,6 +1606,6 @@ export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectSkillEntries, duplicateSkillPicks, normalizeSkills, charBonusPicksAt };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
-export { canEditCharacterFor, canSetVisibilityFor, shouldSkipRealtimeMerge };
+export { canEditCharacterFor, canSetVisibilityFor, shouldSkipRealtimeMerge, isHollowHero, ensureShape, normalizeLoaded };
 export { parseHash, navToHash };
 export { App };

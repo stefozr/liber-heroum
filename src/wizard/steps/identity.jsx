@@ -5,20 +5,61 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, Pill, Tag, Button, IconButton
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import { DS } from '../../backend.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+// Shrink a chosen image to at most MAX_EDGE px on its long edge before upload:
+// a phone photo is several MB and the sheet shows it at 96px. Falls back to the
+// original file when the canvas path is unavailable (jsdom) or anything fails.
+const MAX_EDGE = 1024;
+async function shrinkImage(file) {
+  if (typeof createImageBitmap !== 'function' || typeof document === 'undefined') return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.size < 400 * 1024) { bmp.close?.(); return file; }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close?.();
+    const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise(res => canvas.toBlob(res, type, 0.88));
+    return blob || file;
+  } catch {
+    return file;
+  }
+}
 
 function IdentityStep({ character, update }) {
   const id = character.identity || {};
   const setF = (k, v) => update(c => ({ ...c, identity: { ...c.identity, [k]: v }, name: k === 'name' ? v : c.name }));
   const fileRef = React.useRef(null);
   const [dragOver, setDragOver] = React.useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
-  const readImage = (file) => {
-    if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => update(c => ({ ...c, portrait: e.target.result }));
-    reader.readAsDataURL(file);
+  // The portrait is uploaded to Storage and only its URL is kept on the hero.
+  // Storing the image inline (a base64 data URL) used to push the row past
+  // Realtime's 1 MiB record cap and break live sync for that hero — see
+  // backend.jsx subscribeCharacters.
+  const readImage = async (file) => {
+    if (!file || !file.type.startsWith('image/') || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const blob = await shrinkImage(file);
+      const url = await DS.uploadPortrait(blob);
+      update(c => ({ ...c, portrait: url }));
+    } catch (e) {
+      console.error('Portrait upload failed', e);
+      setUploadError('The portrait could not be uploaded. Try again in a moment.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -40,12 +81,12 @@ function IdentityStep({ character, update }) {
             {character.portrait ? (
               <>
                 <img src={character.portrait} alt="Portrait" />
-                <div className="portrait-overlay">Replace portrait</div>
+                <div className="portrait-overlay">{uploading ? 'Uploading…' : 'Replace portrait'}</div>
               </>
             ) : (
               <div className="portrait-empty">
                 <span className="glyph">✠</span>
-                Upload<br/>portrait
+                {uploading ? 'Uploading…' : <>Upload<br/>portrait</>}
               </div>
             )}
             <input
@@ -53,12 +94,17 @@ function IdentityStep({ character, update }) {
               type="file"
               accept="image/*"
               style={{display:'none'}}
-              onChange={(e) => readImage(e.target.files && e.target.files[0])}
+              onChange={(e) => { readImage(e.target.files && e.target.files[0]); e.target.value = ''; }}
             />
           </div>
           {character.portrait && (
             <div className="portrait-actions">
               <button className="portrait-clear" onClick={() => update(c => ({ ...c, portrait: '' }))}>Remove</button>
+            </div>
+          )}
+          {uploadError && (
+            <div role="alert" style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize:'0.8125rem', color:'var(--rubric-2)', marginTop:6}}>
+              {uploadError}
             </div>
           )}
         </div>

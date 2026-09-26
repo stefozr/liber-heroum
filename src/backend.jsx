@@ -238,18 +238,46 @@ async function deleteCharacter(id) {
   if (error) throw new Error(error.message);
 }
 
+// One hero row by id, hydrated — or null when it doesn't exist / isn't visible.
+async function fetchCharacter(id) {
+  const { data, error } = await supabase.from('characters').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? hydrateChar(data) : null;
+}
+
+// Supabase Realtime caps a change record at max_record_bytes (1 MiB). Past that,
+// WALRUS keeps only the columns whose value is ≤ 64 bytes and sets
+// errors: ['Error 413: Payload Too Large'] — so a hero whose blob is big (an inline
+// base64 portrait, historically) arrives with id/owner/status/level but no `data`.
+// Such a payload must never be hydrated as-is: the hollow hero would blank every
+// screen that reads c.career / c.cclass, and the next edit would save it back over
+// the real row. Exported for unit testing.
+function isTruncatedPayload(payload) {
+  if (!payload) return true;
+  if (Array.isArray(payload.errors) && payload.errors.length) return true;
+  const rec = payload.new;
+  return !rec || rec.data == null || typeof rec.data !== 'object';
+}
+
 // Live sync: stream every characters change this client is allowed to SEE (RLS scopes
 // postgres_changes to rows the authenticated user can SELECT — own + shared-campaign
 // heroes). onUpsert(hydrated) fires for INSERT/UPDATE, onDelete(id) for DELETE. Returns
 // an unsubscribe function. Requires the table to be in the supabase_realtime publication
-// (see supabase/migration.sql).
+// (see supabase/migration.sql). A truncated payload (see isTruncatedPayload) is
+// replaced by a fresh read of the row; if that fails the event is dropped.
 function subscribeCharacters(onUpsert, onDelete) {
   const channel = supabase
     .channel('characters-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'characters' }, (payload) => {
       if (payload.eventType === 'DELETE') {
         if (payload.old && payload.old.id) onDelete(payload.old.id);
-      } else if (payload.new) {
+      } else if (isTruncatedPayload(payload)) {
+        const id = payload.new && payload.new.id;
+        if (!id) return;
+        fetchCharacter(id)
+          .then(row => { if (row) onUpsert(row); })
+          .catch(e => console.warn('Realtime: could not refetch oversized hero row', id, e));
+      } else {
         onUpsert(hydrateChar(payload.new));
       }
     })
@@ -257,12 +285,18 @@ function subscribeCharacters(onUpsert, onDelete) {
   return () => { supabase.removeChannel(channel); };
 }
 
+// Portraits live in the public `portraits` bucket under <uid>/ (RLS: only the
+// owner may write there). Accepts a File or a bare Blob (the inline-portrait
+// migration hands over a Blob with no name), returning the public URL to store
+// on the hero — never the image bytes themselves.
+const EXT_BY_TYPE = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 async function uploadPortrait(file) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in.');
-  const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : 'png';
+  const named = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : null;
+  const ext = named || EXT_BY_TYPE[file.type] || 'png';
   const path = `${user.id}/${uid('p')}.${ext}`;
-  const { error } = await supabase.storage.from('portraits').upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from('portraits').upload(path, file, { upsert: true, contentType: file.type || undefined });
   if (error) throw new Error(error.message);
   const { data } = supabase.storage.from('portraits').getPublicUrl(path);
   return data.publicUrl;
@@ -357,10 +391,10 @@ const DS = {
   init, onAuthChange,
   signInWithProvider, signOut, setDisplayName,
   loadAll,
-  upsertCharacter, upsertCharacterKeepalive, deleteCharacter, subscribeCharacters, uploadPortrait,
+  upsertCharacter, upsertCharacterKeepalive, deleteCharacter, fetchCharacter, subscribeCharacters, uploadPortrait,
   createCampaign, joinByCode, loadCampaignParty, updateCampaign, regenInviteCode,
   leaveCampaign, removeMember, releaseHero, disbandCampaign,
 };
 
 if (typeof window !== 'undefined') window.DS = DS;
-export { DS };
+export { DS, isTruncatedPayload, hydrateChar };

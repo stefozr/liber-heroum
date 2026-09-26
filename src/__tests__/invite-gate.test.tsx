@@ -30,6 +30,8 @@ const mockDS = vi.hoisted(() => {
     setDisplayName: vi.fn(),
     upsertCharacter: vi.fn(async () => {}),
     upsertCharacterKeepalive: vi.fn(),
+    fetchCharacter: vi.fn(async () => null),
+    uploadPortrait: vi.fn(async () => 'https://example.test/p.png'),
     deleteCharacter: vi.fn(async () => {}),
     createCampaign: vi.fn(),
     joinByCode: vi.fn(),

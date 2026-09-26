@@ -10,7 +10,9 @@
 // documents are embedded with their compendium _id and _stats.compendiumSource, the
 // system's default basic abilities travel along, and the advancement bookkeeping
 // (flags.draw-steel.advancement) that ties grants to their source is filled in.
-// The portrait is embedded as a data: URI — it works, but bloats the world database.
+// The portrait travels as whatever the hero stores — normally its Storage URL, which
+// Foundry loads as an external image; a legacy inline data: URI still works but bloats
+// the world database.
 import {
   classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef,
   computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
