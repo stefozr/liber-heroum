@@ -415,6 +415,7 @@ function ClassSubclassPicker({ character, update }) {
                     <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
                     <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(f.text)}</div>
+                    {f.ability && <div style={{marginTop:10}}><AbilityCard ability={f.ability} kind="sig" /></div>}
                   </SelCard>
                 );
               })}
@@ -650,6 +651,10 @@ function CensorDomainPicker({ character, update }) {
             <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{chosen}</div>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{curFeature.name}</div>
             <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(curFeature.text)}</div>
+            {(() => {
+              const granted = (window.CENSOR_DOMAIN_1 || window.DOMAIN_1ST_FEATURES || {})[chosen]?.ability;
+              return granted ? <div style={{marginTop:10}}><AbilityCard ability={granted} kind="sig" /></div> : null;
+            })()}
           </div>
 
           {curFeature.skillGroup && (() => {

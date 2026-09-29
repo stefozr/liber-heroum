@@ -12,7 +12,8 @@ import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
 import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills } from './wizard/helpers.js';
-import { LEVELUP_DATA } from './levelup.jsx';
+import { LEVELUP_DATA, CENSOR_DOMAIN_1 } from './levelup.jsx';
+import { DOMAIN_1ST_FEATURES } from './data/conduit-domains.js';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
 
 const { useState, useEffect, useMemo, useReducer, useCallback } = React;
@@ -744,6 +745,14 @@ function App() {
     setView(target);
   }, [flushSave]);
 
+  // The top-bar brand/mark on the hero screens: always the roster, the landing
+  // screen — unlike goBackFromHero, which returns to a campaign when it came from one.
+  const goHome = useCallback(() => {
+    flushSave();
+    setActiveCampaignId(null);
+    setView('roster');
+  }, [flushSave]);
+
   const openCampaign = useCallback((id) => { setActiveCampaignId(id); setView('campaign'); }, []);
 
   // ── deep-link resolution ──
@@ -1045,6 +1054,7 @@ function App() {
             update={updateActive}
             saveState={saveState}
             onExit={goBackFromHero}
+            onHome={goHome}
             onComplete={(isComplete = true) => {
               if (isComplete) {
                 updateActive(c => ({ ...c, status: 'complete' }));
@@ -1066,6 +1076,7 @@ function App() {
                 character={active}
                 update={editable ? updateActive : NOOP_UPDATE}
                 onExit={goBackFromHero}
+                onHome={goHome}
                 exitLabel={backView && backView.view === 'campaign' ? '◂ CAMPAIGN' : '◂ ROSTER'}
                 onEdit={editable ? () => setView('wizard') : null}
                 canEdit={editable}
@@ -1164,6 +1175,20 @@ function applyDistanceBonuses(a, bonuses) {
 }
 
 // ───────── Summarise benefits (skills / languages / perks / class features) ─────────
+// The 1st-level domain feature's granted ability, from the class's own table
+// (the Censor's copies are Presence-keyed variants of the Conduit's).
+function domainFeatureAbility(cls, domain) {
+  const table = cls?.id === 'censor' ? CENSOR_DOMAIN_1 : DOMAIN_1ST_FEATURES;
+  return table?.[domain]?.ability || null;
+}
+
+// The class feature that explains the heroic resource — how it is gained, spent
+// and lost. Named for the resource ("Focus"), or leads with it ("Clarity and Strain").
+function resourceFeature(cls) {
+  if (!cls?.resource) return null;
+  return (cls.features || []).find(f => f.name === cls.resource || f.name.startsWith(cls.resource + ' ')) || null;
+}
+
 function summarizeBenefits(c) {
   const cls = classDef(c);
   const anc = ancestryDef(c);
@@ -1255,7 +1280,6 @@ function summarizeBenefits(c) {
   const features = [];
   const classAbilities = [];
   if (cls) {
-    features.push({ name: 'Heroic Resource', text: cls.resource });
     if (cls.features?.length) {
       for (const f of cls.features) {
         if (f.ability) {
@@ -1317,6 +1341,11 @@ function summarizeBenefits(c) {
     if (c.cclass?.domainFeature) {
       const df = c.cclass.domainFeature;
       features.push({ name: `${df.domain}: ${df.name}`, text: df.text });
+      // The ability some 1st-level domain features grant (Hands of the Maker,
+      // Grave Speech, Faithful Friend). Resolved from the table rather than the
+      // stored pick, which holds only the feature's name and text.
+      const granted = domainFeatureAbility(cls, df.domain);
+      if (granted && !classAbilities.some(a => a.name === granted.name)) classAbilities.push(granted);
     }
   }
 
@@ -1601,7 +1630,7 @@ Object.assign(window, {
   collectLanguagePicks, languagesTakenExcept, normalizeLanguages,
   collectDistanceBonuses, applyDistanceBonuses,
 });
-export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions };
+export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, resourceFeature, domainFeatureAbility };
 export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectSkillEntries, duplicateSkillPicks, normalizeSkills, charBonusPicksAt };

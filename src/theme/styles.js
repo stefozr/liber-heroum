@@ -578,6 +578,14 @@ body[data-theme="obsidian"] { -webkit-tap-highlight-color: rgba(176,138,72,0.15)
    would widen its column and ride under the right-side buttons. */
 .topbar > * { min-width: 0; }
 .tb-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* The mark + brand double as the way home (TopBar's onHome), so they carry a
+   button reset; hover lifts the brand to gold like the other links. */
+.tb-home {
+  appearance: none; -webkit-appearance: none; background: transparent;
+  border: 0; padding: 0; margin: 0; cursor: pointer; color: inherit; font: inherit; text-align: left;
+}
+.tb-home:hover .tb-brand { color: var(--gold); }
+.tb-home:hover .tb-mark-box { border-color: var(--gold-2); color: var(--gold-2); }
 .tb-mark { flex-shrink: 0; }
 .tb-mark-box {
   width: 36px; height: 36px; display: grid; place-items: center;

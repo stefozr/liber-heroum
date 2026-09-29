@@ -267,3 +267,11 @@ describe('deleteLevelProgression', () => {
     expect(JSON.stringify(at3)).toBe(frozen);
   });
 });
+
+describe('shadow Night Watch', () => {
+  it('level 4 grants the Night Watch triggered ability its feature promises', () => {
+    const at4 = levelTo(buildValidCharacter({ cls: 'shadow' }), 4);
+    const names = (at4.cclass.levelAbilities[4] || []).map((a: any) => a.name);
+    expect(names).toContain('Night Watch');
+  });
+});

@@ -75,6 +75,24 @@ function SheetStyles() {
 // Ancestry signature traits + purchased traits, in full (text, costs, choices).
 // `interactive` keeps the option <select> live (Play); off, choices render as
 // static text (Review — the picks were made in earlier wizard steps).
+// The abilities a trait or signature grants — the "you have the following
+// ability" its text promises. A choice-bearing trait (Psionic Gift) contributes
+// only what was chosen, so an unresolved definition (no `chosen`) shows nothing.
+function traitAbilities(t) {
+  if (!t?.abilities?.length) return [];
+  if (t.optionChoice) return t.abilities.filter(a => (t.chosen || []).includes(a.name));
+  return t.abilities;
+}
+function TraitAbilityCards({ trait }) {
+  const list = traitAbilities(trait);
+  if (!list.length) return null;
+  return (
+    <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+      {list.map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
+    </div>
+  );
+}
+
 function AncestryTraitsList({ character, update, interactive = false }) {
   const anc = DS_ANCESTRIES.find(a => a.id === character?.ancestry?.id);
   if (!anc) return null;
@@ -111,6 +129,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
               </>
             );
           })()}
+          <TraitAbilityCards trait={{ ...sig, chosen: (character.ancestry.sigOptions || {})[sig.name] || [] }} />
         </div>
       ))}
       {resolvedAncestryTraits(character).map((t, i) => (
@@ -125,6 +144,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
               {t.choiceLabel}: <b>{t.chosen.join(', ')}</b>
             </div>
           )}
+          <TraitAbilityCards trait={t} />
         </div>
       ))}
     </>
@@ -261,4 +281,4 @@ function StatblockCard({ block, costLabel, level, staminaNote, children }) {
   );
 }
 
-export { SHEET_CSS, SheetStyles, AncestryTraitsList, KitDetails, StatblockCard };
+export { SHEET_CSS, SheetStyles, AncestryTraitsList, KitDetails, StatblockCard, TraitAbilityCards, traitAbilities };

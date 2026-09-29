@@ -727,3 +727,37 @@ describe('PlayView sheet tabs', () => {
     expect(rows[1].querySelectorAll('.prog-pick-text').length).toBeGreaterThan(0);
   });
 });
+
+describe('granted abilities and resource rules on the sheet', () => {
+  const count = (text: string, needle: string) => text.split(needle).length - 1;
+
+  it('revenant Vengeance Mark shows Detonate Sigil under the trait as well as in Abilities', () => {
+    const c = completedCharacter();
+    c.ancestry.id = 'revenant';
+    c.ancestry.traits = ['Vengeance Mark'];
+    const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
+    expect(count(container.textContent!, 'A magic sigil you placed on a creature explodes')).toBeGreaterThanOrEqual(2);
+  });
+
+  it('stripped-of-rank shows Issue Order under the complication as well as in Abilities', () => {
+    const c = completedCharacter();
+    c.complication.id = 'stripped-of-rank';
+    const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
+    expect(count(container.textContent!, 'Move or die, folks.')).toBeGreaterThanOrEqual(2);
+  });
+
+  it('explains how the heroic resource is gained next to the abilities', () => {
+    const c = completedCharacter();
+    c.cclass.id = 'fury';
+    const { container, getByText } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
+    fireEvent.click(getByText('Ferocity — How You Gain It'));
+    expect(container.textContent).toContain('you gain 1d3 ferocity');
+  });
+
+  it('the top-bar dice and brand return home when asked', () => {
+    const onHome = vi.fn();
+    const { getByRole } = render(<PlayView character={completedCharacter()} update={noop} onExit={noop} onEdit={noop} onHome={onHome} />);
+    fireEvent.click(getByRole('button', { name: 'Home' }));
+    expect(onHome).toHaveBeenCalledTimes(1);
+  });
+});

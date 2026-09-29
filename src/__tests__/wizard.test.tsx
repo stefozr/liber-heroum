@@ -723,3 +723,38 @@ describe('stepIssues', () => {
     expect(latest().wizardStep).toBe(CLASS_STEP);
   });
 });
+
+describe('granted abilities show on the option that promises them', () => {
+  const ancestryStep = DS_STEPS.findIndex((s: any) => /ancestry/i.test(s.id));
+  const compStep = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
+
+  it('revenant Vengeance Mark card carries the Detonate Sigil ability', () => {
+    const c = sampleCharacter(ancestryStep);
+    c.ancestry.id = 'revenant';
+    c.ancestry.traits = ['Vengeance Mark'];
+    const { container } = render(<Wizard character={c} update={noop} onExit={noop} onComplete={noop} />);
+    expect(container.textContent).toContain('Detonate Sigil');
+    expect(container.textContent).toContain('A magic sigil you placed on a creature explodes');
+  });
+
+  it('complication cards show their granted ability before any pick', () => {
+    const c = sampleCharacter(compStep);
+    c.complication.id = null;
+    const { container } = render(<Wizard character={c} update={noop} onExit={noop} onComplete={noop} />);
+    expect(container.textContent).toContain('Issue Order');
+    expect(container.textContent).toContain('Move or die, folks.');
+  });
+
+  it('conduit domain feature card shows the Hands of the Maker ability', () => {
+    const c = atStep(CLASS_STEP, { cls: 'conduit', domains: ['Creation', 'Death'] });
+    const { container } = renderWizard(c);
+    expect(container.textContent).toContain('You craft objects with the power of your mind.');
+  });
+
+  it('the top-bar brand returns home when asked', () => {
+    const onHome = vi.fn();
+    const { getByRole } = render(<Wizard character={sampleCharacter(0)} update={noop} onExit={noop} onComplete={noop} onHome={onHome} />);
+    fireEvent.click(getByRole('button', { name: 'Home' }));
+    expect(onHome).toHaveBeenCalledTimes(1);
+  });
+});

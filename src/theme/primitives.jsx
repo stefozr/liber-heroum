@@ -148,16 +148,23 @@ function IconButton({ children, onClick, title }) {
 // shell: `mark` is a free node (✠ box, Crest, svg …) — wrap plain glyphs in
 // .tb-mark-box for the standard bordered square. Screen-specific rules hang off
 // the passthrough className (.ds-appbar / .wiz-topbar / .play-top).
-function TopBar({ mark, brand, sub, center, right, className = '' }) {
+// `onHome` turns the mark + brand into a real button that returns to the app's
+// landing screen, the way a site's logo links home.
+function TopBar({ mark, brand, sub, center, right, className = '', onHome = null }) {
+  const identity = (
+    <>
+      {mark && <div className="tb-mark">{mark}</div>}
+      <div className="tb-text">
+        <div className="tb-brand">{brand}</div>
+        {sub && <div className="tb-sub">{sub}</div>}
+      </div>
+    </>
+  );
   return (
     <div className={`topbar${className ? ' ' + className : ''}`}>
-      <div className="tb-left">
-        {mark && <div className="tb-mark">{mark}</div>}
-        <div className="tb-text">
-          <div className="tb-brand">{brand}</div>
-          {sub && <div className="tb-sub">{sub}</div>}
-        </div>
-      </div>
+      {onHome
+        ? <button type="button" className="tb-left tb-home" onClick={onHome} aria-label="Home" title="Home">{identity}</button>
+        : <div className="tb-left">{identity}</div>}
       <div className="tb-center">{center}</div>
       <div className="tb-right">{right}</div>
     </div>

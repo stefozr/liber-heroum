@@ -5,6 +5,7 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures, orderTraitCards, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import { TraitAbilityCards } from '../../theme/sheet.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -178,6 +179,7 @@ function AncestryStep({ character, update }) {
                   toggle={(o) => toggleSigOption(sig.name, sig.optionChoice.count, o)}
                 />
               )}
+              <TraitAbilityCards trait={{ ...sig, chosen: sigOptions[sig.name] || [] }} />
             </div>
           ))}
 
@@ -233,6 +235,7 @@ function AncestryStep({ character, update }) {
                       <Tag kind="gold">{t.cost} PT</Tag>
                     </div>
                     <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
+                    <TraitAbilityCards trait={t} />
                   </SelCard>
                 );
               })}
@@ -273,6 +276,7 @@ function AncestryStep({ character, update }) {
                               <Tag kind="gold">{t.cost} PT</Tag>
                             </div>
                             <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
+                            <TraitAbilityCards trait={t} />
                           </SelCard>
                         );
                       })}
@@ -313,6 +317,7 @@ function AncestryStep({ character, update }) {
                         toggle={(o) => toggleTraitOption(t.name, t.optionChoice.count, o)}
                       />
                     )}
+                    <TraitAbilityCards trait={t} />
                   </div>
                 );
               })}

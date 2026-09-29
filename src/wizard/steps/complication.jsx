@@ -173,6 +173,12 @@ function ComplicationStep({ character, update }) {
                 <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-7)', color:'var(--ink-2)', lineHeight:1.5}}>{renderRich(c.drawback)}</div>
               </>}
             </div>
+            {/* The ability a "you have the following ability" benefit grants. */}
+            {(c.abilities || []).length > 0 && (
+              <div style={{marginTop: 12, display:'grid', gap: 10}}>
+                {c.abilities.map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
+              </div>
+            )}
           </SelCard>
         ))}
       </div>

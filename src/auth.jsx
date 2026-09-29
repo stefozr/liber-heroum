@@ -373,6 +373,7 @@ function AppBar({ view, onNav, heroCount, campaignCount, user, onSignOut, onRena
   return (
     <TopBar
       className="ds-appbar"
+      onHome={() => onNav('roster')}
       mark={<span className="tb-mark-box">✠</span>}
       brand="LIBER HEROUM"
       center={

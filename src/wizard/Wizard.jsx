@@ -16,7 +16,7 @@ import { ReviewStep } from './steps/review.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-function Wizard({ character, update, saveState, onExit, onComplete }) {
+function Wizard({ character, update, saveState, onExit, onComplete, onHome = null }) {
   const rawStep = character.wizardStep || 0;
   const stepIndex = Math.max(0, Math.min(DS_STEPS.length - 1, rawStep));
   const step = DS_STEPS[stepIndex];
@@ -117,6 +117,7 @@ function Wizard({ character, update, saveState, onExit, onComplete }) {
       {/* Top bar */}
       <TopBar
         className="wiz-topbar"
+        onHome={onHome}
         mark={<Crest glyph="✠" portrait={character.portrait || undefined} />}
         brand="DRAW · STEEL"
         sub={<>

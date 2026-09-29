@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { newCharacter, collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept, collectLanguagePicks, languagesTakenExcept, normalizeLanguages, summarizeBenefits, duplicateSkillPicks, normalizeSkills } from '../app.jsx';
 import { complicationGrantCollisions, effectiveComplicationSkills } from '../wizard/helpers.js';
+import { buildValidCharacter } from './helpers/factories';
 
 function charWithPicks() {
   const c: any = newCharacter('u-test', null);
@@ -370,5 +371,27 @@ describe('class feature picks in summarizeBenefits', () => {
     const f = features.find((x: any) => x.name === 'Augmentation: Density Augmentation');
     expect(f).toBeDefined();
     expect(f.text.length).toBeGreaterThan(0);
+  });
+});
+
+describe('domain feature abilities in summarizeBenefits', () => {
+  it('conduit Creation grants Hands of the Maker', () => {
+    const c = buildValidCharacter({ cls: 'conduit', domains: ['Creation', 'Death'] });
+    const names = summarizeBenefits(c).classAbilities.map((a: any) => a.name);
+    expect(names.filter((n: string) => n === 'Hands of the Maker')).toHaveLength(1);
+  });
+
+  it('censor Creation grants the Presence-keyed Hands of the Maker', () => {
+    const c = buildValidCharacter({ cls: 'censor', domain: 'Creation' });
+    const a = summarizeBenefits(c).classAbilities.find((x: any) => x.name === 'Hands of the Maker');
+    expect(a).toBeTruthy();
+    expect(a.effect).toContain('Presence');
+    expect(a.effect).not.toContain('Intuition');
+  });
+
+  it('a domain feature without an ability adds nothing', () => {
+    const c = buildValidCharacter({ cls: 'conduit', domains: ['Fate', 'Knowledge'] });
+    const names = summarizeBenefits(c).classAbilities.map((a: any) => a.name);
+    expect(names).not.toContain('Hands of the Maker');
   });
 });

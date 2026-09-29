@@ -676,7 +676,7 @@ function characterToFoundryHero(c, officialIndex = null) {
   const subComposite = sub ? `${cls?.subclassName || 'Subclass'} — ${sub.name}` : null;
   const seenFeatures = new Set();
   for (const f of (benefits.features || [])) {
-    if (f.name === 'Heroic Resource' || f.name === subComposite || expandedComposites.has(f.name)) continue;
+    if (f.name === subComposite || expandedComposites.has(f.name)) continue;
     if (domainsOfficial && (f.name === 'Domain' || f.name === 'Domains')) continue;
     seenFeatures.add(f.name);
     // Domain features arrive as "Creation: Hands of the Maker" — the official

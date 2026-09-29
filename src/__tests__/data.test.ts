@@ -32,3 +32,13 @@ describe('game data tables', () => {
     });
   }
 });
+
+describe('heroic resource rules', () => {
+  it('every class carries a feature explaining how its heroic resource is gained', () => {
+    for (const cls of (data as any).DS_CLASSES) {
+      const f = (cls.features || []).find((x: any) => x.name === cls.resource || x.name.startsWith(cls.resource + ' '));
+      expect(f, `${cls.id} has no feature for ${cls.resource}`).toBeDefined();
+      expect(f.text, `${cls.id} resource text`).toMatch(/start of each of your turns/i);
+    }
+  });
+});

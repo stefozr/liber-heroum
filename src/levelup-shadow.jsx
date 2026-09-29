@@ -126,6 +126,14 @@ export const shadow = {
     summary: 'Your reflexes sharpen, and the dark keeps your secrets.',
     staminaGain: 6,
     autoCharacteristicIncrease: { Agility: 3, max: true },
+    // The Night Watch feature's "you have the following ability".
+    autoAbilities: () => [
+      { name: 'Night Watch', noBadge: true,
+        flavor: 'A steely dagger from out of the blue knocks another weapon off course.',
+        keywords: ['Ranged', 'Weapon'], type: 'Triggered', distance: 'Ranged 5', target: 'One ally',
+        trigger: 'The target takes damage from another creature\'s ability while you are hidden.',
+        effect: 'The target takes half the damage. You remain hidden.' },
+    ],
     autoFeatures: () => [
       { name: 'Characteristic Increase', text: 'Your Agility score increases to 3. Additionally, you can increase one of your characteristic scores by 1, to a maximum of 3.' },
       { name: 'Keep It Down', text: 'While conversing with any creature you share a language with, you can decide whether anyone else can perceive what you\'re conveying, even while yelling.' },

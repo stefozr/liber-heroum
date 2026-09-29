@@ -126,8 +126,10 @@ describe('ReviewStep renders complete feature data', () => {
     expect(text).toContain(inc.text);
   });
 
-  it('does not duplicate the heroic resource as a feature row', () => {
+  it('explains the heroic resource through its class feature, not a name-only row', () => {
     const text = renderReview(buildValidCharacter({ cls: 'fury' }));
-    expect(text.match(/Heroic Resource/g) || []).toHaveLength(0);
+    expect(text).toContain('Ferocity in Combat');
+    // The retired synthetic row printed the bare resource name under a "Heroic Resource" title.
+    expect(text).not.toMatch(/Heroic Resource\s*Ferocity(?![a-z ])/);
   });
 });

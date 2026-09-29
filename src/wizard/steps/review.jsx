@@ -65,8 +65,7 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
   const incident = car && character.career.incident
     ? (car.incidents || []).find(i => i.name === character.career.incident)
     : null;
-  // The Class card already prints "Resource · X"; drop the synthetic row.
-  const featureRows = benefits.features.filter(f => f.name !== 'Heroic Resource');
+  const featureRows = benefits.features;
 
   return (
     <div className="stack-22">

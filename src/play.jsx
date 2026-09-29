@@ -4,7 +4,7 @@ import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, deleteLevelProgression } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses } from './app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses, resourceFeature } from './app.jsx';
 import { companionById, minionById, collectMinionIds } from './data.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
 import { SheetStyles, AncestryTraitsList, KitDetails, StatblockCard } from './theme/sheet.jsx';
@@ -109,7 +109,7 @@ function TopBarMenu({ items }) {
   );
 }
 
-function PlayView({ character, update, onExit, exitLabel = '◂ ROSTER', onEdit, canEdit = true, saveState = null, owner = null, isOwner = true, canSetVisibility = false, onSetVisibility = null, canPreviewReadonly = false, previewReadonly = false, onTogglePreviewReadonly = null, onError = () => {} }) {
+function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ ROSTER', onEdit, canEdit = true, saveState = null, owner = null, isOwner = true, canSetVisibility = false, onSetVisibility = null, canPreviewReadonly = false, previewReadonly = false, onTogglePreviewReadonly = null, onError = () => {} }) {
   const cls = classDef(character);
   const anc = ancestryDef(character);
   const kit = kitDef(character);
@@ -118,6 +118,7 @@ function PlayView({ character, update, onExit, exitLabel = '◂ ROSTER', onEdit,
   const car = careerDef(character);
   const derived = computeDerived(character);
   const benefits = summarizeBenefits(character);
+  const resourceRules = resourceFeature(cls);
   // Active conditions cap the *displayed* speed only — computeDerived stays
   // condition-free because the wizard review, level-up projections, and the
   // Foundry export all read it and must show the unconditioned character.
@@ -417,6 +418,7 @@ function PlayView({ character, update, onExit, exitLabel = '◂ ROSTER', onEdit,
       {/* Top bar */}
       <TopBar
         className="play-top"
+        onHome={onHome}
         mark={
           <span className="tb-mark-box">
             <svg viewBox="0 0 100 100" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
@@ -574,6 +576,17 @@ function PlayView({ character, update, onExit, exitLabel = '◂ ROSTER', onEdit,
           <div className="play-grid">
             {/* LEFT column */}
             <div className="play-col-l">
+              {/* How the heroic resource is earned — the class feature named for
+                  it, next to the abilities it pays for. Collapsed: it's a rules
+                  read, not a per-turn control. */}
+              {resourceRules && (
+                <Panel title={`${cls.resource} — How You Gain It`} collapsible defaultCollapsed>
+                  <div className="trait-block">
+                    <div className="trait-text">{renderRich(resourceRules.text)}</div>
+                  </div>
+                </Panel>
+              )}
+
               {/* Master-class trackers — the most-touched combat surface for these classes */}
               {isBeastheart && <CompanionPanel character={character} derived={derived} canEdit={canEdit} setPlay={setPlay} />}
               {isSummoner && <MinionsPanel character={character} derived={derived} canEdit={canEdit} setPlay={setPlay} showTip={showTip} hideTip={hideTip} />}
@@ -755,6 +768,11 @@ function PlayView({ character, update, onExit, exitLabel = '◂ ROSTER', onEdit,
                     <div className="trait-name">{comp.name}</div>
                     <div className="trait-text"><b style={{color:'var(--gold-2)'}}>{comp.combined ? 'Benefit and Drawback.' : 'Benefit.'}</b> {renderRich(comp.benefit)}</div>
                     {!comp.combined && <div className="trait-text"><b style={{color:'var(--rubric-2)'}}>Drawback.</b> {renderRich(comp.drawback)}</div>}
+                    {(comp.abilities || []).length > 0 && (
+                      <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                        {comp.abilities.map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
+                      </div>
+                    )}
                   </div>
                 </Panel>
               )}
