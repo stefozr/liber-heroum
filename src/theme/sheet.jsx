@@ -84,12 +84,14 @@ function traitAbilities(t) {
   return t.abilities;
 }
 // A trait whose rules live on a same-named ability card (Vengeance Mark,
-// Beyondsight, Dragon Breath…) shows the card in place of its prose, the way
-// class features do — otherwise the rules print twice. Prose survives when it
-// says something the card does not: a different-named grant, or a choice prompt.
+// Beyondsight, Dragon Breath…) shows a one-line lead-in and the card in place
+// of its prose, the way class features do — otherwise the rules print twice.
+// Prose survives when it says something the card does not: a different-named
+// grant, or a choice prompt.
 function traitProse(t) {
-  if (!t?.text) return null;
-  return traitAbilities(t).some(a => a.name === t.name) ? null : t.text;
+  const list = traitAbilities(t);
+  if (list.some(a => a.name === t?.name)) return list.length > 1 ? 'You gain the following abilities:' : 'You gain the following ability:';
+  return t?.text || null;
 }
 function TraitProse({ trait, className, style }) {
   const prose = traitProse(trait);

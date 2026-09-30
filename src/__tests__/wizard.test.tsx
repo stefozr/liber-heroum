@@ -735,8 +735,9 @@ describe('granted abilities show on the option that promises them', () => {
     const { container } = render(<Wizard character={c} update={noop} onExit={noop} onComplete={noop} />);
     expect(container.textContent).toContain('Detonate Sigil');
     expect(container.textContent).toContain('A magic sigil you placed on a creature explodes');
-    // Once: the card replaces the prose rather than following it.
+    // Once: a lead-in and the card replace the prose rather than following it.
     expect(container.textContent!.split('You always know the direction to the exact location').length - 1).toBe(1);
+    expect(container.textContent).toContain('You gain the following abilities:');
   });
 
   it('complication cards show their granted ability before any pick', () => {

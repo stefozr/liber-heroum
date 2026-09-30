@@ -749,6 +749,7 @@ describe('granted abilities and resource rules on the sheet', () => {
     const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
     expect(container.textContent).toContain('A furious exhalation of energy');
     expect(container.textContent).not.toContain('You have the following signature ability.');
+    expect(container.textContent).toContain('You gain the following ability:');
   });
 
   it('stripped-of-rank shows Issue Order under the complication as well as in Abilities', () => {
