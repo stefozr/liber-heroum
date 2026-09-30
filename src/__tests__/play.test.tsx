@@ -737,6 +737,18 @@ describe('granted abilities and resource rules on the sheet', () => {
     c.ancestry.traits = ['Vengeance Mark'];
     const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
     expect(count(container.textContent!, 'A magic sigil you placed on a creature explodes')).toBeGreaterThanOrEqual(2);
+    // The trait's rules live on its same-named card, so they print once per
+    // surface (trait list + Abilities panel), never as prose *and* card.
+    expect(count(container.textContent!, 'You always know the direction to the exact location')).toBe(2);
+  });
+
+  it('a trait whose rules are a card does not also print the "following ability" prompt', () => {
+    const c = completedCharacter();
+    c.ancestry.id = 'dragon-knight';
+    c.ancestry.traits = ['Dragon Breath'];
+    const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
+    expect(container.textContent).toContain('A furious exhalation of energy');
+    expect(container.textContent).not.toContain('You have the following signature ability.');
   });
 
   it('stripped-of-rank shows Issue Order under the complication as well as in Abilities', () => {

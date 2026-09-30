@@ -5,7 +5,7 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures, orderTraitCards, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
-import { TraitAbilityCards } from '../../theme/sheet.jsx';
+import { TraitProse, TraitAbilityCards } from '../../theme/sheet.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -159,9 +159,7 @@ function AncestryStep({ character, update }) {
           {ancestrySignatures(anc).map((sig, i) => (
             <div key={sig.name} className="orn-frame bracket-corners" style={{padding: '22px 24px'}}>
               <H3>Signature Trait: <span style={{color:'var(--gold-2)'}}>{sig.name}</span></H3>
-              <div style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.55}}>
-                {renderRich(sig.text)}
-              </div>
+              <TraitProse trait={{ ...sig, chosen: sigOptions[sig.name] || [] }} style={{fontFamily:'var(--serif)', fontSize: '0.875rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.55}} />
               {sig.skillChoice && (
                 <SkillChoicePicker
                   character={character}
@@ -234,7 +232,7 @@ function AncestryStep({ character, update }) {
                       </div>
                       <Tag kind="gold">{t.cost} PT</Tag>
                     </div>
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
+                    <TraitProse trait={t} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}} />
                     <TraitAbilityCards trait={t} />
                   </SelCard>
                 );
@@ -275,7 +273,7 @@ function AncestryStep({ character, update }) {
                               <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
                               <Tag kind="gold">{t.cost} PT</Tag>
                             </div>
-                            <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
+                            <TraitProse trait={t} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}} />
                             <TraitAbilityCards trait={t} />
                           </SelCard>
                         );

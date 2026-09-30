@@ -83,6 +83,19 @@ function traitAbilities(t) {
   if (t.optionChoice) return t.abilities.filter(a => (t.chosen || []).includes(a.name));
   return t.abilities;
 }
+// A trait whose rules live on a same-named ability card (Vengeance Mark,
+// Beyondsight, Dragon Breath…) shows the card in place of its prose, the way
+// class features do — otherwise the rules print twice. Prose survives when it
+// says something the card does not: a different-named grant, or a choice prompt.
+function traitProse(t) {
+  if (!t?.text) return null;
+  return traitAbilities(t).some(a => a.name === t.name) ? null : t.text;
+}
+function TraitProse({ trait, className, style }) {
+  const prose = traitProse(trait);
+  if (!prose) return null;
+  return <div className={className} style={style}>{renderRich(prose)}</div>;
+}
 function TraitAbilityCards({ trait }) {
   const list = traitAbilities(trait);
   if (!list.length) return null;
@@ -101,7 +114,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
       {ancestrySignatures(anc).map(sig => (
         <div className="trait-block" key={sig.name}>
           <div className="trait-name">{sig.name} <span className="sig-tag">SIG</span></div>
-          <div className="trait-text">{renderRich(sig.text)}</div>
+          <TraitProse trait={{ ...sig, chosen: (character.ancestry.sigOptions || {})[sig.name] || [] }} className="trait-text" />
           {sig.name === 'Former Life' && formerLifeDef(character) && (
             <div className="trait-text" style={{ marginTop: 6 }}>
               Former Life: <b>{formerLifeDef(character).name}</b> — Size {formerLifeDef(character).size}
@@ -138,7 +151,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
             {t.name} <span className="cost-tag">{t.cost} PT</span>
             {t.borrowedFrom && <span className="sig-tag">PREVIOUS LIFE — {t.borrowedFrom.toUpperCase()}</span>}
           </div>
-          <div className="trait-text">{renderRich(t.text)}</div>
+          <TraitProse trait={t} className="trait-text" />
           {t.chosen?.length > 0 && (
             <div className="trait-text" style={{ marginTop: 6 }}>
               {t.choiceLabel}: <b>{t.chosen.join(', ')}</b>
@@ -281,4 +294,4 @@ function StatblockCard({ block, costLabel, level, staminaNote, children }) {
   );
 }
 
-export { SHEET_CSS, SheetStyles, AncestryTraitsList, KitDetails, StatblockCard, TraitAbilityCards, traitAbilities };
+export { SHEET_CSS, SheetStyles, AncestryTraitsList, KitDetails, StatblockCard, TraitProse, TraitAbilityCards, traitAbilities, traitProse };

@@ -126,6 +126,12 @@ describe('ReviewStep renders complete feature data', () => {
     expect(text).toContain(inc.text);
   });
 
+  it('shows a granted ancestry ability once, under its trait', () => {
+    const text = renderReview(buildValidCharacter({ ancestry: 'revenant', formerLife: 'human', traits: ['Vengeance Mark'] }));
+    expect(text.split('A magic sigil you placed on a creature explodes').length - 1).toBe(1);
+    expect(text.split('You always know the direction to the exact location').length - 1).toBe(1);
+  });
+
   it('explains the heroic resource through its class feature, not a name-only row', () => {
     const text = renderReview(buildValidCharacter({ cls: 'fury' }));
     expect(text).toContain('Ferocity in Combat');

@@ -315,17 +315,6 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
         </div>
       )}
 
-      {(benefits.ancestryAbilities || []).length > 0 && (
-        <div>
-          <H3>Ancestry Abilities</H3>
-          <div className="grid-2" style={{marginTop: 12, gap: 12}}>
-            {benefits.ancestryAbilities.map(a => (
-              <AbilityCard key={a.name} ability={boost(a)} kind="sig" />
-            ))}
-          </div>
-        </div>
-      )}
-
       {(benefits.classAbilities || []).length > 0 && (
         <div>
           <H3>Class Abilities</H3>
