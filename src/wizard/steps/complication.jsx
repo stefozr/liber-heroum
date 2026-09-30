@@ -2,10 +2,11 @@
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
 import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, CardDrawer, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept, heldSkillsFor, complicationOwnSkillPicks, heroicAbilityPools, collectLanguagePicks } from '../../app.jsx';
 import { timeString, parseCareerSkills, complicationGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
+import { OptionChoicePicker, OwnSkillPicker, LanguageChipPicker, TextChoiceField, AbilityPickGrid, TraitPointPicker } from './pickers.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -13,8 +14,9 @@ function ComplicationStep({ character, update }) {
   const sel = character.complication.id;
   // Re-clicking the chosen card keeps its picks — the drawer with the pickers
   // sits right under it, so a stray click on the card mustn't wipe them.
-  const pick = (id) => update(c => (c.complication.id === id ? c : { ...c, complication: { id, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
-  const skip = () => update(c => ({ ...c, complication: { id: null, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
+  const blank = (id) => ({ id, custom: '', skills: {}, skillSwaps: {}, languages: [], ownSkills: {}, options: {}, texts: {}, abilityPicks: {}, forgottenLanguages: [], traits: [] });
+  const pick = (id) => update(c => (c.complication.id === id ? c : { ...c, complication: blank(id) }));
+  const skip = () => update(c => ({ ...c, complication: blank(null) }));
   const comp = complicationDef(character);
   const compSkills = character.complication.skills || {};
   const compLangs = character.complication.languages || [];
@@ -37,7 +39,31 @@ function ComplicationStep({ character, update }) {
     if (name) next[skill] = name; else delete next[skill];
     return { ...c, complication: { ...c.complication, skillSwaps: next } };
   });
-  const hasGrants = comp && ((comp.skills || []).length || (comp.skillChoices || []).length || comp.languageChoice);
+  // Follow-up picks the prose asks for: one of YOUR skills, an enumerated option, an
+  // ability, a free-text detail, a forgotten language, borrowed traits. Each toggles a
+  // keyed array under c.complication so a stray re-click of the card can't wipe them.
+  const toggleIn = (field, key, count, value) => update(c => {
+    const cur = { ...(c.complication[field] || {}) };
+    const arr = cur[key] || [];
+    cur[key] = arr.includes(value) ? arr.filter(x => x !== value) : (arr.length >= count ? arr : [...arr, value]);
+    return { ...c, complication: { ...c.complication, [field]: cur } };
+  });
+  const setText = (i, v) => update(c => ({ ...c, complication: { ...c.complication, texts: { ...(c.complication.texts || {}), [i]: v } } }));
+  const setAbility = (id, name) => update(c => ({ ...c, complication: { ...c.complication, abilityPicks: { ...(c.complication.abilityPicks || {}), [id]: name } } }));
+  const toggleForgotten = (count, L) => update(c => {
+    const cur = c.complication.forgottenLanguages || [];
+    const next = cur.includes(L) ? cur.filter(x => x !== L) : (cur.length >= count ? cur : [...cur, L]);
+    return { ...c, complication: { ...c.complication, forgottenLanguages: next } };
+  });
+  const toggleTrait = (name) => update(c => {
+    const cur = c.complication.traits || [];
+    return { ...c, complication: { ...c.complication, traits: cur.includes(name) ? cur.filter(x => x !== name) : [...cur, name] } };
+  });
+  const ownPicks = comp ? complicationOwnSkillPicks(character) : {};
+  const abilityPools = comp?.abilityChoices ? heroicAbilityPools(character) : null;
+  const hasFollowUps = comp && ((comp.ownSkillChoices || []).length || (comp.optionChoices || []).length || (comp.abilityChoices || []).length
+    || (comp.textChoices || []).length || comp.languageLoss || comp.traitChoice);
+  const hasGrants = comp && ((comp.skills || []).length || (comp.skillChoices || []).length || comp.languageChoice || hasFollowUps);
   // Scroll the wizard body so a freshly-rolled complication card is brought into view.
   const scrollToComp = (id) => {
     requestAnimationFrame(() => {
@@ -87,8 +113,9 @@ function ComplicationStep({ character, update }) {
             return (
               <div key={i} style={{marginTop:16}}>
                 <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
-                  Choose {ch.count} {label} skill{ch.count > 1 ? 's' : ''} — picked <b style={{color: picked.length === ch.count ? 'var(--gold-2)' : 'var(--ink)'}}>{picked.length}</b> / {ch.count}
+                  {ch.label ? `${ch.label} — ` : ''}Choose {ch.count} {label} skill{ch.count > 1 ? 's' : ''} — picked <b style={{color: picked.length === ch.count ? 'var(--gold-2)' : 'var(--ink)'}}>{picked.length}</b> / {ch.count}
                 </div>
+                {ch.note && <div style={{fontFamily:'var(--serif)', fontStyle:'italic', fontSize:'0.8125rem', color:'var(--ink-2)', marginBottom:8}}>{ch.note}</div>}
                 <div className="skill-chip-grid">
                   {pool.map(s => {
                     const on = picked.includes(s);
@@ -140,6 +167,48 @@ function ComplicationStep({ character, update }) {
                   })}
                 </div>
               </div>
+            );
+          })()}
+
+          {(comp.ownSkillChoices || []).map((ch, i) => (
+            <OwnSkillPicker key={'own' + i} label={ch.label} note={ch.note} count={ch.count} groups={ch.groups}
+              pool={heldSkillsFor(character, { groups: ch.groups, excludeKeyPrefix: ch.excludeOwnGrants ? 'comp:' : null })}
+              picked={ownPicks[i] || []} toggle={(s) => toggleIn('ownSkills', i, ch.count, s)} />
+          ))}
+
+          {(comp.optionChoices || []).map((ch, i) => (
+            <OptionChoicePicker key={'opt' + i} choice={ch} options={ch.options}
+              picked={(character.complication.options || {})[i] || []} toggle={(o) => toggleIn('options', i, ch.count, o)} />
+          ))}
+
+          {(comp.abilityChoices || []).map(ch => {
+            const pool = ch.pool === 'known-heroic' ? abilityPools.known : abilityPools.future;
+            const hint = !character.cclass?.id ? 'Choose a class first — this pick draws on its heroic abilities.'
+              : ch.pool === 'known-heroic' ? 'Pick your class abilities first — this choice is one of them.'
+              : 'No higher-level abilities are listed for this class yet.';
+            return (
+              <AbilityPickGrid key={ch.id} label={ch.label} note={ch.note} options={pool} emptyHint={hint}
+                picked={(character.complication.abilityPicks || {})[ch.id] || null} onPick={(name) => setAbility(ch.id, name)} />
+            );
+          })}
+
+          {(comp.textChoices || []).map((ch, i) => (
+            <TextChoiceField key={'txt' + i} id={`comp-text-${i}`} label={ch.label} placeholder={ch.placeholder}
+              value={(character.complication.texts || {})[i] || ''} onChange={(v) => setText(i, v)} />
+          ))}
+
+          {comp.languageLoss && (
+            <LanguageChipPicker label="language" verb="Forget" count={comp.languageLoss.count}
+              pool={Array.from(new Set([...collectLanguagePicks(character).map(p => p.name), ...(character.complication.forgottenLanguages || [])]))}
+              picked={character.complication.forgottenLanguages || []} toggle={(L) => toggleForgotten(comp.languageLoss.count, L)} />
+          )}
+
+          {comp.traitChoice && (() => {
+            const anc = DS_ANCESTRIES.find(a => a.id === comp.traitChoice.ancestry);
+            const owned = character.ancestry?.id === comp.traitChoice.ancestry ? (character.ancestry.traits || []) : [];
+            return (
+              <TraitPointPicker label={comp.traitChoice.label} note={comp.traitChoice.note} traits={anc?.traits || []} points={comp.traitChoice.points}
+                picked={character.complication.traits || []} toggle={toggleTrait} excluded={owned} />
             );
           })()}
 

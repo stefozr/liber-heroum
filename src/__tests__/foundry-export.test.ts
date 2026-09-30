@@ -2,7 +2,7 @@
 // Parser tables first, then whole-document shape assertions for built characters.
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { newCharacter, computeDerived } from '../app.jsx';
+import { newCharacter, computeDerived, collectLanguagePicks } from '../app.jsx';
 import { DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_SKILL_GROUPS } from '../data.jsx';
 import {
   characterToFoundryHero, officialOrGenerated, parseTiers, parseTierClause,
@@ -993,5 +993,27 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
     expect(grounded).toBeTruthy();
     const orcDoc = index.items['ancestryTrait:grounded'].find((e: any) => e.scope.includes('orc')).doc;
     expect(grounded.system.description.value).toBe(orcDoc.system.description.value);
+  });
+});
+
+describe('follow-up picks reach the export', () => {
+  it('Linguist languages are exported, a Shipwrecked forgotten language is not', () => {
+    const c = buildValidCharacter({ career: 'sage', perk: 'Linguist', complication: 'shipwrecked' });
+    c.career.perkPicks = { skills: [], languages: ['Yllyric', 'Zaliac'] };
+    c.complication.forgottenLanguages = ['Caelian'];
+    const doc: any = characterToFoundryHero(c);
+    expect(doc.system.biography.languages).toEqual(expect.arrayContaining(['yllyric', 'zaliac']));
+    expect(doc.system.biography.languages).not.toContain('caelian');
+    expect(collectLanguagePicks(c).map((p: any) => p.name)).not.toContain('Caelian');
+  });
+
+  it("Rival's favored skill travels in the complication description", () => {
+    const c = buildValidCharacter({ complication: 'rival' });
+    const favored = c.complication.ownSkills[0][0];
+    expect(favored).toBeTruthy();
+    const doc: any = characterToFoundryHero(c);
+    const comp = doc.items.find((i: any) => i.type === 'complication');
+    expect(comp.system.description.value).toContain('Favored skill');
+    expect(comp.system.description.value).toContain(favored);
   });
 });

@@ -1,7 +1,9 @@
 import React from 'react';
 import { OrnDivider, GlyphRow, renderRich, Button, H3, H4Meta, Modal, AbilityCard } from './theme.jsx';
 import { MQ } from './theme/breakpoints.js';
-import { classDef, collectSkillPicks, collectPerkPicks, computeDerived } from './app.jsx';
+import { classDef, collectSkillPicks, collectPerkPicks, collectLanguagePicks, computeDerived, heldSkillsFor, perkPickIssues } from './app.jsx';
+import { PERK_CHOICES } from './wizard/helpers.js';
+import { OwnSkillPicker, LanguageChipPicker } from './wizard/steps/pickers.jsx';
 import {
   DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES,
 } from './data/conduit-domains.js';
@@ -1092,6 +1094,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
   const canAdvance = !currentChoice ||
     ((currentChoice.kind === 'perk' || currentChoice.kind === 'skill-group')
       ? !!(currentPick && currentPick.chosen)
+        && (currentChoice.kind !== 'perk' || perkPickIssues(currentPick.chosen, currentPick.perkPicks, character).length === 0)
       : (currentChoice.count > 1)
         ? Array.isArray(currentPick) && currentPick.length === currentChoice.count
         : !!currentPick);
@@ -1126,6 +1129,9 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
   }
   const currentTaken = currentChoice && currentChoice.kind === 'skill-group' ? takenSkills
     : currentChoice && currentChoice.kind === 'perk' ? takenPerks : null;
+  // Languages already known, for a Linguist pick's follow-up (this level's own picks excluded).
+  const takenLangs = new Map();
+  for (const p of collectLanguagePicks(character)) if (!p.key.startsWith(lvlPrefix)) takenLangs.set(p.name, p.source);
 
   return (
     <Modal open={open} onClose={onClose} title={isEditing ? `Edit Level ${nextLevel} \u2014 ${cls.name}` : `Level ${nextLevel} \u2014 ${cls.name}`} width={960}
@@ -1141,7 +1147,7 @@ function LevelUpFlow({ open, onClose, character, update, editLevel = null }) {
         </>
       )}>
       {stepId === 'intro' && <LvlIntro data={data} cls={cls} character={character} nextLevel={nextLevel} isEditing={isEditing} />}
-      {currentChoice && <ChoiceStep choice={currentChoice} pick={picks[currentChoice.id]} onPick={(v) => setPick(currentChoice.id, v)} ctx={ctx} taken={currentTaken} />}
+      {currentChoice && <ChoiceStep choice={currentChoice} pick={picks[currentChoice.id]} onPick={(v) => setPick(currentChoice.id, v)} ctx={ctx} taken={currentTaken} takenLangs={takenLangs} />}
       {stepId === 'review' && <LvlReview data={data} picks={picks} choices={choices} cls={cls} nextLevel={nextLevel} character={character} isEditing={isEditing} />}
     </Modal>
   );
@@ -1346,7 +1352,7 @@ function LvlIntro({ data, cls, character, nextLevel, isEditing }) {
   );
 }
 
-function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
+function ChoiceStep({ choice, pick, onPick, ctx, taken, takenLangs }) {
   const opts = typeof choice.options === 'function' ? choice.options(ctx) : choice.options;
   const isPerk = choice.kind === 'perk';
   const isSkill = choice.kind === 'skill-group';
@@ -1436,7 +1442,7 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
                   disabled={blocked || undefined}
                   aria-pressed={selected}
                   className={`card-btn lvl-opt simple ${isSkill ? 'compact' : ''} ${selected ? 'selected' : ''} ${blocked ? 'blocked' : ''}`}
-                  onClick={() => !blocked && onPick({ ...pick, chosen: p.name, chosenText: p.text })}
+                  onClick={() => !blocked && (pick.chosen === p.name || onPick({ ...pick, chosen: p.name, chosenText: p.text, perkPicks: { skills: [], languages: [] } }))}
                   title={blocked ? `Already chosen — ${taken.get(p.name)}` : ''}
                 >
                   <div className="lvl-opt-name">{p.name}</div>
@@ -1446,6 +1452,31 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken }) {
               );
             })}
           </div>
+          {isPerk && pick.chosen && PERK_CHOICES[pick.chosen] && (() => {
+            // Third tier: the follow-up the chosen perk asks for (Area of Expertise's
+            // skill, Linguist's two languages) — stored on the pick as perkPicks.
+            const spec = PERK_CHOICES[pick.chosen];
+            const perkPicks = { skills: [], languages: [], ...(pick.perkPicks || {}) };
+            const toggle = (field, count, v) => {
+              const arr = perkPicks[field] || [];
+              const next = arr.includes(v) ? arr.filter(x => x !== v) : (arr.length >= count ? arr : [...arr, v]);
+              onPick({ ...pick, perkPicks: { ...perkPicks, [field]: next } });
+            };
+            return (
+              <div className="orn-frame" style={{padding:'14px 18px'}}>
+                <OrnDivider glyph={pick.chosen} size="small" />
+                {spec.ownSkill && (
+                  <OwnSkillPicker label={spec.ownSkill.label} note={spec.ownSkill.note} count={spec.ownSkill.count} groups={spec.ownSkill.groups}
+                    pool={heldSkillsFor(ctx.character, { groups: spec.ownSkill.groups })}
+                    picked={perkPicks.skills} toggle={(s) => toggle('skills', spec.ownSkill.count, s)} />
+                )}
+                {spec.languages && (
+                  <LanguageChipPicker count={spec.languages.count} picked={perkPicks.languages} taken={takenLangs}
+                    toggle={(L) => toggle('languages', spec.languages.count, L)} />
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

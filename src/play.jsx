@@ -4,7 +4,7 @@ import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, deleteLevelProgression } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses, resourceFeature } from './app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses, resourceFeature, perkPickText } from './app.jsx';
 import { companionById, minionById, collectMinionIds } from './data.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
 import { SheetStyles, AncestryTraitsList, KitDetails, StatblockCard } from './theme/sheet.jsx';
@@ -347,7 +347,7 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
         const found = PERKS[group].find(x => x.name === p.chosen);
         if (found) text = found.text;
       }
-      levelUpPerks.push({ level: lvl, name: p.chosen, group, text });
+      levelUpPerks.push({ level: lvl, name: p.chosen, group, text, picks: perkPickText(p.chosen, p.perkPicks) });
     }
   }
 
@@ -692,6 +692,9 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
                       {benefits.perk.chosen && benefits.perk.desc && (
                         <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{renderRich(benefits.perk.desc)}</div>
                       )}
+                      {benefits.perk.picks && (
+                        <div className="trait-text" style={{marginTop: 5, color:'var(--gold-2)'}}>{benefits.perk.picks}</div>
+                      )}
                       {levelUpPerks.map((lp, i) => (
                         <div className="perk-leveled" key={`${lp.level}-${lp.name}-${i}`}>
                           <div className="trait-text">
@@ -700,6 +703,7 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
                             <span className="perk-lvl-tag">LV {lp.level}</span>
                           </div>
                           {lp.text && <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{renderRich(lp.text)}</div>}
+                          {lp.picks && <div className="trait-text" style={{marginTop: 5, color:'var(--gold-2)'}}>{lp.picks}</div>}
                         </div>
                       ))}
                     </div>
@@ -768,6 +772,11 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
                     <div className="trait-name">{comp.name}</div>
                     <div className="trait-text"><b style={{color:'var(--gold-2)'}}>{comp.combined ? 'Benefit and Drawback.' : 'Benefit.'}</b> {renderRich(comp.benefit)}</div>
                     {!comp.combined && <div className="trait-text"><b style={{color:'var(--rubric-2)'}}>Drawback.</b> {renderRich(comp.drawback)}</div>}
+                    {(benefits.complicationPicks || []).map((r, i) => (
+                      <div className="kv-row kv-src" key={i} style={{marginTop: i === 0 ? 8 : 4}}>
+                        <span className="k">{r.label}</span><span className="v" style={{color:'var(--gold-2)'}}>{r.text}</span>
+                      </div>
+                    ))}
                     {(comp.abilities || []).length > 0 && (
                       <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                         {comp.abilities.map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}

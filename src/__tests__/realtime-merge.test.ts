@@ -71,7 +71,7 @@ describe('ensureShape', () => {
     delete c.career;
     const out: any = ensureShape(c);
     expect(out).not.toBe(c);
-    expect(out.career).toEqual({ id: null, incident: '', taken: '', languages: [], skills: [], perk: '' });
+    expect(out.career).toEqual({ id: null, incident: '', taken: '', languages: [], skills: [], perk: '', perkPicks: { skills: [], languages: [] } });
     expect(out.cclass).toBe(c.cclass);
     expect(c.career).toBeUndefined(); // input not mutated
   });

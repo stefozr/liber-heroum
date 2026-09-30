@@ -1,11 +1,12 @@
 // wizard/steps/career.jsx — CareerStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
-import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, CardDrawer, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept, heldSkillsFor } from '../../app.jsx';
+import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, PERK_CHOICES, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
+import { OwnSkillPicker, LanguageChipPicker } from './pickers.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -18,13 +19,40 @@ function CareerStep({ character, update }) {
     update(c => {
       const newCar = DS_CAREERS.find(x => x.id === id);
       const parsed = newCar ? parseCareerSkills(newCar) : { auto: [], picks: [] };
-      return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, skillSwaps: {}, languages: [], perk: '' } };
+      return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, skillSwaps: {}, languages: [], perk: '', perkPicks: { skills: [], languages: [] } } };
     });
   };
   const setIncident = (v) => update(c => ({ ...c, career: { ...c.career, incident: v } }));
   const setTaken = (v) => update(c => ({ ...c, career: { ...c.career, taken: v } }));
   const setCarLangs = (arr) => update(c => ({ ...c, career: { ...c.career, languages: arr } }));
-  const setPerkName = (v) => update(c => ({ ...c, career: { ...c.career, perk: v } }));
+  // Re-clicking the chosen perk keeps its follow-up picks (its drawer sits right under it).
+  const setPerkName = (v) => update(c => (c.career.perk === v ? c : { ...c, career: { ...c.career, perk: v, perkPicks: { skills: [], languages: [] } } }));
+  const perkPicks = character.career.perkPicks || { skills: [], languages: [] };
+  const togglePerkPick = (field, count, v) => update(c => {
+    const cur = { skills: [], languages: [], ...(c.career.perkPicks || {}) };
+    const arr = cur[field] || [];
+    cur[field] = arr.includes(v) ? arr.filter(x => x !== v) : (arr.length >= count ? arr : [...arr, v]);
+    return { ...c, career: { ...c.career, perkPicks: cur } };
+  });
+  // The follow-up picks a chosen perk asks for (Area of Expertise's skill, Linguist's
+  // two languages), attached beneath its card like the wizard's other drawers.
+  const perkDrawer = (perkName) => {
+    const spec = PERK_CHOICES[perkName];
+    if (!spec) return null;
+    return (
+      <CardDrawer id="career-perk-picks" title={<span>Granted by <span style={{color:'var(--gold-2)'}}>{perkName}</span></span>}>
+        {spec.ownSkill && (
+          <OwnSkillPicker label={spec.ownSkill.label} note={spec.ownSkill.note} count={spec.ownSkill.count} groups={spec.ownSkill.groups}
+            pool={heldSkillsFor(character, { groups: spec.ownSkill.groups })}
+            picked={perkPicks.skills || []} toggle={(s) => togglePerkPick('skills', spec.ownSkill.count, s)} />
+        )}
+        {spec.languages && (
+          <LanguageChipPicker count={spec.languages.count} picked={perkPicks.languages || []}
+            taken={languagesTakenExcept(character, 'perk:career')} toggle={(L) => togglePerkPick('languages', spec.languages.count, L)} />
+        )}
+      </CardDrawer>
+    );
+  };
 
   const car = careerDef(character);
   const parsed = car ? parseCareerSkills(car) : null;
@@ -260,8 +288,8 @@ function CareerStep({ character, update }) {
               {(PERKS[car.perk] || []).map(p => {
                 const isQuick = car.quickPerk === p.name;
                 return (
+                <React.Fragment key={p.name}>
                 <SelCard
-                  key={p.name}
                   selected={character.career.perk === p.name}
                   dimmed={!!character.career.perk && character.career.perk !== p.name}
                   onClick={() => setPerkName(p.name)}
@@ -273,6 +301,8 @@ function CareerStep({ character, update }) {
                   </div>
                   <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:6}}>{renderRich(p.text)}</div>
                 </SelCard>
+                {character.career.perk === p.name && perkDrawer(p.name)}
+                </React.Fragment>
                 );
               })}
             </div>

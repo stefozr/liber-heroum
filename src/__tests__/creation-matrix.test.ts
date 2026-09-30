@@ -9,7 +9,7 @@ import {
 import { isStepValid, stepIssues, classSections } from '../wizard.jsx';
 import { collectSkillPicks, normalizeSkills, skillsTakenExcept } from '../app.jsx';
 import { PERKS, parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, charBudget, classGrantCollisions } from '../wizard/helpers.js';
-import { buildValidCharacter, hero, resolveGrantSwaps } from './helpers/factories';
+import { buildValidCharacter, hero, resolveGrantSwaps, perkPicksFor } from './helpers/factories';
 
 const STEP_INDEX = Object.fromEntries((DS_STEPS as any[]).map((s: any, i: number) => [s.id, i]));
 const CLASS_STEP = STEP_INDEX['class'];
@@ -398,6 +398,9 @@ describe('careers', () => {
             c.career.skills = [...c.career.skills.filter((x: string) => x !== mine[0]), s];
             delete c.career.skillPicks[mine[0]];
             c.career.skillPicks[s] = idx;
+            // Swapping the skill out from under a perk's own-skill pick (Area of
+            // Expertise) re-opens that prompt, as it does in the wizard — re-fill it.
+            c.career.perkPicks = perkPicksFor(c.career.perk, c);
           }
           expect(isStepValid(c, STEP_INDEX['career']), `${car.id} pick "${s}"`).toBe(true);
         }

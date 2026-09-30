@@ -231,6 +231,12 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
             {character.complication.custom && (
               <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--gold-2)', fontSize: '0.8125rem', marginTop:6, lineHeight:1.5}}>{character.complication.custom}</div>
             )}
+            {(benefits.complicationPicks || []).map((r, i) => (
+              <div key={i} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>
+                <span style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginRight:8}}>{r.label}</span>
+                <span style={{color:'var(--gold-2)'}}>{r.text}</span>
+              </div>
+            ))}
           </>
         ) : 'None — a simpler life.'} />
       </div>
@@ -269,6 +275,9 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
                   {benefits.perk.chosen && benefits.perk.desc && (
                     <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', lineHeight:1.5, marginTop: 5, whiteSpace:'pre-line',
                       display:'-webkit-box', WebkitLineClamp:4, WebkitBoxOrient:'vertical', overflow:'hidden'}} title={benefits.perk.desc}>{benefits.perk.desc}</div>
+                  )}
+                  {benefits.perk.picks && (
+                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--gold-2)', marginTop: 5}}>{benefits.perk.picks}</div>
                   )}
                 </div>
               )}

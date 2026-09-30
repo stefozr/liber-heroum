@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CLASSES, DS_STEPS, kitPoolFor, companionById } from '../data.jsx';
 import { Crest, SavePill, Button, TopBar, Modal } from '../theme.jsx';
-import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept, duplicateSkillPicks } from '../app.jsx';
+import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept, duplicateSkillPicks, heldSkillsFor, complicationOwnSkillPicks, heroicAbilityPools, collectLanguagePicks, perkPickIssues } from '../app.jsx';
 import { parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { UnfinishedChapters } from './UnfinishedChapters.jsx';
@@ -463,6 +463,7 @@ function stepIssues(c, idx) {
         issues.push(car.languages === 1 ? 'Language not chosen' : `Languages: ${got} of ${car.languages} picked`);
       }
       if (!c.career.perk) issues.push('Perk not chosen');
+      else issues.push(...perkPickIssues(c.career.perk, c.career.perkPicks, c));
       // Auto-granted duplicates need their "choose another instead" swap.
       issues.push(...swapIssues(careerAutoCollisions(c), c.career.skillSwaps, 'career', c.career.skills || []));
       issues.push(...dupPickIssues(k => k === 'career'));
@@ -555,6 +556,37 @@ function stepIssues(c, idx) {
       if (comp.languageChoice && ((c.complication.languages || []).length < comp.languageChoice.count)) {
         const got = (c.complication.languages || []).length;
         issues.push(comp.languageChoice.count === 1 ? 'Language not chosen' : `Languages: ${got} of ${comp.languageChoice.count} picked`);
+      }
+      // Follow-up picks the prose asks for. Text prompts are optional and never listed.
+      const own = complicationOwnSkillPicks(c);
+      (comp.ownSkillChoices || []).forEach((ch, i) => {
+        const pool = heldSkillsFor(c, { groups: ch.groups, excludeKeyPrefix: ch.excludeOwnGrants ? 'comp:' : null });
+        const got = (own[i] || []).length;
+        if (pool.length >= ch.count && got < ch.count) issues.push(ch.count === 1 ? `${ch.label} not picked` : `${ch.label}: ${got} of ${ch.count} picked`);
+      });
+      (comp.optionChoices || []).forEach((ch, i) => {
+        if (((c.complication.options || {})[i] || []).length < ch.count) issues.push(`${ch.label} not chosen`);
+      });
+      if ((comp.abilityChoices || []).length) {
+        const pools = heroicAbilityPools(c);
+        for (const ch of comp.abilityChoices) {
+          const pool = ch.pool === 'known-heroic' ? pools.known : pools.future;
+          const name = (c.complication.abilityPicks || {})[ch.id];
+          if (pool.length && !pool.some(a => a.name === name)) issues.push(`${ch.label} not chosen`);
+        }
+      }
+      if (comp.languageLoss) {
+        const forgotten = (c.complication.forgottenLanguages || []).length;
+        if (forgotten < comp.languageLoss.count) issues.push(`${comp.languageLoss.label} not chosen`);
+      }
+      if (comp.traitChoice) {
+        const anc = DS_ANCESTRIES.find(a => a.id === comp.traitChoice.ancestry);
+        const owned = c.ancestry?.id === comp.traitChoice.ancestry ? (c.ancestry.traits || []) : [];
+        const pool = (anc?.traits || []).filter(t => !owned.includes(t.name));
+        const picked = c.complication.traits || [];
+        const spent = pool.filter(t => picked.includes(t.name)).reduce((s, t) => s + (t.cost || 0), 0);
+        const affordable = pool.some(t => !picked.includes(t.name) && spent + (t.cost || 0) <= comp.traitChoice.points);
+        if (spent < comp.traitChoice.points && affordable) issues.push(`${comp.traitChoice.label}: ${spent} of ${comp.traitChoice.points} points spent`);
       }
       // Fixed grants colliding with an earlier slot must carry a same-group swap.
       const ownNames = [...(comp.skills || []), ...Object.values(c.complication.skills || {}).flat()];

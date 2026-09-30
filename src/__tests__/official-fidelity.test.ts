@@ -470,6 +470,10 @@ const COMPLICATION_EXCEPTIONS: Record<string, string[]> = {
   // Heroes p.236 grants one lore skill; the compendium models only the Study Lore project
   // (projects aren't part of the extract), so the app's skillChoices entry is book-backed.
   'consuming-interest': ['app-extra-skill'],
+  // Heroes p.240: "Then choose three new skills, which you have and can use only while
+  // your spirit is in control." The compendium has no advancement for Shared Spirit at
+  // all; the app's skillChoices entry is book-backed.
+  'shared-spirit': ['app-extra-skill'],
 };
 const compExempt = (id: string, field: string) => COMPLICATION_EXCEPTIONS[id]?.includes(field);
 

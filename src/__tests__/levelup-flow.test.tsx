@@ -53,6 +53,12 @@ function driveLevelUp(c: any, editLevel: number | null = null) {
       // If the drilldown list vanished, click once more to re-open it.
       if (!(container.textContent || '').includes(pick.chosen)) clickText(container, pick.name);
       clickText(container, pick.chosen);  // specific item
+      // Third tier: the perk's own follow-up (Area of Expertise's skill, Linguist's languages).
+      for (const chip of [...(pick.perkPicks?.skills || []), ...(pick.perkPicks?.languages || [])]) {
+        const btn = [...container.querySelectorAll<HTMLButtonElement>('button.skill-chip')].find(b => (b.textContent || '').trim() === chip);
+        expect(btn, `chip "${chip}" not found`).toBeTruthy();
+        fireEvent.click(btn!);
+      }
     } else {
       clickText(container, pick.name);
     }
@@ -135,5 +141,25 @@ describe('deeper screens', () => {
       const blocked = [...container.querySelectorAll<HTMLElement>('.lvl-opt.blocked')];
       expect(blocked.some(e => e.textContent!.includes(perk2)), `"${perk2}" should render blocked`).toBe(true);
     }
+  });
+});
+
+describe('perk follow-up tier', () => {
+  it('censor L2: Linguist cannot continue until two languages are picked', () => {
+    const c = buildValidCharacter({ cls: 'censor' });
+    const { container } = render(<LevelUpFlow open={true} onClose={noop} character={c} update={noop} />);
+    clickButton(container, /CONTINUE/);
+    clickText(container, 'Lore Perk');
+    clickText(container, 'Linguist');
+    const cont = [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => /CONTINUE/.test(b.textContent || ''))!;
+    expect(cont.disabled).toBe(true);
+    const chips = [...container.querySelectorAll<HTMLButtonElement>('button.skill-chip')].filter(b => !b.disabled);
+    expect(chips.length).toBeGreaterThanOrEqual(2);
+    // Caelian is already known — its chip is blocked.
+    expect([...container.querySelectorAll<HTMLButtonElement>('button.skill-chip')].find(b => b.textContent === 'Caelian')?.disabled).toBe(true);
+    fireEvent.click(chips[0]);
+    expect(cont.disabled).toBe(true);
+    fireEvent.click(chips[1]);
+    expect(cont.disabled).toBe(false);
   });
 });

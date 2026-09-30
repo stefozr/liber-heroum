@@ -6,6 +6,7 @@ import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, com
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures, orderTraitCards, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { TraitProse, TraitAbilityCards } from '../../theme/sheet.jsx';
+import { SkillChoicePicker, OptionChoicePicker } from './pickers.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -324,98 +325,6 @@ function AncestryStep({ character, update }) {
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-// Chip grid for a "choose N skills from these groups" choice, with cross-slot dedupe.
-function SkillChoicePicker({ character, slotKey, choice, picked, toggle }) {
-  const { groups, count } = choice;
-  const pool = Array.from(new Set(groups.flatMap(g => DS_SKILL_GROUPS[g] || [])));
-  const groupLabel = groups.join(' / ');
-  // Skills held in any other slot (other signatures/traits, culture, career, domain, level-ups).
-  const takenElsewhere = skillsTakenExcept(character, slotKey);
-  return (
-    <div style={{marginTop:16}}>
-      <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
-        Choose {count} {groupLabel} skill{count > 1 ? 's' : ''} — picked <b style={{color: picked.length === count ? 'var(--gold-2)' : 'var(--ink)'}}>{picked.length}</b> / {count}
-      </div>
-      <div className="skill-chip-grid">
-        {pool.map(s => {
-          const on = picked.includes(s);
-          const elsewhere = !on && takenElsewhere.has(s);
-          const blocked = elsewhere || (!on && picked.length >= count);
-          return (
-            <button
-              type="button"
-              key={s}
-              className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
-              onClick={() => !blocked && toggle(s)}
-              disabled={blocked}
-              title={elsewhere ? `Already chosen — ${takenElsewhere.get(s)}` : ''}
-            >
-              {s}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// "Choose N of these options" — cards when options carry text, chips otherwise.
-function OptionChoicePicker({ choice, options, picked, toggle }) {
-  const { label, count } = choice;
-  const norm = (options || []).map(o => typeof o === 'string' ? { name: o, text: null } : o);
-  const detailed = norm.some(o => o.text);
-  if (detailed) {
-    return (
-      <div style={{marginTop:16}}>
-        <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:10}}>
-          {label} — {count === 1 ? 'choose one' : `choose ${count} (${picked.length}/${count})`}
-        </div>
-        <div className="grid-2">
-          {norm.map(o => {
-            const on = picked.includes(o.name);
-            const blocked = !on && count > 1 && picked.length >= count;
-            return (
-              <SelCard
-                key={o.name}
-                selected={on}
-                blocked={blocked}
-                onClick={() => !blocked && toggle(o.name)}
-              >
-                <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{o.name}</div>
-                {o.text && <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(o.text)}</div>}
-              </SelCard>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div style={{marginTop:16}}>
-      <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.22em', textTransform:'uppercase', marginBottom:8}}>
-        {label} — {count === 1 ? 'choose one' : `choose ${count}`}{count > 1 ? ` (${picked.length}/${count})` : ''}
-      </div>
-      <div className="skill-chip-grid">
-        {norm.map(o => {
-          const on = picked.includes(o.name);
-          const blocked = !on && count > 1 && picked.length >= count;
-          return (
-            <button
-              type="button"
-              key={o.name}
-              className={`skill-chip${on ? ' on' : ''}${blocked ? ' blocked' : ''}`}
-              onClick={() => !blocked && toggle(o.name)}
-              disabled={blocked}
-            >
-              {o.name}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

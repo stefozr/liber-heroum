@@ -6,7 +6,7 @@ import { render, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import React from 'react';
 import { Wizard, isStepValid, stepIssues, classSections } from '../wizard.jsx';
-import { newCharacter, collectSkillPicks } from '../app.jsx';
+import { newCharacter, collectSkillPicks, collectLanguagePicks, computeDerived, heldSkillsFor } from '../app.jsx';
 import { DS_STEPS, DS_ANCESTRIES, DS_CLASSES, DS_CAREERS, DS_KITS, DS_COMPLICATIONS, DS_CULTURES, DS_SKILL_GROUPS, DS_LANGUAGES, kitPoolFor } from '../data.jsx';
 import { PERKS, pickPool } from '../wizard/helpers.js';
 import { buildValidCharacter } from './helpers/factories';
@@ -829,5 +829,152 @@ describe('follow-up picks sit in a drawer right under their card', () => {
     expect(drawer?.classList.contains('card-drawer')).toBe(true);
     expect(drawer?.previousElementSibling?.classList.contains('selected')).toBe(true);
     expect(drawer?.textContent).toContain('crafting');
+  });
+});
+
+describe('follow-up picks the prose asks for (own skills, options, abilities, text, traits)', () => {
+  const COMP_STEP = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
+  const CAREER_STEP = DS_STEPS.findIndex((s: any) => /career/i.test(s.id));
+  const chip = (container: HTMLElement, text: string) =>
+    Array.from(container.querySelectorAll<HTMLButtonElement>('button.skill-chip')).find(b => b.textContent!.trim() === text) || null;
+  const withComp = (id: string, extra: any = {}) => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id, custom: '', skills: {}, skillSwaps: {}, languages: [], ownSkills: {}, options: {}, texts: {}, abilityPicks: {}, forgottenLanguages: [], traits: [], ...extra };
+    return c;
+  };
+
+  it('Rival: the drawer lists the skills the hero already holds, blocks the chapter until one is favored, and stores the pick', () => {
+    const c = withComp('rival');
+    const held = heldSkillsFor(c);
+    expect(held.length).toBeGreaterThan(0);
+    expect(stepIssues(c, COMP_STEP)).toContain('Favored skill not picked');
+    const { container, latest } = renderWizard(c);
+    const drawer = container.querySelector('#comp-rival')!.nextElementSibling as HTMLElement;
+    expect(drawer.classList.contains('card-drawer')).toBe(true);
+    expect(drawer.textContent).toContain('Favored skill');
+    for (const s of held) expect(chip(drawer, s), `held skill ${s} offered`).toBeTruthy();
+    // A skill the hero doesn't have is not on offer.
+    const notHeld = (DS_SKILL_GROUPS as any).lore.find((s: string) => !held.includes(s));
+    expect(chip(drawer, notHeld)).toBeNull();
+    fireEvent.click(chip(drawer, held[0])!);
+    expect(latest().complication.ownSkills).toEqual({ 0: [held[0]] });
+    c.complication.ownSkills = { 0: [held[0]] };
+    expect(stepIssues(c, COMP_STEP)).toEqual([]);
+    // The pick is not a new skill grant …
+    expect(collectSkillPicks(c).filter((p: any) => p.name === held[0])).toHaveLength(1);
+  });
+
+  it('Rival: a favored skill the hero no longer holds re-opens the prompt', () => {
+    const c = withComp('rival', { ownSkills: { 0: ['Timescape'] } });
+    expect(heldSkillsFor(c)).not.toContain('Timescape');
+    expect(stepIssues(c, COMP_STEP)).toContain('Favored skill not picked');
+  });
+
+  it("Shared Spirit: the body's skills come from earlier chapters, the spirit's are three new ones", () => {
+    const c = withComp('shared-spirit', { skills: { 0: ['Alchemy', 'Architecture', 'Blacksmithing'] } });
+    const body = heldSkillsFor(c, { excludeKeyPrefix: 'comp:' });
+    expect(body).not.toContain('Alchemy');
+    expect(heldSkillsFor(c)).toContain('Alchemy');
+    const { container } = renderWizard(c);
+    const drawer = container.querySelector('#comp-shared-spirit')!.nextElementSibling as HTMLElement;
+    expect(drawer.textContent).toContain('Skills while you control your body');
+    expect(drawer.textContent).toContain('Spirit’s skills');
+  });
+
+  it('Infernal Contract (Bad): the chosen bargain drives Renown, Wealth or Stamina — not all three', () => {
+    const base = computeDerived(withComp('infernal-contract-bad'));
+    const renown = computeDerived(withComp('infernal-contract-bad', { options: { 0: ['2 Renown'] } }));
+    const wealth = computeDerived(withComp('infernal-contract-bad', { options: { 0: ['+2 Wealth'] } }));
+    const stamina = computeDerived(withComp('infernal-contract-bad', { options: { 0: ['+3 Stamina'] } }));
+    expect(renown.renownBase).toBe(base.renownBase + 2);
+    expect(renown.staminaMax).toBe(base.staminaMax);
+    expect(wealth.wealthBase).toBe(base.wealthBase + 2);
+    expect(stamina.staminaMax).toBe(base.staminaMax + 3);
+    expect(stamina.renownBase).toBe(base.renownBase);
+    expect(stepIssues(withComp('infernal-contract-bad'), COMP_STEP)).toContain('Bargain not chosen');
+    const { container, latest } = renderWizard(withComp('infernal-contract-bad'));
+    fireEvent.click(chip(container, '2 Renown')!);
+    expect(latest().complication.options).toEqual({ 0: ['2 Renown'] });
+  });
+
+  it('Following in the Footsteps: known and higher-level heroic abilities show as cards and both picks are required', () => {
+    const c = withComp('following-footsteps');
+    const issues = stepIssues(c, COMP_STEP);
+    expect(issues).toContain('Ability to master not chosen');
+    expect(issues).toContain('Neglected ability not chosen');
+    const { container, latest } = renderWizard(c);
+    const drawer = container.querySelector('#comp-following-footsteps')!.nextElementSibling as HTMLElement;
+    const known = c.cclass.signatures[0];
+    expect(drawer.textContent).toContain(known);
+    const knownCard = Array.from(drawer.querySelectorAll('button.card')).find(b => b.textContent!.includes(known))!;
+    fireEvent.click(knownCard);
+    expect(latest().complication.abilityPicks.known).toBe(known);
+  });
+
+  it('Searching for a Cure: the monster prompt is offered but never blocks the chapter', () => {
+    const c = withComp('searching-for-cure');
+    expect(stepIssues(c, COMP_STEP)).toEqual([]);
+    const { container, latest } = renderWizard(c);
+    const input = container.querySelector<HTMLInputElement>('#comp-text-0')!;
+    expect(input).toBeTruthy();
+    fireEvent.change(input, { target: { value: 'vampire' } });
+    expect(latest().complication.texts).toEqual({ 0: 'vampire' });
+  });
+
+  it('Shipwrecked: the forgotten language leaves the known list and must be chosen', () => {
+    const c = withComp('shipwrecked');
+    expect(stepIssues(c, COMP_STEP)).toContain('Forgotten language not chosen');
+    const before = collectLanguagePicks(c).map((p: any) => p.name);
+    expect(before).toContain('Caelian');
+    c.complication.forgottenLanguages = ['Caelian'];
+    expect(collectLanguagePicks(c).map((p: any) => p.name)).not.toContain('Caelian');
+    expect(stepIssues(c, COMP_STEP)).not.toContain('Forgotten language not chosen');
+    const { container } = renderWizard(c);
+    // The forgotten tongue stays on offer so it can be toggled back.
+    expect(chip(container, 'Caelian')?.classList.contains('on')).toBe(true);
+  });
+
+  it('Dragon Dreams: two points of dragon knight traits, a third point is blocked', () => {
+    const c = withComp('dragon-dreams');
+    expect(stepIssues(c, COMP_STEP)).toContain('Dragon knight traits: 0 of 2 points spent');
+    c.complication.traits = ['Draconian Guard']; // 1 pt
+    expect(stepIssues(c, COMP_STEP)).toContain('Dragon knight traits: 1 of 2 points spent');
+    c.complication.traits = ['Dragon Breath']; // 2 pt
+    expect(stepIssues(c, COMP_STEP)).toEqual([]);
+    const { container, latest } = renderWizard(c);
+    const drawer = container.querySelector('#comp-dragon-dreams')!.nextElementSibling as HTMLElement;
+    const guard = Array.from(drawer.querySelectorAll('button.card')).find(b => b.textContent!.includes('Draconian Guard'))!;
+    expect(guard.classList.contains('blocked')).toBe(true);
+    const breath = Array.from(drawer.querySelectorAll('button.card')).find(b => b.textContent!.includes('Dragon Breath'))!;
+    fireEvent.click(breath);
+    expect(latest().complication.traits).toEqual([]);
+  });
+
+  it('Corrupted Mentor prints its Corrupt Spirit card', () => {
+    const { container } = renderWizard(withComp('corrupted-mentor'));
+    expect(container.querySelector('#comp-corrupted-mentor')!.textContent).toContain('Corrupt Spirit');
+  });
+
+  it('career: Area of Expertise opens a drawer over the held crafting skills and blocks the chapter until picked', () => {
+    const c = atStep(CAREER_STEP, { career: 'artisan', perk: 'Area of Expertise' });
+    c.career.perkPicks = { skills: [], languages: [] };
+    expect(stepIssues(c, CAREER_STEP)).toContain('Area of Expertise: expertise skill not picked');
+    const { container, latest } = renderWizard(c);
+    const drawer = container.querySelector('#career-perk-picks') as HTMLElement;
+    expect(drawer?.classList.contains('card-drawer')).toBe(true);
+    const crafting = heldSkillsFor(c, { groups: ['crafting'] });
+    expect(crafting.length).toBeGreaterThan(0);
+    fireEvent.click(chip(drawer, crafting[0])!);
+    expect(latest().career.perkPicks.skills).toEqual([crafting[0]]);
+  });
+
+  it('career: Linguist asks for two new languages, which then count as known', () => {
+    const c = atStep(CAREER_STEP, { career: 'sage', perk: 'Linguist' });
+    c.career.perkPicks = { skills: [], languages: [] };
+    expect(stepIssues(c, CAREER_STEP)).toContain('Linguist: languages 0 of 2 picked');
+    c.career.perkPicks = { skills: [], languages: ['Yllyric', 'Zaliac'] };
+    expect(stepIssues(c, CAREER_STEP)).toEqual([]);
+    const known = collectLanguagePicks(c);
+    expect(known.find((p: any) => p.name === 'Yllyric')?.source).toBe('Linguist');
   });
 });

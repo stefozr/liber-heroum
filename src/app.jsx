@@ -1,5 +1,5 @@
 import React from 'react';
-import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES, DS_STEPS, companionById, minionById, collectMinionIds } from './data.jsx';
+import { DS_ANCESTRIES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_LEVEL_BONUSES, DS_STEPS, DS_SKILL_GROUPS, companionById, minionById, collectMinionIds } from './data.jsx';
 import { ThemeStyles, Pill, Button } from './theme.jsx';
 import { DS } from './backend.jsx';
 import { AccountStyles, AuthScreen, NotInvitedScreen, DisplayNamePrompt, AppBar, Masthead } from './auth.jsx';
@@ -11,8 +11,8 @@ const TweaksHost = import.meta.env.DEV ? React.lazy(() => import('./tweaks-host.
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
-import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills } from './wizard/helpers.js';
-import { LEVELUP_DATA, CENSOR_DOMAIN_1 } from './levelup.jsx';
+import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills, PERK_CHOICES } from './wizard/helpers.js';
+import { LEVELUP_DATA, CENSOR_DOMAIN_1, makeContext, levelChoicesFor } from './levelup.jsx';
 import { DOMAIN_1ST_FEATURES } from './data/conduit-domains.js';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
 
@@ -127,14 +127,14 @@ function newCharacter(ownerId = null, campaignId = null) {
 
     ancestry: { id: null, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} },
     culture: { language: 'Caelian', environment: null, organization: null, upbringing: null, archetype: null, skills: {} },
-    career: { id: null, incident: '', taken: '', languages: [], skills: [], perk: '' },
+    career: { id: null, incident: '', taken: '', languages: [], skills: [], perk: '', perkPicks: { skills: [], languages: [] } },
     cclass: { id: null, subclass: null, domains: [], characteristics: {}, charArrayIndex: 0, signatures: [], heroic3: null, heroic5: null, skills: [], deity: '', charModel: 'v2',
       // Master-class picks: Beastheart companion (+ per-companion options, e.g. the
       // drake's attuned type); Summoner formation / quick command / portfolio minions.
       companion: null, companionOptions: {}, formation: null, quickCommand: null, minions: { sig: [], t3: [] } },
     kit: { id: null },
     kit2: { id: null },
-    complication: { id: null, custom: '', skills: {}, languages: [] },
+    complication: { id: null, custom: '', skills: {}, languages: [], ownSkills: {}, options: {}, texts: {}, abilityPicks: {}, forgottenLanguages: [], traits: [] },
     identity: { name: '', pronouns: '', age: '', height: '', weight: '', appearance: '', backstory: '', deity: '' },
     levelChoices: {},
 
@@ -297,6 +297,7 @@ function collectStatBonuses(c) {
     }
   }
   if (comp?.bonuses) out.push(comp.bonuses);
+  out.push(...complicationOptionEffects(c).bonuses);
   // Level-up picks (features/abilities chosen in the level-up flow) that carry stat
   // bonuses. None of the current LEVELUP_DATA options do, but the pipeline honors them.
   for (let l = 2; l <= lvl; l++) {
@@ -363,8 +364,9 @@ function computeDerived(c) {
   // adjustments live in c.play.renownAdj / wealthAdj on top of these.
   const car = careerDef(c);
   const comp = complicationDef(c);
-  const renownBase = (car?.renown || 0) + (comp?.renown || 0);
-  const wealthBase = 1 + (car?.wealth || 0) + (comp?.wealth || 0) + Math.floor((lvl - 1) / 2);
+  const compOpts = complicationOptionEffects(c);
+  const renownBase = (car?.renown || 0) + (comp?.renown || 0) + compOpts.renown;
+  const wealthBase = 1 + (car?.wealth || 0) + (comp?.wealth || 0) + compOpts.wealth + Math.floor((lvl - 1) / 2);
 
   return {
     staminaMax, recoveries, recoveryValue, winded,
@@ -1263,6 +1265,21 @@ function summarizeBenefits(c) {
     if (picks.length) languages.push({ source: comp.name, text: picks.join(' \u00b7 ') });
     else languages.push({ source: comp.name, text: `+${comp.languageChoice.count} of your choice` });
   }
+  // Linguist (career perk or level-up perk) grants two languages of the player's choice.
+  const perkLangRow = (perkName, picks, count) => {
+    if (picks.length) languages.push({ source: perkName, text: picks.join(' \u00b7 ') });
+    else languages.push({ source: perkName, text: `+${count} of your choice` });
+  };
+  if (c.career?.perk && PERK_CHOICES[c.career.perk]?.languages) {
+    perkLangRow(c.career.perk, c.career.perkPicks?.languages || [], PERK_CHOICES[c.career.perk].languages.count);
+  }
+  for (const { pick } of levelUpPerkPicks(c)) {
+    if (PERK_CHOICES[pick.chosen]?.languages) perkLangRow(pick.chosen, pick.perkPicks?.languages || [], PERK_CHOICES[pick.chosen].languages.count);
+  }
+  if (comp?.languageLoss) {
+    const f = c.complication?.forgottenLanguages || [];
+    if (f.length) languages.push({ source: `${comp.name} — forgotten`, text: f.join(' \u00b7 ') });
+  }
 
   // Perk
   let perk = null;
@@ -1273,8 +1290,12 @@ function summarizeBenefits(c) {
       const found = window.PERKS[car.perk].find(p => p.name === chosen);
       if (found) desc = found.text;
     }
-    perk = { group: car.perk, chosen, desc };
+    // The perk's own follow-up pick (Area of Expertise's skill), when it has one.
+    const picks = chosen ? perkPickText(chosen, c.career?.perkPicks) : null;
+    perk = { group: car.perk, chosen, desc, picks };
   }
+  // Follow-up picks the complication asks for (favored skill, bargain, ability, …).
+  const complicationPicks = complicationPickRows(c);
 
   // Class features (incl. resource and subclass label)
   const features = [];
@@ -1380,7 +1401,39 @@ function summarizeBenefits(c) {
     }
   }
 
-  return { skills, languages, perk, features, classAbilities, ancestryAbilities };
+  // Dragon Dreams' borrowed traits bring their abilities (Dragon Breath …) to the sheet.
+  for (const t of complicationTraitPicks(c)) for (const a of t.abilities || []) {
+    if (!ancestryAbilities.some(x => x.name === a.name)) ancestryAbilities.push(a);
+  }
+
+  return { skills, languages, perk, features, classAbilities, ancestryAbilities, complicationPicks };
+}
+
+// Unfinished follow-up picks for a perk → issue strings (empty when complete or when the
+// perk has no follow-ups). An own-skill pick only counts as owed once the hero holds
+// enough qualifying skills to make it.
+function perkPickIssues(perkName, perkPicks, c) {
+  const spec = PERK_CHOICES[perkName];
+  if (!spec) return [];
+  const issues = [];
+  if (spec.ownSkill) {
+    const pool = heldSkillsFor(c, { groups: spec.ownSkill.groups });
+    const got = (perkPicks?.skills || []).filter(s => pool.includes(s)).length;
+    if (pool.length >= spec.ownSkill.count && got < spec.ownSkill.count) issues.push(`${perkName}: ${spec.ownSkill.label.toLowerCase()} not picked`);
+  }
+  if (spec.languages) {
+    const got = (perkPicks?.languages || []).length;
+    if (got < spec.languages.count) issues.push(`${perkName}: languages ${got} of ${spec.languages.count} picked`);
+  }
+  return issues;
+}
+
+// "Skill: Carpentry — note" for a perk's own-skill pick, or null when the perk has none.
+function perkPickText(perkName, perkPicks) {
+  const spec = PERK_CHOICES[perkName];
+  if (!spec?.ownSkill) return null;
+  const skills = (perkPicks?.skills || []).filter(Boolean);
+  return skills.length ? `${spec.ownSkill.label}: ${skills.join(' \u00b7 ')}${spec.ownSkill.note ? ` — ${spec.ownSkill.note}` : ''}` : `${spec.ownSkill.label}: choose one of your ${spec.ownSkill.groups.join('/')} skills`;
 }
 
 // ───────── Duplicate-prevention: a single source of truth for committed skills/perks ─────────
@@ -1512,8 +1565,158 @@ function collectLanguagePicks(c) {
   push('Caelian', 'Standard', 'standard');
   push(c.culture && c.culture.language, 'Culture', 'culture');
   for (const l of (c.career && c.career.languages) || []) push(l, 'Career', 'career');
+  // Linguist's two languages — from the career perk or a level-up perk pick.
+  if (c.career?.perk && PERK_CHOICES[c.career.perk]?.languages) {
+    for (const l of c.career.perkPicks?.languages || []) push(l, c.career.perk, 'perk:career');
+  }
+  for (const { level, chId, pick } of levelUpPerkPicks(c)) {
+    if (PERK_CHOICES[pick.chosen]?.languages) for (const l of pick.perkPicks?.languages || []) push(l, pick.chosen, 'lvl:' + level + ':' + chId);
+  }
   for (const l of (c.complication && c.complication.languages) || []) push(l, 'Complication', 'complication');
+  // Shipwrecked: a language the hero has forgotten no longer counts as known.
+  const comp = complicationDef(c);
+  if (comp?.languageLoss) {
+    const forgotten = new Set(c.complication?.forgottenLanguages || []);
+    return out.filter(p => !forgotten.has(p.name));
+  }
   return out;
+}
+
+// Level-up perk picks as [{ level, chId, pick }] — pick is { ...group, chosen, perkPicks? }.
+function levelUpPerkPicks(c) {
+  const cls = classDef(c);
+  const lvl = cls && LEVELUP_DATA[cls.id];
+  const out = [];
+  if (!lvl) return out;
+  for (const [L, stored] of Object.entries(c.levelChoices || {})) {
+    for (const ch of ((lvl[L] && lvl[L].choices) || [])) {
+      if (ch.kind !== 'perk') continue;
+      const p = stored && stored.picks && stored.picks[ch.id];
+      if (p && p.chosen) out.push({ level: Number(L), chId: ch.id, pick: p });
+    }
+  }
+  return out;
+}
+
+// ───────── Follow-up picks: "choose one of YOUR skills", enumerated options, abilities ─────────
+// Skills the hero currently holds, for pickers that modify an existing skill (Rival,
+// Area of Expertise). `groups` narrows to those skill groups; `excludeKeyPrefix` drops
+// the slots whose picks shouldn't qualify (Shared Spirit's own grants).
+function heldSkillsFor(c, { groups = null, excludeKeyPrefix = null } = {}) {
+  const inGroups = (name) => !groups || groups.some(g => (DS_SKILL_GROUPS[g] || []).includes(name));
+  const names = [];
+  for (const e of collectSkillEntries(c)) {
+    if (excludeKeyPrefix && e.key.startsWith(excludeKeyPrefix)) continue;
+    if (!inGroups(e.name) || names.includes(e.name)) continue;
+    names.push(e.name);
+  }
+  return names;
+}
+
+// The complication's own-skill picks with stale entries dropped (a skill no longer
+// held can't be favored) → { [choiceIndex]: string[] }.
+function complicationOwnSkillPicks(c) {
+  const comp = complicationDef(c);
+  const out = {};
+  (comp?.ownSkillChoices || []).forEach((ch, i) => {
+    const pool = heldSkillsFor(c, { groups: ch.groups, excludeKeyPrefix: ch.excludeOwnGrants ? 'comp:' : null });
+    out[i] = ((c.complication?.ownSkills || {})[i] || []).filter(s => pool.includes(s));
+  });
+  return out;
+}
+
+// Chosen optionChoices entries of the complication, resolved to their option objects.
+function chosenComplicationOptions(c) {
+  const comp = complicationDef(c);
+  const out = [];
+  (comp?.optionChoices || []).forEach((ch, i) => {
+    const picked = (c.complication?.options || {})[i] || [];
+    for (const o of ch.options || []) {
+      const opt = typeof o === 'string' ? { name: o } : o;
+      if (picked.includes(opt.name)) out.push({ choice: ch, option: opt });
+    }
+  });
+  return out;
+}
+
+// Stat effects carried by chosen complication options (Infernal Contract's bargain).
+function complicationOptionEffects(c) {
+  const eff = { bonuses: [], renown: 0, wealth: 0 };
+  for (const { option } of chosenComplicationOptions(c)) {
+    if (option.bonuses) eff.bonuses.push(option.bonuses);
+    eff.renown += option.renown || 0;
+    eff.wealth += option.wealth || 0;
+  }
+  return eff;
+}
+
+// Heroic abilities for "choose an ability" prompts (Following in the Footsteps):
+// `known` is what the hero can use now (chosen signatures, 3/5-cost heroics, level-up
+// picks); `future` is every ability a later level could offer this class/subclass.
+function heroicAbilityPools(c) {
+  const cls = classDef(c);
+  const known = [], future = [];
+  if (!cls) return { known, future };
+  const seen = new Set();
+  const add = (list, a) => { if (a && a.name && !seen.has(list + a.name)) { seen.add(list + a.name); (list === 'k' ? known : future).push(a); } };
+  const sigs = c.cclass?.signatures || [];
+  for (const a of cls.signatures || []) if (sigs.includes(a.name)) add('k', a);
+  for (const a of cls.heroic3 || []) if (a.name === c.cclass?.heroic3) add('k', a);
+  for (const a of cls.heroic5 || []) if (a.name === c.cclass?.heroic5) add('k', a);
+  for (const arr of Object.values(c.cclass?.levelAbilities || {})) for (const a of arr || []) add('k', a);
+  const ctx = makeContext(c);
+  for (let L = (c.level || 1) + 1; L <= 10; L++) {
+    for (const ch of levelChoicesFor(cls, L, ctx)) {
+      if (ch.kind !== 'ability') continue;
+      let opts = [];
+      try { opts = typeof ch.options === 'function' ? ch.options(ctx) : ch.options; } catch { opts = []; }
+      for (const a of opts || []) add('f', a);
+    }
+  }
+  return { known, future };
+}
+
+// Dragon Dreams: the traits the complication borrows, resolved from the ancestry table.
+function complicationTraitPicks(c) {
+  const comp = complicationDef(c);
+  if (!comp?.traitChoice) return [];
+  const anc = DS_ANCESTRIES.find(a => a.id === comp.traitChoice.ancestry);
+  const names = c.complication?.traits || [];
+  return (anc?.traits || []).filter(t => names.includes(t.name));
+}
+
+// Every follow-up pick the complication carries, as display rows [{ label, text }].
+// Unmade picks render as their prompt so the sheet still says what's owed.
+function complicationPickRows(c) {
+  const comp = complicationDef(c);
+  if (!comp) return [];
+  const rows = [];
+  const own = complicationOwnSkillPicks(c);
+  (comp.ownSkillChoices || []).forEach((ch, i) => {
+    const picked = own[i] || [];
+    rows.push({ label: ch.label, text: picked.length ? picked.join(' \u00b7 ') + (ch.note ? ` — ${ch.note}` : '') : `choose ${ch.count} of your skills` });
+  });
+  (comp.optionChoices || []).forEach((ch, i) => {
+    const picked = (c.complication?.options || {})[i] || [];
+    rows.push({ label: ch.label, text: picked.length ? picked.join(' \u00b7 ') : 'not yet chosen' });
+  });
+  for (const ch of comp.abilityChoices || []) {
+    const name = (c.complication?.abilityPicks || {})[ch.id];
+    rows.push({ label: ch.label, text: name ? name + (ch.note ? ` — ${ch.note}` : '') : 'not yet chosen' });
+  }
+  (comp.textChoices || []).forEach((ch, i) => {
+    const v = ((c.complication?.texts || {})[i] || '').trim();
+    if (v) rows.push({ label: ch.label, text: v });
+  });
+  if (comp.languageLoss) {
+    const f = c.complication?.forgottenLanguages || [];
+    rows.push({ label: comp.languageLoss.label, text: f.length ? f.join(' \u00b7 ') : 'not yet chosen' });
+  }
+  if (comp.traitChoice) {
+    const traits = complicationTraitPicks(c);
+    rows.push({ label: comp.traitChoice.label, text: traits.length ? traits.map(t => t.name).join(' \u00b7 ') + (comp.traitChoice.note ? ` — ${comp.traitChoice.note}` : '') : `choose ${comp.traitChoice.points} points of traits` });
+  }
+  return rows;
 }
 
 // Map of name → source for every language known EXCEPT the given slot key(s).
@@ -1635,6 +1838,7 @@ export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectSkillEntries, duplicateSkillPicks, normalizeSkills, charBonusPicksAt };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
+export { heldSkillsFor, complicationOwnSkillPicks, chosenComplicationOptions, complicationOptionEffects, heroicAbilityPools, complicationTraitPicks, complicationPickRows, levelUpPerkPicks, perkPickText, perkPickIssues };
 export { canEditCharacterFor, canSetVisibilityFor, shouldSkipRealtimeMerge, isHollowHero, ensureShape, normalizeLoaded };
 export { parseHash, navToHash };
 export { App };

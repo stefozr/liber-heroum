@@ -595,12 +595,15 @@ function characterToFoundryHero(c, officialIndex = null) {
   }
 
   if (comp) {
-    const custom = c.complication?.custom;
+    // The player's follow-up picks (favored skill, bargain, forgotten language, …) and
+    // free-text note travel with the description, also when the official doc substitutes.
+    const picks = (benefits.complicationPicks || []).map(r => `**${r.label}:** ${r.text}`).join('\n\n');
+    const extra = [picks, c.complication?.custom].filter(Boolean).map(para).join('');
     add(official('complication', comp.name, descriptionItem(comp.name, 'complication', 0,
       (comp.combined
         ? section('Benefit and Drawback', comp.benefit)
-        : section('Benefit', comp.benefit) + section('Drawback', comp.drawback)) + para(custom)),
-      custom ? { appendDescription: para(custom) } : null));
+        : section('Benefit', comp.benefit) + section('Drawback', comp.drawback)) + extra),
+      extra ? { appendDescription: extra } : null));
   }
 
   const kitItems = [kit, kit2].filter(Boolean).map(k => add(official('kit', k.name, kitItem(k, 0))));
@@ -759,10 +762,9 @@ function characterToFoundryHero(c, officialIndex = null) {
   ];
   const skills = [...new Set(skillNames.map(skillId).filter(id => FOUNDRY_SKILL_IDS.has(id)))];
 
-  const langNames = new Set(['Caelian']);
-  if (c.culture?.language) langNames.add(c.culture.language);
-  for (const l of (c.career?.languages || [])) langNames.add(l);
-  for (const l of (c.complication?.languages || [])) langNames.add(l);
+  // Every known tongue through the shared collector: culture, career, Linguist, the
+  // complication — minus one Shipwrecked forgot.
+  const langNames = new Set(collectLanguagePicks(c).map(p => p.name));
   const languages = [...new Set([...langNames].map(langId).filter(Boolean))];
 
   // ── actor system ──

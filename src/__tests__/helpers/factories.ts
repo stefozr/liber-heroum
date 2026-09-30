@@ -1,13 +1,13 @@
 // Shared test factories: build wizard-complete characters for any class/subclass spec
 // and walk them through the level-up flow via the same pure reducer the UI uses.
-import { newCharacter, classDef, collectSkillPicks, collectPerkPicks } from '../../app.jsx';
+import { newCharacter, classDef, collectSkillPicks, collectPerkPicks, collectLanguagePicks, heldSkillsFor, heroicAbilityPools } from '../../app.jsx';
 
 import {
   DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_SKILL_GROUPS, DS_LANGUAGES, DS_COMPLICATIONS, kitPoolFor,
   BEASTHEART_COMPANIONS, companionById, SUMMONER_PORTFOLIOS,
 } from '../../data.jsx';
 import {
-  parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, defaultFlexValues, PERKS,
+  parseCareerSkills, classSkillPicks, classGrantedSkills, pickPool, defaultFlexValues, PERKS, PERK_CHOICES,
   groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions,
   resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent,
 } from '../../wizard/helpers.js';
@@ -28,6 +28,20 @@ const resolveOptions = (choice: any, ctx: any) =>
 // A valid pick for any level-up choice kind. For two-tier kinds (perk / skill-group) the
 // stored shape is { ...categoryOption, chosen } — mirror the UI, skipping items the
 // character already holds so dedupe rules stay satisfied.
+// The follow-up picks a perk asks for (PERK_CHOICES), filled the way the pickers would:
+// the first qualifying held skill(s), the first unknown language(s).
+export function perkPicksFor(perkName: string, character: any) {
+  const spec: any = (PERK_CHOICES as any)[perkName];
+  const out: any = { skills: [], languages: [] };
+  if (!spec || !character) return out;
+  if (spec.ownSkill) out.skills = heldSkillsFor(character, { groups: spec.ownSkill.groups }).slice(0, spec.ownSkill.count);
+  if (spec.languages) {
+    const known = new Set(collectLanguagePicks(character).map((p: any) => p.name));
+    out.languages = (DS_LANGUAGES as string[]).filter(L => !known.has(L)).slice(0, spec.languages.count);
+  }
+  return out;
+}
+
 export function firstPickFor(choice: any, ctx: any, character: any = null) {
   const opts = resolveOptions(choice, ctx);
   if (!opts.length) return null;
@@ -36,7 +50,7 @@ export function firstPickFor(choice: any, ctx: any, character: any = null) {
     for (const opt of opts) {
       const group = (PERKS as any)[deriveGroupName(opt)] || [];
       const item = group.find((p: any) => !takenPerks.has(p.name));
-      if (item) return { ...opt, chosen: item.name, chosenText: item.text };
+      if (item) return { ...opt, chosen: item.name, chosenText: item.text, perkPicks: perkPicksFor(item.name, character) };
     }
     return null;
   }
@@ -295,8 +309,40 @@ export function buildValidCharacter(spec: any = {}) {
         const pool: string[] = comp.languageChoice.options || (DS_LANGUAGES as string[]);
         c.complication.languages = pool.filter(L => !known.has(L)).slice(0, comp.languageChoice.count);
       }
+      // Follow-up picks the prose asks for, filled the way the drawer's pickers would.
+      c.complication.ownSkills = {};
+      (comp.ownSkillChoices || []).forEach((ch: any, i: number) => {
+        c.complication.ownSkills[i] = heldSkillsFor(c, { groups: ch.groups, excludeKeyPrefix: ch.excludeOwnGrants ? 'comp:' : null }).slice(0, ch.count);
+      });
+      c.complication.options = {};
+      (comp.optionChoices || []).forEach((ch: any, i: number) => {
+        c.complication.options[i] = ch.options.slice(0, ch.count).map((o: any) => (typeof o === 'string' ? o : o.name));
+      });
+      c.complication.abilityPicks = {};
+      if ((comp.abilityChoices || []).length) {
+        const pools: any = heroicAbilityPools(c);
+        for (const ch of comp.abilityChoices) {
+          const pool = ch.pool === 'known-heroic' ? pools.known : pools.future;
+          if (pool[0]) c.complication.abilityPicks[ch.id] = pool[0].name;
+        }
+      }
+      if (comp.languageLoss) {
+        c.complication.forgottenLanguages = collectLanguagePicks(c).map((p: any) => p.name).filter((n: string) => n !== 'Caelian').slice(0, comp.languageLoss.count);
+      }
+      if (comp.traitChoice) {
+        const anc: any = DS_ANCESTRIES.find((a: any) => a.id === comp.traitChoice.ancestry);
+        const owned: string[] = c.ancestry.id === comp.traitChoice.ancestry ? c.ancestry.traits : [];
+        let left = comp.traitChoice.points;
+        c.complication.traits = [];
+        for (const t of (anc?.traits || []).filter((t: any) => !owned.includes(t.name))) {
+          if (t.cost <= left) { c.complication.traits.push(t.name); left -= t.cost; }
+        }
+      }
     }
   }
+  // Career perk follow-ups last: Area of Expertise needs a held crafting skill, which the
+  // class step may be the one to grant.
+  c.career.perkPicks = perkPicksFor(c.career.perk, c);
 
   // 6 · Identity
   c.identity.name = spec.name || 'Test Hero';

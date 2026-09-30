@@ -257,6 +257,14 @@ const PERKS = {
   ],
 };
 
+// Follow-up picks a perk's text asks for, keyed by perk name. ownSkill picks from
+// skills the hero already holds (heldSkillsFor); languages are new grants. Picks
+// live at c.career.perkPicks / a level-up pick's perkPicks as { skills, languages }.
+const PERK_CHOICES = {
+  'Area of Expertise': { ownSkill: { count: 1, groups: ['crafting'], label: 'Expertise skill', note: 'tier 1 becomes tier 2 on easy or medium tests' } },
+  'Specialist': { ownSkill: { count: 1, groups: ['lore'], label: 'Specialist skill', note: 'double edge to recall lore' } },
+  'Linguist': { languages: { count: 2 } },
+};
 
 const CHAR_MIN = -1, CHAR_MAX = 2;
 
@@ -444,4 +452,4 @@ function scrollWizardTo(id) {
   });
 }
 
-export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent, orderTraitCards, scrollWizardTo };
+export { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill, careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, complicationGrantCollisions, effectiveComplicationSkills, PERKS, PERK_CHOICES, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, kitSigAbility, normalizeAbilityTiers, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent, orderTraitCards, scrollWizardTo };

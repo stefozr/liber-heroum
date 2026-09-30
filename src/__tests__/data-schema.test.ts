@@ -11,7 +11,7 @@ import {
   LEVELUP_DATA, makeContext, levelChoicesFor, deriveGroupName,
   DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES, CENSOR_DOMAIN_1,
 } from '../levelup.jsx';
-import { PERKS, parseCareerSkills, classSkillPicks, pickPool } from '../wizard/helpers.js';
+import { PERKS, PERK_CHOICES, parseCareerSkills, classSkillPicks, pickPool } from '../wizard/helpers.js';
 import { newCharacter } from '../app.jsx';
 
 const ALL_SKILLS = new Set(Object.values(DS_SKILL_GROUPS).flat());
@@ -322,6 +322,50 @@ describe('cross-references', () => {
         expect(typeof a.type, `${comp.id}/${a.name} ability without a type`).toBe('string');
         if (a.tiers) expect(a.tiers.length, `${comp.id}/${a.name} tier count`).toBe(3);
       }
+    }
+  });
+
+  it('complications: follow-up choice fields are well-formed', () => {
+    const ALL_LANGS = new Set([...(DS_LANGUAGES as string[]), ...(DS_DEAD_LANGUAGES as string[])]);
+    for (const comp of DS_COMPLICATIONS as any[]) {
+      for (const ch of comp.ownSkillChoices || []) {
+        expect(ch.count, `${comp.id} ownSkillChoices count`).toBeGreaterThanOrEqual(1);
+        expect(typeof ch.label, `${comp.id} ownSkillChoices label`).toBe('string');
+        for (const g of ch.groups || []) expect(GROUP_NAMES.has(g), `${comp.id} unknown skill group "${g}"`).toBe(true);
+      }
+      for (const ch of comp.optionChoices || []) {
+        expect(typeof ch.label, `${comp.id} optionChoices label`).toBe('string');
+        expect(ch.count).toBeGreaterThanOrEqual(1);
+        expect(ch.options.length, `${comp.id} optionChoices pool`).toBeGreaterThanOrEqual(ch.count);
+        for (const o of ch.options) expect(typeof (typeof o === 'string' ? o : o.name), `${comp.id} option name`).toBe('string');
+      }
+      const ids = new Set<string>();
+      for (const ch of comp.abilityChoices || []) {
+        expect(['known-heroic', 'future-heroic']).toContain(ch.pool);
+        expect(ids.has(ch.id), `${comp.id} duplicate abilityChoices id ${ch.id}`).toBe(false);
+        ids.add(ch.id);
+      }
+      for (const ch of comp.textChoices || []) expect(typeof ch.label, `${comp.id} textChoices label`).toBe('string');
+      if (comp.languageLoss) expect(comp.languageLoss.count).toBeGreaterThanOrEqual(1);
+      if (comp.traitChoice) {
+        const anc: any = (DS_ANCESTRIES as any[]).find(a => a.id === comp.traitChoice.ancestry);
+        expect(anc, `${comp.id} traitChoice ancestry "${comp.traitChoice.ancestry}"`).toBeTruthy();
+        expect(comp.traitChoice.points).toBeGreaterThanOrEqual(1);
+        expect(anc.traits.some((t: any) => t.cost <= comp.traitChoice.points)).toBe(true);
+      }
+      void ALL_LANGS;
+    }
+  });
+
+  it('perk follow-ups name real perks and real skill groups', () => {
+    const allPerks = new Set(Object.values(PERKS as any).flat().map((p: any) => p.name));
+    for (const [name, spec] of Object.entries(PERK_CHOICES as any) as any) {
+      expect(allPerks.has(name), `PERK_CHOICES names unknown perk "${name}"`).toBe(true);
+      if (spec.ownSkill) {
+        expect(spec.ownSkill.count).toBeGreaterThanOrEqual(1);
+        for (const g of spec.ownSkill.groups) expect(GROUP_NAMES.has(g), `${name}: unknown group "${g}"`).toBe(true);
+      }
+      if (spec.languages) expect(spec.languages.count).toBeGreaterThanOrEqual(1);
     }
   });
 
