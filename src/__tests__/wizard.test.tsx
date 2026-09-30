@@ -761,3 +761,73 @@ describe('granted abilities show on the option that promises them', () => {
     expect(onHome).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('follow-up picks sit in a drawer right under their card', () => {
+  const COMP_STEP = DS_STEPS.findIndex((s: any) => /complication/i.test(s.id));
+  const drawerAfter = (card: Element | null) => {
+    expect(card, 'card not found').toBeTruthy();
+    const next = card!.nextElementSibling as HTMLElement | null;
+    expect(next?.classList.contains('card-drawer'), 'no drawer after the card').toBe(true);
+    return next!;
+  };
+  const cardWithText = (container: HTMLElement, text: string) =>
+    Array.from(container.querySelectorAll('button.card')).find(b => b.textContent!.includes(text)) || null;
+
+  it('complication: the Hunter skill picker follows the Hunter card, and re-clicking the card keeps the pick', () => {
+    const c = atStep(COMP_STEP);
+    const hunter: any = DS_COMPLICATIONS.find((x: any) => x.id === 'hunter');
+    const opt = hunter.skillChoices[0].options[0];
+    c.complication = { id: 'hunter', custom: '', skills: { 0: [opt] }, skillSwaps: {}, languages: [] };
+    const { container, latest } = renderWizard(c);
+    const drawer = drawerAfter(container.querySelector('#comp-hunter'));
+    expect(drawer.textContent).toContain('Granted by');
+    expect(drawer.textContent).toContain(opt);
+    // Only the chosen card carries a drawer.
+    expect(container.querySelectorAll('.card-drawer')).toHaveLength(1);
+    fireEvent.click(container.querySelector('#comp-hunter')!);
+    expect(latest().complication.skills).toEqual({ 0: [opt] });
+  });
+
+  it('complication: a granted ability prints once, on the card', () => {
+    const c = atStep(COMP_STEP);
+    c.complication = { id: 'stripped-of-rank', custom: '', skills: {}, languages: [] };
+    const { container } = renderWizard(c);
+    expect(container.textContent!.split('Move or die, folks.').length - 1).toBe(1);
+  });
+
+  it('ancestry: a choice-bearing trait and a Previous Life pick open under their own cards', () => {
+    const ancestryStep = DS_STEPS.findIndex((s: any) => /ancestry/i.test(s.id));
+    const dk = atStep(ancestryStep, { ancestry: 'dragon-knight', traits: ['Prismatic Scales'] });
+    dk.ancestry.traitOptions = {};
+    const dkr = renderWizard(dk);
+    const dkDrawer = drawerAfter(cardWithText(dkr.container, 'Prismatic Scales'));
+    expect(dkDrawer.textContent).toContain('Fire');
+    fireEvent.click(dkr.getAllByText('Fire').pop()!);
+    expect(dkr.latest().ancestry.traitOptions['Prismatic Scales']).toEqual(['Fire']);
+    cleanup();
+    const rv = atStep(ancestryStep, { ancestry: 'revenant', formerLife: 'dwarf', traits: ['Previous Life: 1pt'] });
+    const rvr = renderWizard(rv);
+    const rvDrawer = drawerAfter(cardWithText(rvr.container, 'Previous Life: 1pt'));
+    expect(rvDrawer.textContent).toContain('Borrow from');
+    expect(rvDrawer.textContent).toContain('Grounded');
+  });
+
+  it('culture: the aspect skill picker follows the chosen aspect card', () => {
+    const cultureStep = DS_STEPS.findIndex((s: any) => /culture/i.test(s.id));
+    const { container } = renderWizard(atStep(cultureStep));
+    const drawers = Array.from(container.querySelectorAll('.card-drawer'));
+    expect(drawers.length).toBe(3); // environment, organization, upbringing
+    for (const d of drawers) {
+      expect(d.previousElementSibling?.classList.contains('selected')).toBe(true);
+      expect(d.textContent).toContain('Skill');
+    }
+  });
+
+  it('class: the domain skill picker follows the chosen domain feature card', () => {
+    const { container } = renderWizard(atStep(CLASS_STEP, { cls: 'conduit', domains: ['Creation', 'Death'] }));
+    const drawer = container.querySelector('#class-sec-domain-skill');
+    expect(drawer?.classList.contains('card-drawer')).toBe(true);
+    expect(drawer?.previousElementSibling?.classList.contains('selected')).toBe(true);
+    expect(drawer?.textContent).toContain('crafting');
+  });
+});

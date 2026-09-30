@@ -348,6 +348,20 @@ body[data-theme="obsidian"] { -webkit-tap-highlight-color: rgba(176,138,72,0.15)
 .card.selected .c-stamp { display: none; }
 .card.blocked { opacity: 0.4; cursor: not-allowed; }
 .card.blocked:hover { border-color: var(--line); background: var(--grad-card); }
+/* The picks a selected card unlocks, as a full-width row right after it in the
+   grid (CardDrawer). Dense flow lets the next card fill the slot beside the
+   selected one, so the drawer sits under that row rather than leaving a hole. */
+.grid-drawers { grid-auto-flow: row dense; }
+.card-drawer {
+  grid-column: 1 / -1; min-width: 0;
+  border: 1px solid var(--gold); background: var(--bg-2);
+  padding: 14px 18px; margin-top: -4px;
+}
+.card-drawer-title {
+  font-family: var(--display-2); font-size: var(--fs-6); font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--gold-2); margin-bottom: 10px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
 /* Group already decided — fade the also-rans, but keep them live: hovering
    restores full strength and clicking switches the pick in one step. */
 .card.dimmed { opacity: 0.5; }

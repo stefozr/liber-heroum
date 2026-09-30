@@ -1,7 +1,7 @@
 // wizard/steps/complication.jsx — ComplicationStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, CardDrawer, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, complicationGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
@@ -11,7 +11,9 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 function ComplicationStep({ character, update }) {
   const sel = character.complication.id;
-  const pick = (id) => update(c => ({ ...c, complication: { id, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
+  // Re-clicking the chosen card keeps its picks — the drawer with the pickers
+  // sits right under it, so a stray click on the card mustn't wipe them.
+  const pick = (id) => update(c => (c.complication.id === id ? c : { ...c, complication: { id, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
   const skip = () => update(c => ({ ...c, complication: { id: null, custom: '', skills: {}, skillSwaps: {}, languages: [] } }));
   const comp = complicationDef(character);
   const compSkills = character.complication.skills || {};
@@ -35,7 +37,7 @@ function ComplicationStep({ character, update }) {
     if (name) next[skill] = name; else delete next[skill];
     return { ...c, complication: { ...c.complication, skillSwaps: next } };
   });
-  const hasGrants = comp && ((comp.skills || []).length || (comp.skillChoices || []).length || comp.languageChoice || (comp.abilities || []).length);
+  const hasGrants = comp && ((comp.skills || []).length || (comp.skillChoices || []).length || comp.languageChoice);
   // Scroll the wizard body so a freshly-rolled complication card is brought into view.
   const scrollToComp = (id) => {
     requestAnimationFrame(() => {
@@ -54,21 +56,10 @@ function ComplicationStep({ character, update }) {
     scrollToComp(c.id);
   };
 
-  return (
-    <div className="stack-22">
-      <div className="orn-frame bracket-corners" style={{padding:'18px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap'}}>
-        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.9375rem', color:'var(--ink-2)'}}>
-          Roll the dice and let fate decide, or browse and choose the thread you'll carry.
-        </div>
-        <div style={{display:'flex', gap:10}}>
-          <Button kind="ghost" small onClick={skip}>SKIP COMPLICATIONS</Button>
-          <Button kind="ghost" small onClick={roll}>⚄ ROLL d100</Button>
-        </div>
-      </div>
-
-      {hasGrants && (
-        <div className="orn-frame" style={{padding:'18px 22px'}}>
-          <H3>Granted by <span style={{color:'var(--gold-2)'}}>{comp.name}</span></H3>
+  // The skills and languages the chosen complication grants, attached beneath
+  // its card in the grid. Its abilities already print on the card.
+  const grantsDrawer = hasGrants ? (
+        <CardDrawer title={<span>Granted by <span style={{color:'var(--gold-2)'}}>{comp.name}</span></span>}>
 
           {(comp.skills || []).length > 0 && (
             <div style={{marginTop:12, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
@@ -152,18 +143,26 @@ function ComplicationStep({ character, update }) {
             );
           })()}
 
-          {(comp.abilities || []).length > 0 && (
-            <div style={{marginTop:16, display:'grid', gap:14}}>
-              {(comp.abilities || []).map(a => <AbilityCard key={a.name} ability={a} kind="sig" />)}
-            </div>
-          )}
+        </CardDrawer>
+      ) : null;
+
+  return (
+    <div className="stack-22">
+      <div className="orn-frame bracket-corners" style={{padding:'18px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap'}}>
+        <div style={{fontFamily:'var(--hand)', fontStyle:'italic', fontSize: '0.9375rem', color:'var(--ink-2)'}}>
+          Roll the dice and let fate decide, or browse and choose the thread you'll carry.
         </div>
-      )}
+        <div style={{display:'flex', gap:10}}>
+          <Button kind="ghost" small onClick={skip}>SKIP COMPLICATIONS</Button>
+          <Button kind="ghost" small onClick={roll}>⚄ ROLL d100</Button>
+        </div>
+      </div>
 
       <H3>Or choose one</H3>
-      <div className="grid-2">
+      <div className="grid-2 grid-drawers">
         {DS_COMPLICATIONS.map(c => (
-          <SelCard key={c.id} id={'comp-' + c.id} selected={sel === c.id} dimmed={!!sel && sel !== c.id} onClick={() => pick(c.id)}>
+          <React.Fragment key={c.id}>
+          <SelCard id={'comp-' + c.id} selected={sel === c.id} dimmed={!!sel && sel !== c.id} onClick={() => pick(c.id)}>
             <div style={{fontFamily:'var(--display)', fontSize: '1rem', letterSpacing:'0.10em', color:'var(--ink)', paddingRight:16}}>{c.name}</div>
             <div style={{marginTop: 10, display:'grid', gridTemplateColumns:'auto 1fr', gap: '4px 12px', alignItems:'start'}}>
               <Tag kind="gold">{c.combined ? 'Benefit and Drawback' : 'Benefit'}</Tag>
@@ -180,6 +179,8 @@ function ComplicationStep({ character, update }) {
               </div>
             )}
           </SelCard>
+          {sel === c.id && grantsDrawer}
+          </React.Fragment>
         ))}
       </div>
     </div>

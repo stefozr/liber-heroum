@@ -1,7 +1,7 @@
 // wizard/steps/ancestry.jsx — AncestryStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, CardDrawer, Modal, PowerRoll, AbilityCard } from '../../theme.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, resolvedAncestryTraits, ancestryPoints, ancestrySpent, ancestrySignatures, orderTraitCards, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
@@ -120,6 +120,85 @@ function AncestryStep({ character, update }) {
     }
   };
 
+  // Follow-up picks a purchased trait unlocks — rendered as a drawer right under
+  // its card in the grid (and, for a borrowed trait, under its card in the
+  // Previous Life drawer). Cards are buttons, so the pickers can't nest inside.
+  const choiceTraits = resolvedAncestryTraits(character).filter(t => !t.placeholder && (t.skillChoice || t.optionChoice));
+  const traitChoiceDrawer = (name) => {
+    const t = choiceTraits.find(x => x.name === name);
+    if (!t) return null;
+    const count = (t.skillChoice || t.optionChoice).count;
+    const done = (t.chosen || []).length >= count;
+    return (
+      <CardDrawer title={<>
+        <span>{t.skillChoice ? 'Skill' : t.optionChoice.label || 'Option'}{t.borrowedFrom ? <span style={{color:'var(--ink-3)'}}> — borrowed from {t.borrowedFrom}</span> : ''}</span>
+        <Pill kind={done ? 'gold' : ''}>{done ? 'CHOSEN' : `PICK ${count}`}</Pill>
+      </>}>
+        {t.skillChoice && (
+          <SkillChoicePicker
+            character={character}
+            slotKey={'trait:' + t.name}
+            choice={t.skillChoice}
+            picked={(character.ancestry.traitSkills || {})[t.name] || []}
+            toggle={(s) => toggleTraitSkill(t.name, t.skillChoice.count, s)}
+          />
+        )}
+        {t.optionChoice && (
+          <OptionChoicePicker
+            choice={t.optionChoice}
+            options={t.optionChoice.options || (t.abilities || []).map(a => a.name)}
+            picked={(character.ancestry.traitOptions || {})[t.name] || []}
+            toggle={(o) => toggleTraitOption(t.name, t.optionChoice.count, o)}
+          />
+        )}
+        <TraitAbilityCards trait={t} />
+      </CardDrawer>
+    );
+  };
+  const PREV_LIFE_TRAITS = ['Previous Life: 1pt', 'Previous Life: 2pt'];
+  const prevLifeDrawer = (plName) => {
+    const cost = plName.includes('1pt') ? 1 : 2;
+    const key = `${cost}pt`;
+    const pool = formerAnc ? formerAnc.traits.filter(t => t.cost === cost) : [];
+    const chosen = prevLifeTraits[key] || null;
+    return (
+      <CardDrawer title={<>
+        <span>Borrow from <span style={{color:'var(--gold-2)'}}>{formerAnc ? formerAnc.name : 'Former Life'}</span></span>
+        <Pill kind={chosen ? 'gold' : ''}>{chosen ? 'CHOSEN' : `PICK ${cost}-PT TRAIT`}</Pill>
+      </>}>
+        {!formerAnc ? (
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem'}}>
+            Choose your Former Life ancestry above to borrow a {cost}-point trait from it.
+          </div>
+        ) : pool.length === 0 ? (
+          <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem'}}>
+            {formerAnc.name} has no {cost}-point traits to borrow.
+          </div>
+        ) : (
+          <div className="grid-2 grid-drawers">
+            {pool.map(t => {
+              const on = chosen === t.name;
+              return (
+                <React.Fragment key={t.name}>
+                <SelCard selected={on} onClick={() => setPrevLifeTrait(cost, t.name)}>
+                  <div style={{display:'flex', justifyContent:'space-between', gap:10, alignItems:'baseline'}}>
+                    <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
+                    <Tag kind="gold">{t.cost} PT</Tag>
+                  </div>
+                  <TraitProse trait={t} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}} />
+                  <TraitAbilityCards trait={t} />
+                </SelCard>
+                {on && traitChoiceDrawer(t.name)}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+      </CardDrawer>
+    );
+  };
+
+
   return (
     <div className="stack-22">
       <H3>Choose your Ancestry</H3>
@@ -213,14 +292,14 @@ function AncestryStep({ character, update }) {
                 </Pill>
               </div>
             </div>
-            <div className="grid-2">
+            <div className="grid-2 grid-drawers">
               {orderTraitCards(anc.traits).map(t => {
                 const isOn = (character.ancestry.traits || []).includes(t.name);
                 const overBudget = !isOn && t.cost > remaining;
                 const isQuick = (anc.quick || []).includes(t.name);
                 return (
+                  <React.Fragment key={t.name}>
                   <SelCard
-                    key={t.name}
                     selected={isOn}
                     blocked={overBudget}
                     onClick={() => toggleTrait(t.name)}
@@ -235,90 +314,13 @@ function AncestryStep({ character, update }) {
                     <TraitProse trait={t} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}} />
                     <TraitAbilityCards trait={t} />
                   </SelCard>
+                  {isOn && traitChoiceDrawer(t.name)}
+                  {isOn && isRevenant && PREV_LIFE_TRAITS.includes(t.name) && prevLifeDrawer(t.name)}
+                  </React.Fragment>
                 );
               })}
             </div>
 
-            {isRevenant && ['Previous Life: 1pt', 'Previous Life: 2pt'].map(plName => {
-              if (!(character.ancestry.traits || []).includes(plName)) return null;
-              const cost = plName.includes('1pt') ? 1 : 2;
-              const key = `${cost}pt`;
-              const pool = formerAnc ? formerAnc.traits.filter(t => t.cost === cost) : [];
-              const chosen = prevLifeTraits[key] || null;
-              return (
-                <div key={plName} className="orn-frame" style={{padding:'18px 22px', marginTop:14}}>
-                  <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, flexWrap:'wrap'}}>
-                    <H3>{plName} — Borrow from <span style={{color:'var(--gold-2)'}}>{formerAnc ? formerAnc.name : 'Former Life'}</span></H3>
-                    <Pill kind={chosen ? 'gold' : ''}>{chosen ? 'CHOSEN' : `PICK ${cost}-PT TRAIT`}</Pill>
-                  </div>
-                  {!formerAnc ? (
-                    <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem', marginTop:10}}>
-                      Choose your Former Life ancestry above to borrow a {cost}-point trait from it.
-                    </div>
-                  ) : pool.length === 0 ? (
-                    <div style={{fontFamily:'var(--hand)', fontStyle:'italic', color:'var(--ink-3)', fontSize: '0.875rem', marginTop:10}}>
-                      {formerAnc.name} has no {cost}-point traits to borrow.
-                    </div>
-                  ) : (
-                    <div className="grid-2" style={{marginTop:14}}>
-                      {pool.map(t => {
-                        const on = chosen === t.name;
-                        return (
-                          <SelCard
-                            key={t.name}
-                            selected={on}
-                            onClick={() => setPrevLifeTrait(cost, t.name)}
-                          >
-                            <div style={{display:'flex', justifyContent:'space-between', gap:10, alignItems:'baseline'}}>
-                              <div style={{fontFamily:'var(--display)', fontSize: '0.875rem', letterSpacing:'0.12em', color:'var(--ink)'}}>{t.name}</div>
-                              <Tag kind="gold">{t.cost} PT</Tag>
-                            </div>
-                            <TraitProse trait={t} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}} />
-                            <TraitAbilityCards trait={t} />
-                          </SelCard>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Choice-bearing purchased/borrowed traits (Prismatic Scales, Psionic Gift,
-                Passionate Artisan) get their picker below the trait grid. */}
-            {resolvedAncestryTraits(character)
-              .filter(t => !t.placeholder && (t.skillChoice || t.optionChoice))
-              .map(t => {
-                const count = (t.skillChoice || t.optionChoice).count;
-                const done = (t.chosen || []).length >= count;
-                return (
-                  <div key={`choice-${t.name}`} className="orn-frame" style={{padding:'18px 22px', marginTop:14}}>
-                    <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, flexWrap:'wrap'}}>
-                      <H3>{t.name}{t.borrowedFrom ? <span style={{color:'var(--gold-2)'}}> — borrowed from {t.borrowedFrom}</span> : ''}</H3>
-                      <Pill kind={done ? 'gold' : ''}>{done ? 'CHOSEN' : `PICK ${count}`}</Pill>
-                    </div>
-                    <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:8, lineHeight:1.5}}>{renderRich(t.text)}</div>
-                    {t.skillChoice && (
-                      <SkillChoicePicker
-                        character={character}
-                        slotKey={'trait:' + t.name}
-                        choice={t.skillChoice}
-                        picked={(character.ancestry.traitSkills || {})[t.name] || []}
-                        toggle={(s) => toggleTraitSkill(t.name, t.skillChoice.count, s)}
-                      />
-                    )}
-                    {t.optionChoice && (
-                      <OptionChoicePicker
-                        choice={t.optionChoice}
-                        options={t.optionChoice.options || (t.abilities || []).map(a => a.name)}
-                        picked={(character.ancestry.traitOptions || {})[t.name] || []}
-                        toggle={(o) => toggleTraitOption(t.name, t.optionChoice.count, o)}
-                      />
-                    )}
-                    <TraitAbilityCards trait={t} />
-                  </div>
-                );
-              })}
           </div>
         </>
       )}

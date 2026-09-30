@@ -219,6 +219,19 @@ function SelCard({ selected, onClick, children, style, id, className, blocked, d
 
 }
 
+// Full-width row attached beneath a selected SelCard, for the picks that card
+// unlocks. Cards are buttons, so interactive follow-ups can't nest inside them;
+// this sits right after the card in the same grid instead (a `.grid-drawers`
+// grid backfills the slot beside the card so the drawer hugs its row).
+function CardDrawer({ title, id, children, className, style }) {
+  return (
+    <div id={id} className={`card-drawer${className ? ' ' + className : ''}`} style={style}>
+      {title && <div className="card-drawer-title">{title}</div>}
+      {children}
+    </div>
+  );
+}
+
 function Modal({ open, onClose, title, children, footer, width }) {
   if (!open) return null;
   return (
@@ -373,4 +386,4 @@ function AbilityCard({ ability, kind = '', onClick, selected, dimmed }) {
 
 // Expose to window so other files can use these in shared scope
 
-export { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard };
+export { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, SavePill, Tag, Button, IconButton, TopBar, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, CardDrawer, Modal, PowerRoll, FeatureTable, AbilityCard };

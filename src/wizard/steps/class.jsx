@@ -1,7 +1,7 @@
 // wizard/steps/class.jsx — ClassStep (split out of the former wizard.jsx).
 import React from 'react';
 import { DS_LANGUAGES, DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CAREERS, DS_CLASSES, DS_KITS, DS_COMPLICATIONS, DS_STEPS, kitPoolFor, BEASTHEART_COMPANIONS, companionById, SUMMONER_PORTFOLIOS } from '../../data.jsx';
-import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
+import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button, IconButton, H1, H2, H3, H4Meta, Eyebrow, Deck, DropCap, StatTile, SelCard, CardDrawer, Modal, PowerRoll, FeatureTable, AbilityCard } from '../../theme.jsx';
 import { SheetStyles, StatblockCard } from '../../theme/sheet.jsx';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
@@ -195,21 +195,19 @@ function CompanionPicker({ character, update }) {
         <H3>Companion</H3>
         <Pill kind="gold">{chosen ? 1 : 0} / 1 CHOSEN</Pill>
       </div>
-      <div className="grid-2" style={{marginTop:12}}>
+      <div className="grid-2 grid-drawers" style={{marginTop:12}}>
         {BEASTHEART_COMPANIONS.map(b => (
+          <React.Fragment key={b.id}>
           <SelCard
-            key={b.id}
             selected={chosen === b.id}
             dimmed={!!chosen && chosen !== b.id}
             onClick={() => setCompanion(b.id)}
             style={{textAlign:'left', padding:0}}>
             <StatblockCard block={b} level={character.level || 1} staminaNote={'= yours'} />
           </SelCard>
-        ))}
-      </div>
-      {comp?.optionChoice && (
-        <div className="sig-option-row" id="class-sec-companion-option">
-          <span className="sig-option-label">{comp.optionChoice.label}</span>
+            {chosen === b.id && comp?.optionChoice && (
+              <CardDrawer id="class-sec-companion-option" title={comp.optionChoice.label}>
+                <div className="sig-option-row" style={{marginTop:0}}>
           <select
             className="sig-option-select"
             value={(character.cclass.companionOptions || {})[comp.optionChoice.id] || ''}
@@ -217,8 +215,12 @@ function CompanionPicker({ character, update }) {
             <option value="" disabled>Choose…</option>
             {comp.optionChoice.options.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
-        </div>
-      )}
+                </div>
+              </CardDrawer>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
     </div>
   );
 }
@@ -405,31 +407,26 @@ function ClassSubclassPicker({ character, update }) {
           <div id="class-sec-domain-feature">
             <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
             <Deck>At 1st level you gain the 1st-level feature of one of your two domains. The other follows at 2nd level.</Deck>
-            <div className="grid-2" style={{marginTop: 12, gap: 10}}>
+            <div className="grid-2 grid-drawers" style={{marginTop: 12, gap: 10}}>
               {chosenDomains.map(d => {
                 const f = window.DOMAIN_1ST_FEATURES?.[d];
                 if (!f) return null;
                 const on = curFeature?.domain === d;
                 return (
-                  <SelCard key={d} selected={on} dimmed={!!curFeature && !on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
+                  <React.Fragment key={d}>
+                  <SelCard selected={on} dimmed={!!curFeature && !on} onClick={() => setDomainFeature(d)} style={{padding:'14px 16px'}}>
                     <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{d}</div>
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{f.name}</div>
                     <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(f.text)}</div>
                     {f.ability && <div style={{marginTop:10}}><AbilityCard ability={f.ability} kind="sig" /></div>}
                   </SelCard>
-                );
-              })}
-            </div>
-            {curFeature?.skillGroup && (() => {
+                    {on && curFeature?.skillGroup && (() => {
               const group = curFeature.skillGroup;
               const skills = (window.DS_SKILL_GROUPS?.[group]) || [];
               const cur = character.cclass.domainSkill;
               const takenElsewhere = skillsTakenExcept(character, 'domain');
               return (
-                <div style={{marginTop: 16}} id="class-sec-domain-skill">
-                  <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
-                    {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
-                  </div>
+                <CardDrawer id="class-sec-domain-skill" title={<><span>{group} Skill · Pick 1</span><span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em', fontWeight:400}}>granted by {curFeature.name}</span></>}>
                   <div className="skill-chip-grid">
                     {skills.map(s => {
                       const on = cur === s;
@@ -448,9 +445,13 @@ function ClassSubclassPicker({ character, update }) {
                       );
                     })}
                   </div>
-                </div>
+                </CardDrawer>
               );
             })()}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -632,23 +633,17 @@ function CensorDomainPicker({ character, update }) {
       <div id="class-sec-domain">
         <H3>Deity &amp; Domain <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>Pick 1</span></H3>
         <Deck>Pick one domain from your deity&rsquo;s portfolio. It grants a 1st-level domain feature and a skill, and shapes the features you gain as you rise in level.</Deck>
-        <div className="grid-4" style={{marginTop: 10}}>
+        <div className="grid-4 grid-drawers" style={{marginTop: 10}}>
           {cls.domains.map(d => {
             const on = chosen === d;
             return (
-              <SelCard key={d} selected={on} dimmed={!!chosen && !on} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
+              <React.Fragment key={d}>
+              <SelCard selected={on} dimmed={!!chosen && !on} onClick={() => pickDomain(d)} style={{padding:'10px 12px', textAlign:'center'}}>
                 <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', letterSpacing:'0.14em', color:'var(--ink)', fontWeight:700}}>{d}</div>
               </SelCard>
-            );
-          })}
-        </div>
-      </div>
-
-      {chosen && curFeature && (
-        <div>
-          <H3>Domain Feature <span style={{fontFamily:'var(--mono)', fontSize: '0.6875rem', color:'var(--ink-3)', letterSpacing:'0.18em', textTransform:'uppercase', marginLeft: 8}}>From {chosen}</span></H3>
-          <div className="orn-frame" style={{padding:'14px 18px', marginTop:10}}>
-            <div style={{fontFamily:'var(--mono)', fontSize: '0.5625rem', color:'var(--gold-2)', letterSpacing:'0.2em', textTransform:'uppercase'}}>{chosen}</div>
+              {on && curFeature && (
+                <CardDrawer id="class-sec-domain-skill" title={<><span>Domain Feature</span><span style={{color:'var(--ink-3)', fontWeight:400}}>from {chosen}</span></>}>
+          <div>
             <div style={{fontFamily:'var(--display-2)', fontSize: '0.875rem', fontWeight:700, letterSpacing:'0.08em', color:'var(--ink)', marginTop:4}}>{curFeature.name}</div>
             <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', marginTop:6, lineHeight:1.5}}>{renderRich(curFeature.text)}</div>
             {(() => {
@@ -662,7 +657,7 @@ function CensorDomainPicker({ character, update }) {
             const skills = (window.DS_SKILL_GROUPS?.[group]) || [];
             const takenElsewhere = skillsTakenExcept(character, 'domain');
             return (
-              <div style={{marginTop: 16}} id="class-sec-domain-skill">
+              <div style={{marginTop: 16}}>
                 <div style={{fontFamily:'var(--mono)', fontSize: '0.625rem', color:'var(--ink-3)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom: 8}}>
                   {group} Skill <span style={{color:'var(--gold-2)'}}>· Pick 1</span> <span style={{color:'var(--ink-3)', textTransform:'none', letterSpacing:'0.04em'}}>— granted by {curFeature.name}</span>
                 </div>
@@ -687,8 +682,14 @@ function CensorDomainPicker({ character, update }) {
               </div>
             );
           })()}
+                </CardDrawer>
+              )}
+              </React.Fragment>
+            );
+          })}
         </div>
-      )}
+      </div>
+
     </div>
   );
 }
