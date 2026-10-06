@@ -326,6 +326,7 @@ function fmtKitDmg(v) {
 
 // A kit's signature ability parsed into the shape AbilityCard expects.
 function kitSigAbility(kt) {
+  if (kt.sigAbility) return { ...kt.sigAbility };
   const s = parseKitSig(kt.sig, kt.sigTiers);
   return {
     name: s.name, flavor: '', keywords: ['Weapon'], type: 'Main action', badge: 'SIG',

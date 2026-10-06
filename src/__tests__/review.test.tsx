@@ -7,7 +7,7 @@ import React from 'react';
 import { ReviewStep } from '../wizard/steps/review.jsx';
 import { buildValidCharacter } from './helpers/factories';
 import { kitDef } from '../app.jsx';
-import { parseKitSig } from '../wizard/helpers.js';
+import { parseKitSig, kitSigAbility } from '../wizard/helpers.js';
 import { DS_CAREERS, DS_KITS } from '../data.jsx';
 import { DOMAIN_1ST_FEATURES } from '../levelup.jsx';
 
@@ -63,9 +63,9 @@ describe('ReviewStep renders complete feature data', () => {
     const kit: any = kitDef(c);
     const text = renderReview(c);
     expect(text).toContain(kit.desc);
-    const sig = parseKitSig(kit.sig, kit.sigTiers);
+    const sig = kitSigAbility(kit);
     expect(text).toContain(sig.name);
-    if (sig.rows) expect(text).toContain(sig.rows[0][1]); // first tier's result text
+    if (sig.tiers) expect(text).toContain(sig.tiers[0][1]); // first tier's result text
   });
 
   it('parseKitSig keeps tiers/distance intact under the full-sentence effect texts', () => {

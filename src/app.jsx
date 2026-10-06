@@ -143,6 +143,7 @@ function newCharacter(ownerId = null, campaignId = null) {
       stamina: null, // current
       resource: 0,   // current Heroic Resource
       recoveriesUsed: 0,
+      povertyRecoveries: 0, // extra Recovery capacity granted by Curse of Poverty
       victories: 0,
       surges: 0,
       heroTokens: 0,
@@ -340,7 +341,8 @@ function computeDerived(c) {
   staminaMax += (kb('sta_per') + sum('sta_per')) * echelon;
   staminaMax += sum('sta') + sum('sta_lvl') * lvl;
 
-  const recoveries = (cls ? cls.starting.recoveries : 0) + sum('rec');
+  const recoveries = (cls ? cls.starting.recoveries : 0) + sum('rec')
+    + (c.complication?.id === 'curse-of-poverty' ? Math.max(0, c.play?.povertyRecoveries || 0) : 0);
 
   // Speed: "you have speed N" traits (spdMin) upgrade the ancestry base
   // (official data: upgrade @ initial phase); additive bonuses stack on top.
@@ -382,11 +384,22 @@ function computeDerived(c) {
 // drop below 0; wealth can (Indebted starts at −5 — debt is a real state).
 function playCurrencies(c, derived = computeDerived(c)) {
   const p = c.play || {};
+  const renownMax = c.complication?.id === 'betrothed' ? Math.max(0, (c.level || 1) - 1) : Infinity;
   return {
-    renown: Math.max(0, (derived.renownBase || 0) + (p.renownAdj || 0)),
+    renown: Math.min(renownMax, Math.max(0, (derived.renownBase || 0) + (p.renownAdj || 0))),
     wealth: (derived.wealthBase || 0) + (p.wealthAdj || 0),
     xp: p.xp || 0,
   };
+}
+
+// Apply the complication's respite changes before restoring spent Recoveries.
+// Reading absent play fields as zero keeps older saves compatible.
+function respiteComplicationChanges(c, derived = computeDerived(c)) {
+  if (c.complication?.id !== 'curse-of-poverty') return {};
+  const p = c.play || {};
+  const lostWealth = Math.max(0, playCurrencies(c, derived).wealth - 1);
+  const retained = p.recoveriesUsed > 0 ? 0 : Math.max(0, p.povertyRecoveries || 0);
+  return { povertyRecoveries: retained + lostWealth, wealthAdj: (p.wealthAdj || 0) - lostWealth };
 }
 
 // ───────── Sync error banner ─────────
@@ -1817,12 +1830,56 @@ function normalizeSkills(c) {
   }
 }
 
+// Level-up choices store copies of rule definitions. Refresh their rules from
+// the current class data while preserving selected options and custom abilities.
+function refreshLevelAbilityRules(c) {
+  const cls = classDef(c);
+  if (!cls || !LEVELUP_DATA[cls.id]) return c;
+  const ctx = makeContext(c);
+  let changed = false;
+  const refresh = (saved, canonical) => {
+    if (!saved || !canonical) return saved;
+    const next = { ...saved, ...canonical };
+    if (JSON.stringify(next) === JSON.stringify(saved)) return saved;
+    changed = true;
+    return next;
+  };
+  const abilities = { ...(c.cclass.levelAbilities || {}) };
+  const history = { ...(c.levelChoices || {}) };
+  for (const level of new Set([...Object.keys(abilities), ...Object.keys(history)])) {
+    const data = LEVELUP_DATA[cls.id][level];
+    if (!data) continue;
+    const definitions = new Map();
+    const auto = typeof data.autoAbilities === 'function' ? data.autoAbilities(ctx) : (data.autoAbilities || []);
+    for (const a of auto) definitions.set(a.name, a);
+    const picks = { ...(history[level]?.picks || {}) };
+    for (const ch of levelChoicesFor(cls, Number(level), ctx)) {
+      if (!['ability', 'feature'].includes(ch.kind)) continue;
+      const options = typeof ch.options === 'function' ? ch.options(ctx) : (ch.options || []);
+      for (const opt of options) {
+        const a = ch.kind === 'ability' ? opt : opt.ability;
+        if (a) definitions.set(a.name, a);
+      }
+      const resolve = saved => {
+        const canonical = options.find(opt => saved?.id ? opt.id === saved.id : opt.name === saved?.name);
+        if (ch.kind === 'ability') return refresh(saved, canonical);
+        return saved?.ability && canonical?.ability
+          ? { ...saved, ability: refresh(saved.ability, canonical.ability) } : saved;
+      };
+      if (picks[ch.id]) picks[ch.id] = Array.isArray(picks[ch.id]) ? picks[ch.id].map(resolve) : resolve(picks[ch.id]);
+    }
+    if (history[level]) history[level] = { ...history[level], picks };
+    if (abilities[level]) abilities[level] = abilities[level].map(a => refresh(a, definitions.get(a.name)));
+  }
+  return changed ? { ...c, cclass: { ...c.cclass, levelAbilities: abilities }, levelChoices: history } : c;
+}
+
 // Everything a hero from the store passes through before it reaches state: fill
 // missing sections, then the one-time migrations and repair passes above. The
 // boot load applies it to hollow rows too (a hero the DB itself holds hollow can
 // only be rendered by filling it); the live merges drop hollow rows first.
 function normalizeLoaded(c) {
-  return normalizeSkills(normalizeLanguages(migrateCharacterChars(ensureShape(c))));
+  return refreshLevelAbilityRules(normalizeSkills(normalizeLanguages(migrateCharacterChars(ensureShape(c)))));
 }
 
 // Expose helpers globally for other files
@@ -1833,7 +1890,7 @@ Object.assign(window, {
   collectLanguagePicks, languagesTakenExcept, normalizeLanguages,
   collectDistanceBonuses, applyDistanceBonuses,
 });
-export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, resourceFeature, domainFeatureAbility };
+export { newCharacter, classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, respiteComplicationChanges, summarizeBenefits, chosenFeatureOptions, resourceFeature, domainFeatureAbility };
 export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectSkillEntries, duplicateSkillPicks, normalizeSkills, charBonusPicksAt };

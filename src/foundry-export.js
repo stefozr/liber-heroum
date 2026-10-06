@@ -18,7 +18,7 @@ import {
   computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
   collectSkillEntries, collectLanguagePicks, charBonusPicksAt,
 } from './app.jsx';
-import { parseKitSig, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { kitSigAbility, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { collectLevelUpFeatures, LEVELUP_DATA } from './levelup.jsx';
 import { DS_CULTURES } from './data/cultures.js';
@@ -424,17 +424,6 @@ function kitItem(k, sort) {
     ranged: { damage: damageTriple(k.bonuses?.ranged), distance: k.bonuses?.rngDist || 0 },
   };
   return item;
-}
-
-// Kit signature string → ability-shaped object (mirrors mkKitSig in play.jsx).
-function kitSigAbility(kt) {
-  const s = parseKitSig(kt.sig, kt.sigTiers);
-  if (!s.name) return null;
-  return {
-    name: s.name, flavor: '', keywords: ['Weapon'], type: 'Main action',
-    distance: s.distance || undefined, tiers: s.rows || undefined,
-    powerRoll: '', effect: s.effect || undefined,
-  };
 }
 
 // ───────── biography / physique helpers ─────────

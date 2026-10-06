@@ -399,6 +399,7 @@ const DS_CLASSES = [
           { name: 'Relentless Hunter', text: 'You gain an edge on tests made using the Track skill.' },
         ],
         abilities: [
+          ab('Aspect of the Wild', {"flavor": "You assume the form of the animal who channels your ferocity.", "keywords": ["Magic"], "type": "Maneuver", "noBadge": true, "distance": "Self", "target": "Self", "effect": "You can shapeshift into the animal defined by your stormwight kit, into a hybrid form, or back into your true form. While in animal form or hybrid form, you can speak as you usually do, and you can also speak to animals who share your form. If you are in a negotiation with an animal while in animal form, you treat your Renown as 2 higher than usual.", "resource": "Ferocity", "spend": "As a free maneuver, you can shapeshift a second time, either into another animal form, into your hybrid form, or back into your true form."}),
           ab('Furious Change', {
             flavor: 'In your anger, you revert to a more bestial form.',
             type: 'Triggered', badge: 'TRIGGER',
@@ -943,7 +944,7 @@ const DS_CLASSES = [
         abilities: [
           ab('I’m No Threat', { flavor: 'Taking on an illusory countenance gives you an advantage on subterfuge.',
             keywords: ['Magic'], type: 'Maneuver', distance: 'Self', target: 'Self',
-            effect: 'You envelop yourself in an illusion that makes you appear nonthreatening and harmless to your enemies. You might take on the appearance of a harmless animal of your size, such as a sheep or capybara, or you might appear as a less heroic and unarmed version of yourself. While this illusion lasts, your strikes gain an edge, and when you take the Disengage move action, you gain a +1 bonus to the distance you can shift.',
+            effect: 'You envelop yourself in an illusion that makes you appear nonthreatening and harmless to your enemies. You might take on the appearance of a harmless animal of your size, such as a sheep or capybara, or you might appear as a less heroic and unarmed version of yourself. While this illusion lasts, your strikes gain an edge, and when you take the Disengage move action, you gain a +1 bonus to the distance you can shift.\n\nThe illusion ends when you harm another creature, when you physically interact with a creature, when you use this ability again, or when you end the illusion (no action required). If you end this illusion by harming another creature, you gain 1 surge.',
             resource: 'Insight', spend: 'Choose a creature whose size is no more than 1 greater than yours and who is within 10 squares. This ability’s illusion makes you appear as that creature. This illusion covers your entire body, including clothing and armor, and alters your voice to sound like that of the creature. You gain an edge on tests made to convince the creature’s allies that you are the creature.' }),
           ab('Clever Trick', { flavor: 'You sow a moment of confusion in combat, to your enemy’s peril.',
             keywords: ['Magic'], type: 'Triggered', cost: 1, resource: 'Insight', distance: 'Self', target: 'Self',

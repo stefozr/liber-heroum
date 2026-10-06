@@ -6,7 +6,7 @@ import React from 'react';
 import { MQ } from './breakpoints.js';
 import { AbilityCard, renderRich } from './primitives.jsx';
 import { DS_ANCESTRIES } from '../data.jsx';
-import { parseKitSig, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, normalizeAbilityTiers } from '../wizard/helpers.js';
+import { kitSigAbility, fmtKitDmg, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, normalizeAbilityTiers } from '../wizard/helpers.js';
 
 const SHEET_CSS = `
 .trait-block { padding: 10px 0; border-bottom: 1px dashed var(--line); }
@@ -171,7 +171,7 @@ function AncestryTraitsList({ character, update, interactive = false }) {
 function KitDetails({ kit, divider = false }) {
   const kt = kit;
   const b = kt.bonuses || {};
-  const sig = parseKitSig(kt.sig, kt.sigTiers);
+  const sig = kitSigAbility(kt);
   const meleeDmg = fmtKitDmg(b.melee);
   const rangedDmg = fmtKitDmg(b.ranged);
   return (
@@ -196,27 +196,7 @@ function KitDetails({ kit, divider = false }) {
         </div>
       </div>
       <div className="kit-card" style={{marginTop: 4}}>
-        <div className="kit-sig">
-          <div className="kit-sig-head">
-            <span className="kit-sig-name">{sig.name}</span>
-            <span className="ac-tags">
-              <span className="ac-action act-main">Main Action</span>
-              <span className="kit-sig-badge">⚔ Signature</span>
-            </span>
-          </div>
-          {sig.distance && <div className="kit-sig-kw">{sig.distance}</div>}
-          {sig.rows && (
-            <div className="kit-roll">
-              {sig.rows.map(([t, e], ri) => (
-                <React.Fragment key={ri}>
-                  <span className={`t tier-${ri + 1}`}>{t}</span>
-                  <span className={`e tier-${ri + 1}`}>{e}</span>
-                </React.Fragment>
-              ))}
-            </div>
-          )}
-          {sig.effect && <div className="kit-sig-effect"><b>Effect.</b> {renderRich(sig.effect)}</div>}
-        </div>
+        <AbilityCard ability={sig} />
       </div>
     </React.Fragment>
   );

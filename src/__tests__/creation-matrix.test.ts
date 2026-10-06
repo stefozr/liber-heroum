@@ -472,20 +472,20 @@ describe('duplicate-grant skill swaps', () => {
 
   it('ordering hole: a class pick made before choosing a career that auto-grants it', () => {
     // Free rail navigation: class skills chosen first, then the career switched to
-    // Warden (auto Track). Neither swap chain sees this direction — the class step's
+    // Watch Officer (auto Alertness). Neither swap chain sees this direction — the class step's
     // duplicate-pick issue must gate it, and the load-time repair must shed the pick.
-    const c = buildValidCharacter({ cls: 'shadow', subclass: 'black-ash', career: 'warden' });
+    const c = buildValidCharacter({ cls: 'shadow', subclass: 'black-ash', career: 'watch-officer' });
     const victim = c.cclass.skills[0];
     const idx = c.cclass.skillPicks[victim];
-    c.cclass.skills = [...c.cclass.skills.filter((x: string) => x !== victim), 'Track'];
+    c.cclass.skills = [...c.cclass.skills.filter((x: string) => x !== victim), 'Alertness'];
     delete c.cclass.skillPicks[victim];
-    c.cclass.skillPicks['Track'] = idx;
+    c.cclass.skillPicks['Alertness'] = idx;
     expect(isStepValid(c, STEP_INDEX['career']), 'career keeps its auto grant').toBe(true);
     expect(isStepValid(c, CLASS_STEP), 'the stale class pick must invalidate').toBe(false);
-    expect(stepIssues(c, CLASS_STEP)).toContain('Duplicate skill: Track already held by Career — choose another');
+    expect(stepIssues(c, CLASS_STEP)).toContain('Duplicate skill: Alertness already held by Career — choose another');
     const fixed = normalizeSkills(c);
-    expect(fixed.cclass.skills).not.toContain('Track');
-    expect(fixed.career.skills).toContain('Track');
+    expect(fixed.cclass.skills).not.toContain('Alertness');
+    expect(fixed.career.skills).toContain('Alertness');
   });
 
   it('a stale swap is ignored once the collision disappears', () => {

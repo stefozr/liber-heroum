@@ -4,7 +4,7 @@ import { heroName } from './campaigns.jsx';
 import { ManeuversPanel, RulesGlossary, DS_RULES } from './rules.jsx';
 import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, deleteLevelProgression } from './levelup.jsx';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
-import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses, resourceFeature, perkPickText } from './app.jsx';
+import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, respiteComplicationChanges, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses, resourceFeature, perkPickText } from './app.jsx';
 import { companionById, minionById, collectMinionIds } from './data.jsx';
 import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
 import { SheetStyles, AncestryTraitsList, KitDetails, StatblockCard } from './theme/sheet.jsx';
@@ -224,7 +224,9 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
   // no-op minus doesn't drift the stored adjustment). Wealth may go negative.
   const currencies = playCurrencies(character, derived);
   const adjRenown = (delta) => setPlay(p => {
-    const next = Math.max(-(derived.renownBase || 0), (p.renownAdj || 0) + delta);
+    const cap = character.complication?.id === 'betrothed' ? Math.max(0, (character.level || 1) - 1) : Infinity;
+    const current = playCurrencies({ ...character, play: p }, derived).renown;
+    const next = Math.min(cap, Math.max(0, current + delta)) - (derived.renownBase || 0);
     return { ...p, renownAdj: next === 0 ? 0 : next };  // normalize Math.max's −0
   });
   const adjWealth = (delta) => setPlay(p => ({ ...p, wealthAdj: (p.wealthAdj || 0) + delta }));
@@ -235,6 +237,7 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
   const takeRespite = () => {
     setPlay(p => ({
       ...p,
+      ...respiteComplicationChanges({ ...character, play: p }, derived),
       stamina: null,
       recoveriesUsed: 0,
       xp: (p.xp || 0) + (p.victories || 0),
@@ -246,6 +249,8 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
     }));
     setRespiteOpen(false);
   };
+  const respiteChanges = respiteComplicationChanges(character, derived);
+  const respiteRecoveries = computeDerived({ ...character, play: { ...character.play, ...respiteChanges } }).recoveries;
 
   const heroName = character.identity.name || character.name || 'Unnamed Hero';
   const subclassName = (cls && cls.subclasses && cls.subclasses.find(s => s.id === character.cclass.subclass || s.name === character.cclass.subclass)?.name) || character.cclass.subclass;
@@ -897,7 +902,9 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
         <ul className="respite-list">
           <li>Convert <strong>{character.play.victories || 0} {(character.play.victories || 0) === 1 ? 'Victory' : 'Victories'}</strong> into XP{(character.play.victories || 0) > 0 && <> — XP becomes <strong>{(character.play.xp || 0) + (character.play.victories || 0)}</strong></>}</li>
           <li>Restore Stamina to <strong>{derived.staminaMax}</strong></li>
-          <li>Regain all <strong>{derived.recoveries}</strong> Recoveries</li>
+          <li>Regain all <strong>{respiteRecoveries}</strong> Recoveries</li>
+          {character.complication?.id === 'curse-of-poverty' && currencies.wealth > 1 &&
+            <li>Curse of Poverty reduces Wealth to <strong>1</strong> and grants <strong>{currencies.wealth - 1}</strong> additional Recoveries</li>}
           {isBeastheart && <li>Companion Stamina restored, Rampage cleared</li>}
           {isSummoner && <li>All minions dismissed</li>}
         </ul>

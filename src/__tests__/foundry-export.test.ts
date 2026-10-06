@@ -233,7 +233,7 @@ describe('characterToFoundryHero', () => {
     expect(heroic.system.resource).toBe(3);
     const kitSig = items.find(i => i.name === 'Pain for Pain');
     expect(kitSig.system.category).toBe('signature');
-    expect(kitSig.system.keywords).toEqual(['weapon']);
+    expect(kitSig.system.keywords).toEqual(['melee', 'strike', 'weapon']);
   });
 
   it('maps skills and languages to Foundry ids', () => {
@@ -806,6 +806,11 @@ describe.skipIf(!existsSync(INDEX_PATH))('official index integration (public/fou
   // Fury regression below caught for one class; this pins it for all of them.
   const INTENTIONALLY_GENERATED = new Set([
     'culture :: Culture',                  // aspect-combo cultures (only archetypes are official)
+    // The compendium embeds these Stormwight rules in kit documents instead of standalone features.
+    ...['Aspect Benefits', 'Animal Form: Bear', 'Animal Form: Crow', 'Animal Form: Rat', 'Animal Form: Wolf',
+      'Hybrid Form: Bear', 'Hybrid Form: Crow', 'Hybrid Form: Rat', 'Hybrid Form: Wolf',
+      'Primordial Storm: Blizzard', 'Primordial Storm: Anabatic Wind', 'Primordial Storm: Rat Flood',
+      'Primordial Storm: Lightning Storm'].map(name => `feature :: ${name}`),
     'feature :: Discipline Mastery',       // null: summary of the mastery table inside official Discipline
     // Level-up text the compendium folds into other documents (no doc of their own).
     'feature :: One',                      // elementalist 10

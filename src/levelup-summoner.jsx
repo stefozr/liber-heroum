@@ -75,7 +75,7 @@ const ESS_7 = () => [
   }),
   ess(7, 'Cavalry Call', 'A lone squad appears to disrupt the enemy’s plans and peels off their forces, one by one.', {
     keywords: ['Magic'], type: 'Main action', distance: 'Summoner’s Range', target: 'Special',
-    effect: 'You summon a temporary squad containing 6 of your signature minions regardless of your minion maximum within distance. Whenever one of these minions deals damage to an enemy, the enemy is R < AVERAGE compelled to move 5 squares toward the source of the damage (provoking opportunity attacks). The potency increases by 1 for enemies targeted by two or more of these minions.',
+    effect: 'You summon a temporary squad containing 6 of your signature minions regardless of your minion maximum within distance. Whenever one of these minions deals damage to an enemy, the enemy is R < AVERAGE compelled to move 5 squares toward the source of the damage (provoking opportunity attacks). The potency increases by 1 for enemies targeted by two or more of these minions.\n\nThese minions die at the end of your turn, activate no effects upon death, and you gain no essence from their deaths.',
   }),
   ess(7, 'Essence Funnel', 'You rapidly summon and sacrifice minions in order to power a devastating blast of magic.', {
     keywords: ['Area','Magic'], type: 'Main action', distance: '10 × 1 line within 1', target: 'Each enemy and object in the area',
@@ -114,7 +114,7 @@ const ESS_9 = () => [
 const ESS_11 = () => [
   ess(11, '10,000 Minions', 'The battle is now a war. Your entire army storms the field.', {
     keywords: ['Magic'], type: 'Main action', distance: 'Special', target: 'Special',
-    effect: 'Until the end of the encounter or you are dying, each square on the ground is considered teeming with minions. An enemy that ends their turn in an affected square takes 5 damage. This damage can\'t be reduced.',
+    effect: 'Until the end of the encounter or you are dying, each square on the ground is considered teeming with minions. An enemy that ends their turn in an affected square takes 5 damage. This damage can\'t be reduced.\n\nAdditionally, you can use Minion Bridge treating each affected square as an eligible minion (up to a maximum of 10 additional squares).',
   }),
   ess(11, 'Bodyguard Tactics', 'You surround your allies with a nigh-endless supply of summons that stand in the way of all impacts.', {
     keywords: ['Area','Magic'], type: 'Main action', distance: '5 burst', target: 'Self and each non-minion ally in the area',

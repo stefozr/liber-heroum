@@ -274,7 +274,7 @@ const DS_CAREERS = [
       { name: 'Vow of Sacrifice', text: 'You promised a fellow soldier that you\'d protect his family if he ever fell in battle. When he did, you traveled to his village, but found its people slain or scattered by war. Driven by your vow, you have dedicated your life to finding any survivors and protecting others from a similar fate.' },
     ] },
   { id: 'warden', name: 'Warden', desc: 'You protected a wild region from those who sought to harm it, such as poachers and cultists bent on the destruction of the natural world. Knowing your land well, you could also serve as a guide or the leader of a rescue party for those wandering the wilds.',
-    skills: 'Track; two exploration', quick: 'Endurance · Nature · Track',
+    skills: 'Nature; one exploration; one intrigue', quick: 'Nature · Navigate · Track',
     languages: 1, perk: 'Exploration', quickPerk: 'Camouflage Hunter', projectPoints: 120,
     questions: [
         'What environment did you protect?',

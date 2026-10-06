@@ -423,24 +423,24 @@ describe('duplicate-grant swap UI', () => {
 
   it('a stale duplicate class pick stays an enabled chip; deselecting clears the issue', () => {
     // Ordering hole: class skills picked first, then the career switched to one whose
-    // auto grant matches (Warden's Track). The chip must stay clickable so the player
+    // auto grant matches (Watch Officer's Alertness). The chip must stay clickable so the player
     // can deselect it, and the step must report the duplicate until they do.
-    const c = atStep(CLASS_STEP, { cls: 'shadow', subclass: 'black-ash', career: 'warden' });
+    const c = atStep(CLASS_STEP, { cls: 'shadow', subclass: 'black-ash', career: 'watch-officer' });
     const victim = c.cclass.skills[0];
     const idx = c.cclass.skillPicks[victim];
-    c.cclass.skills = [...c.cclass.skills.filter((x: string) => x !== victim), 'Track'];
+    c.cclass.skills = [...c.cclass.skills.filter((x: string) => x !== victim), 'Alertness'];
     delete c.cclass.skillPicks[victim];
-    c.cclass.skillPicks['Track'] = idx;
-    const dupLine = 'Duplicate skill: Track already held by Career — choose another';
+    c.cclass.skillPicks['Alertness'] = idx;
+    const dupLine = 'Duplicate skill: Alertness already held by Career — choose another';
     expect(stepIssues(c, CLASS_STEP)).toContain(dupLine);
     const { container, latest } = renderWizard(c);
     const chip = [...container.querySelectorAll<HTMLButtonElement>('.skill-chip.on')]
-      .find(ch => ch.textContent === 'Track');
+      .find(ch => ch.textContent === 'Alertness');
     expect(chip, 'the stored duplicate pick must render as an on chip').toBeTruthy();
     expect(chip!.disabled).toBe(false);
     fireEvent.click(chip!);
     const after = latest();
-    expect(after.cclass.skills).not.toContain('Track');
+    expect(after.cclass.skills).not.toContain('Alertness');
     expect(stepIssues(after, CLASS_STEP)).not.toContain(dupLine);
   });
 
@@ -483,7 +483,7 @@ describe('culture and career storage semantics', () => {
     const { getAllByText, latest } = renderWizard(c);
     fireEvent.click(getAllByText('Warden')[0]);
     expect(latest().career.id).toBe('warden');
-    expect(latest().career.skills).toEqual(['Track']);
+    expect(latest().career.skills).toEqual(['Nature']);
     expect(latest().career.perk).toBe('');
   });
   it('the career d6 button lands on a legal incident (stubbed roll)', () => {
