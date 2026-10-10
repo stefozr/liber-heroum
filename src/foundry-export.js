@@ -225,21 +225,40 @@ const ALIASES = {
 // The official content uses UK spelling for some names ("Judgement").
 const respell = (key) => key.replace(/judgment/g, 'judgement');
 
-let _officialIndexPromise = null;
-function loadOfficialIndex() {
-  if (!_officialIndexPromise) {
+const officialIndexPromises = new Map();
+function loadIndex(filename) {
+  if (!officialIndexPromises.has(filename)) {
     const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || './';
-    _officialIndexPromise = fetch(base + 'foundry-items.json')
+    const promise = fetch(base + filename)
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null)
-      // A null index means every export would silently fall back to generated
-      // "custom" items — don't memoize the failure, so a retry can succeed.
-      .then((idx) => {
-        if (!idx) _officialIndexPromise = null;
+      .then(idx => {
+        const valid = idx?.items && (filename !== 'foundry-summoner-items.json'
+          || (idx.module === 'draw-steel-summoner-class' && idx.items['class:summoner']));
+        // Don't cache failure: a retry should fetch the missing index again.
+        if (!valid) { officialIndexPromises.delete(filename); return null; }
         return idx;
       });
+    officialIndexPromises.set(filename, promise);
   }
-  return _officialIndexPromise;
+  return officialIndexPromises.get(filename);
+}
+
+function mergeOfficialIndices(core, supplement) {
+  const items = { ...core.items };
+  const entries = value => Array.isArray(value) ? value : [{ scope: [], doc: value }];
+  for (const [key, value] of Object.entries(supplement.items)) {
+    items[key] = items[key] ? [...entries(items[key]), ...entries(value)] : value;
+  }
+  return { ...core, modules: { ...core.modules, [supplement.module]: supplement.version }, items };
+}
+
+async function loadOfficialIndex({ includeSummoner = false } = {}) {
+  if (!includeSummoner) return loadIndex('foundry-items.json');
+  const [core, summoner] = await Promise.all([
+    loadIndex('foundry-items.json'), loadIndex('foundry-summoner-items.json'),
+  ]);
+  return core && summoner ? mergeOfficialIndices(core, summoner) : null;
 }
 
 function lookupOfficial(index, type, name) {
@@ -484,14 +503,17 @@ function characterToFoundryHero(c, officialIndex = null) {
   // ── embedded items ──
   const items = [];
   const usedIds = new Set();
+  const usedSources = new Map();
   let sort = 0;
   const add = (item) => {
     if (!item) return item;
-    // Official clones keep their compendium _id; two exports of one document (or a
-    // random-id clash) fall back to a fresh id without provenance, so Foundry never
-    // links two embedded items to the same source.
-    if (usedIds.has(item._id)) { item._id = randomId(); delete item._stats; }
+    // One embedded copy per source. Different packs can reuse an _id, so assign
+    // a fresh embedded id on collision while retaining their distinct UUIDs.
+    const uuid = item._stats?.compendiumSource;
+    if (uuid && usedSources.has(uuid)) return usedSources.get(uuid);
+    while (usedIds.has(item._id)) item._id = randomId();
     usedIds.add(item._id);
+    if (uuid) usedSources.set(uuid, item);
     item.sort = ++sort * 100;
     items.push(item);
     return item;
@@ -514,7 +536,7 @@ function characterToFoundryHero(c, officialIndex = null) {
   }
   // Official class documents carry the level-up bookkeeping (characteristic increases,
   // perk/skill/feature grants) as advancements; several export decisions below hinge
-  // on whether the class resolved officially (Summoner/Beastheart never do).
+  // on whether the class resolved to a compendium document.
   const classItem = items.find(i => i.type === 'class') || null;
   const classOfficial = !!classItem?._stats?.compendiumSource;
 
@@ -636,7 +658,7 @@ function characterToFoundryHero(c, officialIndex = null) {
     augment: [
       { field: 'enchantment', options: 'enchantments', candidates: (n) => [n] },
     ],
-    // Summoner: formation + quick command (no official docs yet — generated fallback).
+    // Summoner: formation + quick command from the optional module index.
     formation: [
       { field: 'formation', options: 'formations', candidates: (n) => [n] },
     ],
@@ -682,15 +704,25 @@ function characterToFoundryHero(c, officialIndex = null) {
   // Dedupe by name against features actually exported above (skipped composites
   // don't count) — 'Characteristic Increase' style entries recur across levels.
   for (const f of collectLevelUpFeatures(c)) {
-    if (seenFeatures.has(f.name)) continue;
+    let featureName = f.name;
+    if (cls?.id === 'summoner') {
+      // The app reuses these labels; the module gives each improvement its own
+      // document. Resolve before deduplication so later grants aren't lost.
+      if (f.name === 'Minion Improvement' && f.level > 4) featureName = `${f.level}th-Level Minion Improvement`;
+      if (f.name === 'Kit Improvement' && f.level === 9) featureName = '9th-Level Kit Improvement';
+      if (f.name.startsWith('Portfolio Champion — ')) featureName = 'Portfolio Champion';
+    }
+    if (seenFeatures.has(featureName)) continue;
     // The official class document models characteristic increases as advancements
     // (levels 4/7/10, flagged by applyAdvancements) — the app's summary feature would
     // only duplicate them as a text item.
     if (f.name === 'Characteristic Increase' && classOfficial) continue;
-    seenFeatures.add(f.name);
-    const bare = f.name.replace(/^[A-Za-z]+:\s+/, '');
-    const names = bare !== f.name ? [f.name, bare] : [f.name];
-    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || '') + tableHtml(f.table))));
+    seenFeatures.add(featureName);
+    const bare = featureName.replace(/^[A-Za-z]+:\s+/, '');
+    const names = bare !== featureName ? [featureName, bare] : [featureName];
+    const overrides = featureName === 'Portfolio Champion' && f.name !== featureName
+      ? { appendDescription: section(f.name, f.text) } : null;
+    add(official('feature', names, descriptionItem(f.name, 'feature', 0, para(f.text || '') + tableHtml(f.table)), overrides));
   }
 
   // Abilities, mirroring the Play view's collections (abilityGroups, play.jsx:186-280).
@@ -899,14 +931,16 @@ function applyAdvancements(hero, c, index, addItem) {
   const items = hero.items;
   const cls = classDef(c);
 
-  const indexById = new Map();
+  const indexByUuid = new Map();
   for (const v of Object.values(index.items || {})) {
-    for (const e of (Array.isArray(v) ? v : [{ doc: v }])) if (e.doc?._id) indexById.set(e.doc._id, e.doc);
+    for (const e of (Array.isArray(v) ? v : [{ doc: v }])) {
+      if (e.doc?._stats?.compendiumSource) indexByUuid.set(e.doc._stats.compendiumSource, e.doc);
+    }
   }
   const byUuid = new Map();
   for (const it of items) if (it._stats?.compendiumSource) byUuid.set(it._stats.compendiumSource, it);
   const pullIn = (uuid) => {
-    const doc = indexById.get(uuid.split('.').pop());
+    const doc = indexByUuid.get(uuid);
     if (!doc) return null;
     const clone = JSON.parse(JSON.stringify(doc));
     delete clone._key;
@@ -926,13 +960,33 @@ function applyAdvancements(hero, c, index, addItem) {
   // the class claims its subclass before a sibling pool could.
   const claimed = new Set();
   const claim = (target, parent, adv) => {
-    if (target === parent || claimed.has(target._id)) return false;
+    if (target === parent) return false;
+    if (claimed.has(target._id)) {
+      // The Summoner module lists Soul Flense on the circle and on its feature.
+      // Keep both grant selections, but let the nested feature own the ability.
+      const nestedModuleGrant = adv.chooseN == null
+        && parent._stats?.compendiumSource?.startsWith('Compendium.draw-steel-summoner-class.')
+        && advancementFlags(parent).parentId === advancementFlags(target).parentId;
+      if (!nestedModuleGrant) return false;
+    }
     claimed.add(target._id);
     Object.assign(advancementFlags(target), { advancementId: adv._id, parentId: parent._id });
     return true;
   };
   const reached = (adv) => adv.requirements?.level == null || adv.requirements.level <= level;
   const advLevel = (adv) => adv.requirements?.level ?? 1;
+
+  // All three ward grants share one pool. The user's acquisition level, rather
+  // than the pool's document order, determines which advancement owns each ward.
+  const wardLevels = new Map();
+  if (cls?.id === 'summoner') {
+    for (const lvl of [3, 6, 9]) {
+      if (lvl > level) continue;
+      const pick = c.levelChoices?.[lvl]?.picks?.[`ward-${lvl}`];
+      const ward = pick?.name && findItem('feature', pick.name);
+      if (ward) wardLevels.set(ward._id, lvl);
+    }
+  }
 
   // ── app-side picks, attributed to the exported document that grants them ──
   const cu = c.culture || {};
@@ -992,11 +1046,14 @@ function applyAdvancements(hero, c, index, addItem) {
         const selected = [];
         if (adv.pool?.length) {
           for (const { uuid } of adv.pool) {
+            if (adv.chooseN != null && selected.length >= adv.chooseN) break;
             let target = byUuid.get(uuid);
             if (!target && adv.chooseN == null) {
               target = pullIn(uuid);
               if (target) queue.push(target);
             }
+            if (target && adv.chooseN != null && wardLevels.has(target._id)
+              && wardLevels.get(target._id) !== advLevel(adv)) continue;
             if (target && claim(target, item, adv)) selected.push(uuid);
           }
         } else if (adv.additional?.type === 'perk') {
@@ -1073,7 +1130,7 @@ function downloadJson(obj, filename) {
 }
 
 export {
-  characterToFoundryHero, downloadJson, loadOfficialIndex, officialOrGenerated,
+  characterToFoundryHero, downloadJson, loadOfficialIndex, mergeOfficialIndices, officialOrGenerated,
   parseTiers, parseTierClause, parseDistance, parseTarget,
   skillId, langId, randomId, dsid,
 };

@@ -262,7 +262,7 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
       // The official compendium index ships with the app — a null index means the
       // fetch broke and every item would silently export as a generated "custom"
       // one. Abort instead; the load isn't memoized on failure, so retry works.
-      const idx = await loadOfficialIndex();
+      const idx = await loadOfficialIndex({ includeSummoner: cls?.id === 'summoner' });
       if (!idx) {
         onError('EXPORT ABORTED — OFFICIAL COMPENDIUM FAILED TO LOAD, RETRY');
         return;
