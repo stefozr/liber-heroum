@@ -1427,7 +1427,7 @@ const DS_CLASSES = [
     skillNote: 'You gain the Read Person skill, plus a skill from your class act. Then choose two skills from the interpersonal group and one from the intrigue or lore groups.',
     skillPicks: [{ count: 2, groups: ['interpersonal'] }, { count: 1, groups: ['intrigue','lore'] }],
     grantedSkills: ['Read Person'],
-    quickSkills: ['Brag','Read Person','Rumors','Society'],
+    quickSkills: ['Brag','Flirt','Read Person','Rumors'],
     subclassName: 'Class Act',
     subclasses: [
       { id: 'auteur',   name: 'Auteur',   tag: 'Story', text: 'You seek drama from story and recount, using magic to manipulate the sequence of events.', skill: 'Brag',

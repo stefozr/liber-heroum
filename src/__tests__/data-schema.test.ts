@@ -216,6 +216,27 @@ describe('domain maps', () => {
 
 // ─── Cross-references between tables ───
 describe('cross-references', () => {
+  // "Use Quick Build" applies quickSkills minus the granted ones, so what is left
+  // must fill every class pick group exactly (the book's quick build does).
+  it('class quick-build skills fill the class skill picks exactly', () => {
+    const fits = (skills: string[], caps: number[], pools: string[][]): boolean => {
+      if (!skills.length) return caps.every(n => n === 0);
+      const [s, ...rest] = skills;
+      return pools.some((pool, i) => {
+        if (!caps[i] || !pool.includes(s)) return false;
+        const next = [...caps]; next[i]--;
+        return fits(rest, next, pools);
+      });
+    };
+    for (const cls of DS_CLASSES as any[]) {
+      if (!cls.quickSkills?.length) continue;
+      const picks = cls.skillPicks || [];
+      const chosen = cls.quickSkills.filter((s: string) => !(cls.grantedSkills || []).includes(s));
+      expect(fits(chosen, picks.map((p: any) => p.count), picks.map(pickPool)),
+        `${cls.id} quick build [${chosen.join(', ')}] doesn't fill ${picks.map((p: any) => `${p.count} from ${p.groups.join('/')}`).join(' + ')}`).toBe(true);
+    }
+  });
+
   it('class skill metadata references real skills and groups', () => {
     for (const cls of DS_CLASSES as any[]) {
       for (const s of cls.grantedSkills || []) expect(ALL_SKILLS.has(s), `${cls.id} grants unknown skill "${s}"`).toBe(true);
