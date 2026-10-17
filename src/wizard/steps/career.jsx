@@ -7,6 +7,7 @@ import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisi
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
 import { OwnSkillPicker, LanguageChipPicker } from './pickers.jsx';
+import { TraitProse, TraitAbilityCards } from '../../theme/sheet.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -299,7 +300,9 @@ function CareerStep({ character, update }) {
                     <div style={{fontFamily:'var(--display-2)', fontSize: '0.8125rem', fontWeight:700, letterSpacing:'0.14em', color:'var(--ink)', textTransform:'uppercase'}}>{p.name}</div>
                     {isQuick && <Tag kind="gold">Suggested</Tag>}
                   </div>
-                  <div style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:6}}>{renderRich(p.text)}</div>
+                  {/* A perk used as an action shows its card in place of the prose. */}
+                  <TraitProse trait={p} style={{fontFamily:'var(--serif)', fontSize: '0.8125rem', color:'var(--ink-2)', lineHeight:1.55, marginTop:6}} />
+                  <TraitAbilityCards trait={p} />
                 </SelCard>
                 {character.career.perk === p.name && perkDrawer(p.name)}
                 </React.Fragment>

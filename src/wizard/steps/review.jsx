@@ -5,7 +5,7 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, chosenFeatureOptions, collectDistanceBonuses, applyDistanceBonuses } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, normalizeAbilityTiers, resolvedAncestryTraits, ancestrySignatures } from '../helpers.js';
 import { DOMAIN_2_ABILITIES } from '../../data/conduit-domains.js';
-import { SheetStyles, AncestryTraitsList, KitDetails } from '../../theme/sheet.jsx';
+import { SheetStyles, AncestryTraitsList, KitDetails, TraitProse, TraitAbilityCards } from '../../theme/sheet.jsx';
 import { StepHeader } from '../StepHeader.jsx';
 import { UnfinishedChapters } from '../UnfinishedChapters.jsx';
 
@@ -272,7 +272,15 @@ function ReviewStep({ character, update, incompleteSteps = [], onGoToStep }) {
                       ? <><b style={{color:'var(--ink)'}}>{benefits.perk.chosen}</b> <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.16em'}}>({benefits.perk.group})</span></>
                       : <><b style={{color:'var(--ink)'}}>{benefits.perk.group}</b> <span style={{color:'var(--ink-3)'}}> perk group</span></>}
                   </div>
-                  {benefits.perk.chosen && benefits.perk.desc && (
+                  {/* A perk used as an action shows its card in place of the prose. */}
+                  {benefits.perk.chosen && benefits.perk.abilities?.length > 0 && (
+                    <>
+                      <TraitProse trait={{ name: benefits.perk.chosen, text: benefits.perk.desc, abilities: benefits.perk.abilities }}
+                        style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', lineHeight:1.5, marginTop: 5}} />
+                      <TraitAbilityCards trait={{ abilities: benefits.perk.abilities }} />
+                    </>
+                  )}
+                  {benefits.perk.chosen && !benefits.perk.abilities?.length && benefits.perk.desc && (
                     <div style={{fontFamily:'var(--serif)', fontSize: 'var(--fs-6)', color:'var(--ink-2)', lineHeight:1.5, marginTop: 5, whiteSpace:'pre-line',
                       display:'-webkit-box', WebkitLineClamp:4, WebkitBoxOrient:'vertical', overflow:'hidden'}} title={benefits.perk.desc}>{benefits.perk.desc}</div>
                   )}

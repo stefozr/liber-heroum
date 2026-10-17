@@ -132,6 +132,13 @@ describe('ReviewStep renders complete feature data', () => {
     expect(text.split('You always know the direction to the exact location').length - 1).toBe(1);
   });
 
+  it('shows a perk used as an action as its ability card', () => {
+    const text = renderReview(buildValidCharacter({ career: 'gladiator', perk: 'I’ve Got You' }));
+    expect(text).toContain('You gain the following ability:');
+    expect(text).toContain('A willing ally falls and would land on you or adjacent to you.');
+    expect(text).not.toContain('you catch your ally');
+  });
+
   it('explains the heroic resource through its class feature, not a name-only row', () => {
     const text = renderReview(buildValidCharacter({ cls: 'fury' }));
     expect(text).toContain('Ferocity in Combat');

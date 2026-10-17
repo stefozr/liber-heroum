@@ -4,6 +4,7 @@ import { MQ } from './theme/breakpoints.js';
 import { classDef, collectSkillPicks, collectPerkPicks, collectLanguagePicks, computeDerived, heldSkillsFor, perkPickIssues } from './app.jsx';
 import { PERK_CHOICES } from './wizard/helpers.js';
 import { OwnSkillPicker, LanguageChipPicker } from './wizard/steps/pickers.jsx';
+import { TraitProse, TraitAbilityCards } from './theme/sheet.jsx';
 import {
   DOMAIN_1ST_FEATURES, DOMAIN_2_ABILITIES, DOMAIN_4_FEATURES,
 } from './data/conduit-domains.js';
@@ -1446,8 +1447,9 @@ function ChoiceStep({ choice, pick, onPick, ctx, taken, takenLangs }) {
                   title={blocked ? `Already chosen — ${taken.get(p.name)}` : ''}
                 >
                   <div className="lvl-opt-name">{p.name}</div>
+                  {/* A perk used as an action shows its card in place of the prose. */}
                   {blocked ? <div className="lvl-opt-body">Already chosen — {taken.get(p.name)}</div>
-                    : p.text ? <div className="lvl-opt-body">{renderRich(p.text)}</div> : null}
+                    : <><TraitProse trait={p} className="lvl-opt-body" /><TraitAbilityCards trait={p} /></>}
                 </button>
               );
             })}

@@ -11,7 +11,7 @@ const TweaksHost = import.meta.env.DEV ? React.lazy(() => import('./tweaks-host.
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
 import { PlayView } from './play.jsx';
-import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills, PERK_CHOICES } from './wizard/helpers.js';
+import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills, PERK_CHOICES, perkDef } from './wizard/helpers.js';
 import { LEVELUP_DATA, CENSOR_DOMAIN_1, makeContext, levelChoicesFor } from './levelup.jsx';
 import { DOMAIN_1ST_FEATURES } from './data/conduit-domains.js';
 // app.jsx — main app shell: routing, character state, localStorage persistence.
@@ -1298,14 +1298,17 @@ function summarizeBenefits(c) {
   let perk = null;
   if (car) {
     const chosen = c.career?.perk || null;
-    let desc = null;
-    if (chosen && window.PERKS && window.PERKS[car.perk]) {
-      const found = window.PERKS[car.perk].find(p => p.name === chosen);
-      if (found) desc = found.text;
-    }
+    const found = perkDef(chosen);
     // The perk's own follow-up pick (Area of Expertise's skill), when it has one.
     const picks = chosen ? perkPickText(chosen, c.career?.perkPicks) : null;
-    perk = { group: car.perk, chosen, desc, picks };
+    perk = { group: car.perk, chosen, desc: found?.text || null, abilities: found?.abilities || [], picks };
+  }
+  // Perk-granted abilities (I've Got You, Arcane Trick, …) — career perk plus level-up perks.
+  const perkAbilities = [];
+  for (const name of [c.career?.perk, ...levelUpPerkPicks(c).map(({ pick }) => pick.chosen)]) {
+    for (const a of perkDef(name)?.abilities || []) {
+      if (!perkAbilities.some(x => x.name === a.name)) perkAbilities.push(a);
+    }
   }
   // Follow-up picks the complication asks for (favored skill, bargain, ability, …).
   const complicationPicks = complicationPickRows(c);
@@ -1419,7 +1422,7 @@ function summarizeBenefits(c) {
     if (!ancestryAbilities.some(x => x.name === a.name)) ancestryAbilities.push(a);
   }
 
-  return { skills, languages, perk, features, classAbilities, ancestryAbilities, complicationPicks };
+  return { skills, languages, perk, features, classAbilities, ancestryAbilities, perkAbilities, complicationPicks };
 }
 
 // Unfinished follow-up picks for a perk → issue strings (empty when complete or when the

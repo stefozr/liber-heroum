@@ -1022,3 +1022,23 @@ describe('follow-up picks reach the export', () => {
     expect(comp.system.description.value).toContain(favored);
   });
 });
+
+// Perk ability cards are an app-side presentation; the export follows the compendium.
+describe.skipIf(!existsSync(INDEX_PATH))('perk-granted abilities in the export', () => {
+  const index = JSON.parse(readFileSync(INDEX_PATH, 'utf8'));
+  const advFlags = (item: any) => item.flags?.['draw-steel']?.advancement || {};
+
+  it('Arcane Trick brings its official ability, granted by the perk', () => {
+    const doc: any = characterToFoundryHero(buildValidCharacter({ career: 'mage-apprentice', perk: 'Arcane Trick' }), index);
+    const perk = doc.items.find((i: any) => i.type === 'perk' && i.name === 'Arcane Trick');
+    const ability = doc.items.filter((i: any) => i.type === 'ability' && i.name === 'Arcane Trick');
+    expect(perk).toBeTruthy();
+    expect(ability.length).toBe(1);
+    expect(advFlags(ability[0]).parentId).toBe(perk._id);
+  });
+
+  it('a prose-only action perk (I’ve Got You) exports as the perk alone', () => {
+    const doc: any = characterToFoundryHero(buildValidCharacter({ career: 'gladiator', perk: 'I’ve Got You' }), index);
+    expect(doc.items.filter((i: any) => /^I.ve Got You$/.test(i.name)).map((i: any) => i.type)).toEqual(['perk']);
+  });
+});

@@ -6,8 +6,8 @@ import { LevelUpFlow, LevelUpStyles, LEVELUP_DATA, collectLevelUpFeatures, delet
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, playCurrencies, respiteComplicationChanges, summarizeBenefits, collectDistanceBonuses, applyDistanceBonuses, resourceFeature, perkPickText } from './app.jsx';
 import { companionById, minionById, collectMinionIds } from './data.jsx';
-import { PERKS, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
-import { SheetStyles, AncestryTraitsList, KitDetails, StatblockCard } from './theme/sheet.jsx';
+import { perkDef, kitSigAbility, normalizeAbilityTiers } from './wizard/helpers.js';
+import { SheetStyles, AncestryTraitsList, KitDetails, StatblockCard, TraitProse, TraitAbilityCards } from './theme/sheet.jsx';
 import { Tabs, TabPanel, TabsStyles } from './theme/tabs.jsx';
 import { characterToFoundryHero, downloadJson, loadOfficialIndex } from './foundry-export.js';
 import { DS } from './backend.jsx';
@@ -347,12 +347,9 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
       const p = stored.picks?.[ch.id];
       if (!p || !p.chosen) continue;
       const group = typeof p.name === 'string' ? p.name.replace(/\s*Perk$/i, '') : (p.id || '');
-      let text = p.chosenText || null;
-      if (!text && PERKS[group]) {
-        const found = PERKS[group].find(x => x.name === p.chosen);
-        if (found) text = found.text;
-      }
-      levelUpPerks.push({ level: lvl, name: p.chosen, group, text, picks: perkPickText(p.chosen, p.perkPicks) });
+      const def = perkDef(p.chosen);
+      const text = p.chosenText || def?.text || null;
+      levelUpPerks.push({ level: lvl, name: p.chosen, group, text, abilities: def?.abilities || [], picks: perkPickText(p.chosen, p.perkPicks) });
     }
   }
 
@@ -368,6 +365,7 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
     { label: 'Heroic', items: heroic, kind: 'heroic' },
     { label: 'Class & Subclass', items: benefits.classAbilities || [], kind: 'sig' },
     { label: 'Ancestry', items: benefits.ancestryAbilities || [], kind: 'sig' },
+    { label: 'Perk', items: benefits.perkAbilities || [], kind: 'sig' },
     { label: 'Domain', items: domainAbilities, kind: 'heroic' },
     { label: 'Learned by Level-Up', items: levelAbilities, kind: 'heroic' },
   ].filter(g => g && g.items.length > 0);
@@ -694,8 +692,12 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
                           ? <><b style={{color:'var(--gold-2)'}}>{benefits.perk.chosen}</b> <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.18em'}}>({benefits.perk.group})</span></>
                           : <><b style={{color:'var(--gold-2)'}}>{benefits.perk.group}</b> <span style={{color:'var(--ink-3)'}}>perk group</span></>}
                       </div>
-                      {benefits.perk.chosen && benefits.perk.desc && (
-                        <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{renderRich(benefits.perk.desc)}</div>
+                      {/* A perk used as an action shows its card in place of the prose. */}
+                      {benefits.perk.chosen && (
+                        <>
+                          <TraitProse trait={{ name: benefits.perk.chosen, text: benefits.perk.desc, abilities: benefits.perk.abilities }} className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}} />
+                          <TraitAbilityCards trait={{ abilities: benefits.perk.abilities }} />
+                        </>
                       )}
                       {benefits.perk.picks && (
                         <div className="trait-text" style={{marginTop: 5, color:'var(--gold-2)'}}>{benefits.perk.picks}</div>
@@ -707,7 +709,8 @@ function PlayView({ character, update, onExit, onHome = null, exitLabel = '◂ R
                             <span style={{color:'var(--ink-3)', fontFamily:'var(--mono)', fontSize: '0.625rem', letterSpacing:'0.18em'}}>({lp.group})</span>
                             <span className="perk-lvl-tag">LV {lp.level}</span>
                           </div>
-                          {lp.text && <div className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}}>{renderRich(lp.text)}</div>}
+                          <TraitProse trait={lp} className="trait-text" style={{marginTop: 5, color:'var(--ink-2)'}} />
+                          <TraitAbilityCards trait={lp} />
                           {lp.picks && <div className="trait-text" style={{marginTop: 5, color:'var(--gold-2)'}}>{lp.picks}</div>}
                         </div>
                       ))}

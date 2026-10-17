@@ -18,7 +18,7 @@ import {
   computeDerived, playCurrencies, summarizeBenefits, chosenFeatureOptions, collectSkillPicks, collectPerkPicks,
   collectSkillEntries, collectLanguagePicks, charBonusPicksAt,
 } from './app.jsx';
-import { kitSigAbility, PERKS, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
+import { kitSigAbility, perkDef, resolvedAncestryTraits, ancestrySignatures } from './wizard/helpers.js';
 import { DOMAIN_2_ABILITIES } from './data/conduit-domains.js';
 import { collectLevelUpFeatures, LEVELUP_DATA } from './levelup.jsx';
 import { DS_CULTURES } from './data/cultures.js';
@@ -619,16 +619,12 @@ function characterToFoundryHero(c, officialIndex = null) {
 
   const kitItems = [kit, kit2].filter(Boolean).map(k => add(official('kit', k.name, kitItem(k, 0))));
 
-  // Perks: career perk + level-up perks; text looked up across all PERKS groups.
-  const perkText = (pname) => {
-    for (const group of Object.values(PERKS)) {
-      const found = group.find(p => p.name === pname);
-      if (found) return found.text;
-    }
-    return '';
-  };
+  // Perks: career perk + level-up perks. Their ability cards (benefits.perkAbilities)
+  // are not exported: the official Arcane Trick / Invisible Force / Psychic Whisper
+  // docs grant their abilities through itemGrant advancements (applyAdvancements), and
+  // the other perks carry their action in the perk's own text, as upstream does.
   for (const p of collectPerkPicks(c)) {
-    add(official('perk', p.name, descriptionItem(p.name, 'perk', 0, para(perkText(p.name)))));
+    add(official('perk', p.name, descriptionItem(p.name, 'perk', 0, para(perkDef(p.name)?.text || ''))));
   }
 
   // "Choose one" class features (prayers/wards/enchantments/augmentations/triggered

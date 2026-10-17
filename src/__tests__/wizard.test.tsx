@@ -968,6 +968,14 @@ describe('follow-up picks the prose asks for (own skills, options, abilities, te
     expect(latest().career.perkPicks.skills).toEqual([crafting[0]]);
   });
 
+  it('career: a perk used as an action (I’ve Got You) prints its ability card in place of the prose', () => {
+    const { container } = renderWizard(atStep(CAREER_STEP, { career: 'gladiator' }));
+    const card = Array.from(container.querySelectorAll('.ability-card')).find(el => el.textContent!.includes('I’ve Got You'))!;
+    expect(card).toBeTruthy();
+    expect(card.textContent).toContain('Free triggered action');
+    expect(container.textContent).not.toContain('you catch your ally');
+  });
+
   it('career: Linguist asks for two new languages, which then count as known', () => {
     const c = atStep(CAREER_STEP, { career: 'sage', perk: 'Linguist' });
     c.career.perkPicks = { skills: [], languages: [] };

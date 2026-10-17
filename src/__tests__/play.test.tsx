@@ -759,6 +759,27 @@ describe('granted abilities and resource rules on the sheet', () => {
     expect(count(container.textContent!, 'Move or die, folks.')).toBeGreaterThanOrEqual(2);
   });
 
+  it('a career perk used as an action (I’ve Got You) shows its card in the Perk block and in Abilities', () => {
+    const c = completedCharacter();
+    c.career.id = 'gladiator';
+    c.career.perk = 'I’ve Got You';
+    const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
+    expect(count(container.textContent!, 'You safely catch the target.')).toBe(2);
+    expect(container.textContent).toContain('You gain the following ability:');
+    // The card replaces the prose rather than repeating it.
+    expect(container.textContent).not.toContain('you catch your ally');
+    const perkGroup = Array.from(container.querySelectorAll('.ability-card')).filter(el => el.textContent!.includes('I’ve Got You'));
+    expect(perkGroup.length).toBe(2);
+  });
+
+  it('a level-up perk used as an action (Arcane Trick) shows its card too', () => {
+    const c = completedCharacter();
+    c.level = 2;
+    c.levelChoices = { 2: { picks: { perk: { chosen: 'Arcane Trick', name: 'Supernatural Perk', id: 'supernatural' } } } };
+    const { container } = render(<PlayView character={c} update={noop} onExit={noop} onEdit={noop} />);
+    expect(count(container.textContent!, 'You cast an entertaining spell')).toBe(2);
+  });
+
   it('explains how the heroic resource is gained next to the abilities', () => {
     const c = completedCharacter();
     c.cclass.id = 'fury';
