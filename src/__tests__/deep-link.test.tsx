@@ -130,8 +130,21 @@ describe('App deep-link resolution', () => {
     expect(container.textContent).toContain('Deep Linked');
   });
 
-  it('#/hero/<own in-progress> re-derives to the wizard', async () => {
+  it('#/hero/<own in-progress> re-derives to the creator (the Codex layout, for everyone)', async () => {
     mockDS.store.characters = [hero({ status: 'in-progress' })];
+    lsStore.set('lh:creator', 'wizard'); // ignored: only admins may switch layouts
+    window.location.hash = '#/hero/c1';
+    const { container } = render(<App />);
+    await waitFor(() => expect(container.querySelector('.cr')).not.toBeNull());
+    expect(container.querySelector('.wiz')).toBeNull();
+  });
+
+  it('an admin who chose the classic wizard gets the wizard', async () => {
+    const admin = { ...baseUser, isAdmin: true };
+    mockDS.authUser = admin;
+    mockDS.store.profiles = [admin];
+    mockDS.store.characters = [hero({ status: 'in-progress' })];
+    lsStore.set('lh:creator', 'wizard');
     window.location.hash = '#/hero/c1';
     const { container } = render(<App />);
     await waitFor(() => expect(container.querySelector('.wiz')).not.toBeNull());

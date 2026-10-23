@@ -2,7 +2,7 @@
 import React from 'react';
 import { DS_SKILL_GROUPS, DS_ANCESTRIES, DS_CULTURES, DS_CLASSES, DS_STEPS, kitPoolFor, companionById } from '../data.jsx';
 import { Crest, SavePill, Button, TopBar, Modal } from '../theme.jsx';
-import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept, duplicateSkillPicks, heldSkillsFor, complicationOwnSkillPicks, heroicAbilityPools, collectLanguagePicks, perkPickIssues } from '../app.jsx';
+import { classDef, ancestryDef, careerDef, complicationDef, skillsTakenExcept, duplicateSkillPicks, heldSkillsFor, complicationOwnSkillPicks, heroicAbilityPools, collectLanguagePicks, perkPickIssueEntries } from '../app.jsx';
 import { parseCareerSkills, classSkillPicks, classGrantedSkills, matchesCharArray, groupsOfSkill, careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, ancestryPoints, ancestrySpent } from './helpers.js';
 import { StepHeader } from './StepHeader.jsx';
 import { UnfinishedChapters } from './UnfinishedChapters.jsx';
@@ -16,7 +16,7 @@ import { ReviewStep } from './steps/review.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-function Wizard({ character, update, saveState, onExit, onComplete, onHome = null }) {
+function Wizard({ character, update, saveState, onExit, onComplete, onHome = null, onSwitchLayout = null }) {
   const rawStep = character.wizardStep || 0;
   const stepIndex = Math.max(0, Math.min(DS_STEPS.length - 1, rawStep));
   const step = DS_STEPS[stepIndex];
@@ -128,6 +128,7 @@ function Wizard({ character, update, saveState, onExit, onComplete, onHome = nul
         </>}
         right={<>
           <SavePill saveState={saveState || { status: 'saved', at: null }} />
+          {onSwitchLayout && <Button small kind="ghost" className="wiz-switch" onClick={onSwitchLayout} title="Open this hero in the Codex-style creator">CODEX LAYOUT</Button>}
           <Button small kind="ghost" onClick={onExit}>◂ ROSTER</Button>
         </>}
       />
@@ -370,19 +371,29 @@ function classSections(c) {
 // Everything still missing from a chapter, as short human-readable lines.
 // Empty array ⇔ the step is valid — isStepValid is defined as exactly that.
 function stepIssues(c, idx) {
+  return stepIssueEntries(c, idx).map(e => e.text);
+}
+
+// stepIssues with each line tagged by topic — 'skill', 'language' or 'other' — so
+// the Codex-style creator can move skill and language picks to a step of their own
+// while the classic wizard keeps showing them in their chapter. The texts (and so
+// stepIssues) are unchanged by the tagging.
+function stepIssueEntries(c, idx) {
   const id = DS_STEPS[idx].id;
-  const swapIssues = (...args) => unresolvedSwaps(c, ...args).map(skill => `Duplicate skill: swap for ${skill} not chosen`);
+  const E = (topic, text) => ({ topic, text });
+  const swapIssues = (...args) => unresolvedSwaps(c, ...args).map(skill => E('skill', `Duplicate skill: swap for ${skill} not chosen`));
   // Picks that duplicate a grant or an earlier slot's pick, attributed to the step
   // that owns the pick. The live pickers block these chips, but free rail navigation
   // can invalidate a pick after the fact (choose class skills, then a career whose
   // auto grant matches one) — the issue makes the stale pick visible and deselectable.
   const dupPickIssues = (ownsKey) => duplicateSkillPicks(c)
     .filter(d => ownsKey(d.key))
-    .map(d => `Duplicate skill: ${d.name} already held by ${d.holder} — choose another`);
+    .map(d => E('skill', `Duplicate skill: ${d.name} already held by ${d.holder} — choose another`));
   switch (id) {
     case 'ancestry': {
-      if (!c.ancestry.id) return ['Ancestry not chosen'];
+      if (!c.ancestry.id) return [E('other', 'Ancestry not chosen')];
       const issues = [];
+      const push = (topic, text) => issues.push(E(topic, text));
       const anc = DS_ANCESTRIES.find(a => a.id === c.ancestry.id);
       // Every signature-level choice must be fully picked (Silver Tongue skill,
       // Wyrmplate immunity, Runic Carving rune).
@@ -390,25 +401,25 @@ function stepIssues(c, idx) {
         if (sig.skillChoice) {
           const got = ((c.ancestry.sigSkills || {})[sig.name] || []).filter(Boolean).length;
           const count = sig.skillChoice.count;
-          if (got < count) issues.push(count === 1 ? `${sig.name}: skill not picked` : `${sig.name}: ${got} of ${count} skills picked`);
+          if (got < count) push('skill', count === 1 ? `${sig.name}: skill not picked` : `${sig.name}: ${got} of ${count} skills picked`);
         }
         if (sig.optionChoice) {
           const got = ((c.ancestry.sigOptions || {})[sig.name] || []).filter(Boolean).length;
           const count = sig.optionChoice.count;
-          if (got < count) issues.push(count === 1 ? `${sig.name}: choice not made` : `${sig.name}: ${got} of ${count} choices made`);
+          if (got < count) push('other', count === 1 ? `${sig.name}: choice not made` : `${sig.name}: ${got} of ${count} choices made`);
         }
       }
       if (c.ancestry.id === 'revenant') {
         // A revenant needs a former life, and each purchased 'Previous Life' trait
         // needs its borrowed trait chosen (when the former ancestry offers one).
         const former = DS_ANCESTRIES.find(a => a.id === c.ancestry.formerLife);
-        if (!former) issues.push('Former life not chosen');
+        if (!former) push('other', 'Former life not chosen');
         else {
           const pl = c.ancestry.prevLifeTraits || {};
           for (const [name, cost] of [['Previous Life: 1pt', 1], ['Previous Life: 2pt', 2]]) {
             if ((c.ancestry.traits || []).includes(name)
                 && (former.traits || []).some(t => t.cost === cost)
-                && !pl[`${cost}pt`]) issues.push(`Previous Life (${cost}pt): borrowed trait not chosen`);
+                && !pl[`${cost}pt`]) push('other', `Previous Life (${cost}pt): borrowed trait not chosen`);
           }
         }
       }
@@ -417,11 +428,11 @@ function stepIssues(c, idx) {
         if (t.placeholder) continue; // unpicked Previous Life — the revenant gate owns it
         if (t.skillChoice && (t.chosen || []).length < t.skillChoice.count) {
           const got = (t.chosen || []).length, count = t.skillChoice.count;
-          issues.push(count === 1 ? `${t.name}: skill not picked` : `${t.name}: ${got} of ${count} skills picked`);
+          push('skill', count === 1 ? `${t.name}: skill not picked` : `${t.name}: ${got} of ${count} skills picked`);
         }
         if (t.optionChoice) {
           const pool = t.optionChoice.options || (t.abilities || []).map(a => a.name);
-          if (pool.length >= t.optionChoice.count && (t.chosen || []).length < t.optionChoice.count) issues.push(`${t.name}: choice not made`);
+          if (pool.length >= t.optionChoice.count && (t.chosen || []).length < t.optionChoice.count) push('other', `${t.name}: choice not made`);
         }
       }
       // Every ancestry point must be spent. The step only stays incomplete while
@@ -431,7 +442,7 @@ function stepIssues(c, idx) {
       if (remaining > 0) {
         const owned = new Set(c.ancestry.traits || []);
         if ((anc.traits || []).some(t => !owned.has(t.name) && t.cost <= remaining)) {
-          issues.push(`${remaining} ancestry ${remaining === 1 ? 'point' : 'points'} unspent`);
+          push('other', `${remaining} ancestry ${remaining === 1 ? 'point' : 'points'} unspent`);
         }
       }
       issues.push(...dupPickIssues(k => k.startsWith('sig:') || k.startsWith('trait:')));
@@ -439,31 +450,33 @@ function stepIssues(c, idx) {
     }
     case 'culture': {
       const issues = [];
-      if (!c.culture.environment) issues.push('Environment not chosen');
-      if (!c.culture.organization) issues.push('Organization not chosen');
-      if (!c.culture.upbringing) issues.push('Upbringing not chosen');
-      if (!c.culture.language) issues.push('Language not chosen');
-      if (!(c.culture.skills?.environment)) issues.push('Environment skill not picked');
-      if (!(c.culture.skills?.organization)) issues.push('Organization skill not picked');
-      if (!(c.culture.skills?.upbringing)) issues.push('Upbringing skill not picked');
+      const push = (topic, text) => issues.push(E(topic, text));
+      if (!c.culture.environment) push('other', 'Environment not chosen');
+      if (!c.culture.organization) push('other', 'Organization not chosen');
+      if (!c.culture.upbringing) push('other', 'Upbringing not chosen');
+      if (!c.culture.language) push('language', 'Language not chosen');
+      if (!(c.culture.skills?.environment)) push('skill', 'Environment skill not picked');
+      if (!(c.culture.skills?.organization)) push('skill', 'Organization skill not picked');
+      if (!(c.culture.skills?.upbringing)) push('skill', 'Upbringing skill not picked');
       issues.push(...dupPickIssues(k => k.startsWith('culture:')));
       return issues;
     }
     case 'career': {
-      if (!c.career.id) return ['Career not chosen'];
+      if (!c.career.id) return [E('other', 'Career not chosen')];
       const car = careerDef(c);
-      if (!car) return ['Career not chosen'];
+      if (!car) return [E('other', 'Career not chosen')];
       const issues = [];
+      const push = (topic, text) => issues.push(E(topic, text));
       const parsed = parseCareerSkills(car);
       const skillCount = (c.career.skills || []).length;
       const requiredCount = parsed.auto.length + parsed.picks.reduce((s, p) => s + p.count, 0);
-      if (skillCount < requiredCount) issues.push(`Skills: ${skillCount} of ${requiredCount} picked`);
+      if (skillCount < requiredCount) push('skill', `Skills: ${skillCount} of ${requiredCount} picked`);
       if ((car.languages || 0) > 0 && (c.career.languages || []).length < car.languages) {
         const got = (c.career.languages || []).length;
-        issues.push(car.languages === 1 ? 'Language not chosen' : `Languages: ${got} of ${car.languages} picked`);
+        push('language', car.languages === 1 ? 'Language not chosen' : `Languages: ${got} of ${car.languages} picked`);
       }
-      if (!c.career.perk) issues.push('Perk not chosen');
-      else issues.push(...perkPickIssues(c.career.perk, c.career.perkPicks, c));
+      if (!c.career.perk) push('other', 'Perk not chosen');
+      else issues.push(...perkPickIssueEntries(c.career.perk, c.career.perkPicks, c));
       // Auto-granted duplicates need their "choose another instead" swap.
       issues.push(...swapIssues(careerAutoCollisions(c), c.career.skillSwaps, 'career', c.career.skills || []));
       issues.push(...dupPickIssues(k => k === 'career'));
@@ -471,59 +484,60 @@ function stepIssues(c, idx) {
     }
     case 'class': {
       const cls = classDef(c);
-      if (!cls) return ['Class not chosen'];
+      if (!cls) return [E('other', 'Class not chosen')];
       const issues = [];
-      if (cls.subclasses && !c.cclass.subclass) issues.push('Subclass not chosen');
-      if (cls.pickTwoDomains && (c.cclass.domains || []).length < 2) issues.push(`Domains: ${(c.cclass.domains || []).length} of 2 chosen`);
+      const push = (topic, text) => issues.push(E(topic, text));
+      if (cls.subclasses && !c.cclass.subclass) push('other', 'Subclass not chosen');
+      if (cls.pickTwoDomains && (c.cclass.domains || []).length < 2) push('other', `Domains: ${(c.cclass.domains || []).length} of 2 chosen`);
       // Conduit-style classes also choose a 1st-level domain feature + a domain ability.
-      if (cls.pickTwoDomains && !c.cclass.domainFeature) issues.push('Domain feature not chosen');
+      if (cls.pickTwoDomains && !c.cclass.domainFeature) push('other', 'Domain feature not chosen');
       // The chosen domain feature grants a skill from its group.
-      if (cls.pickTwoDomains && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) issues.push('Domain skill not picked');
-      if (cls.pickTwoDomains && !c.cclass.domainAbility) issues.push('Domain ability not chosen');
+      if (cls.pickTwoDomains && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) push('skill', 'Domain skill not picked');
+      if (cls.pickTwoDomains && !c.cclass.domainAbility) push('other', 'Domain ability not chosen');
       // Censor: choose one domain → its 1st-level feature (auto) + a skill from the indicated group.
-      if (cls.pickOneDomain && (c.cclass.domains || []).length < 1) issues.push('Domain not chosen');
-      if (cls.pickOneDomain && !c.cclass.domainFeature) issues.push('Domain feature not chosen');
-      if (cls.pickOneDomain && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) issues.push('Domain skill not picked');
+      if (cls.pickOneDomain && (c.cclass.domains || []).length < 1) push('other', 'Domain not chosen');
+      if (cls.pickOneDomain && !c.cclass.domainFeature) push('other', 'Domain feature not chosen');
+      if (cls.pickOneDomain && c.cclass.domainFeature?.skillGroup && !c.cclass.domainSkill) push('skill', 'Domain skill not picked');
       const sigsRequired = cls.sigCount ?? 1;
       const sigsGot = (c.cclass.signatures || []).length;
       if (sigsGot < sigsRequired) {
-        issues.push(sigsRequired === 1 ? 'Signature ability not chosen' : `Signature abilities: ${sigsGot} of ${sigsRequired} picked`);
+        push('other', sigsRequired === 1 ? 'Signature ability not chosen' : `Signature abilities: ${sigsGot} of ${sigsRequired} picked`);
       }
-      if (cls.deep && cls.heroic3?.length > 0 && !c.cclass.heroic3) issues.push(`3-${cls.resource} heroic ability not chosen`);
-      if (cls.deep && cls.heroic5?.length > 0 && !c.cclass.heroic5) issues.push(`5-${cls.resource} heroic ability not chosen`);
+      if (cls.deep && cls.heroic3?.length > 0 && !c.cclass.heroic3) push('other', `3-${cls.resource} heroic ability not chosen`);
+      if (cls.deep && cls.heroic5?.length > 0 && !c.cclass.heroic5) push('other', `5-${cls.resource} heroic ability not chosen`);
       // Beastheart: a companion is a required 1st-level pick (plus any per-companion option).
-      if (cls.companionRequired && !c.cclass.companion) issues.push('Companion not chosen');
+      if (cls.companionRequired && !c.cclass.companion) push('other', 'Companion not chosen');
       if (cls.companionRequired && c.cclass.companion) {
         const comp = companionById(c.cclass.companion);
         if (comp?.optionChoice && !(c.cclass.companionOptions || {})[comp.optionChoice.id]) {
-          issues.push(`${comp.optionChoice.label} not chosen`);
+          push('other', `${comp.optionChoice.label} not chosen`);
         }
       }
       // Summoner: formation, quick command, and the 1st-level portfolio minion picks.
-      if (cls.formations && !c.cclass.formation) issues.push('Formation not chosen');
-      if (cls.quickCommands && !c.cclass.quickCommand) issues.push('Quick command not chosen');
+      if (cls.formations && !c.cclass.formation) push('other', 'Formation not chosen');
+      if (cls.quickCommands && !c.cclass.quickCommand) push('other', 'Quick command not chosen');
       if (cls.minionPicks && c.cclass.subclass) {
         for (const [tier, need] of Object.entries(cls.minionPicks)) {
           const got = ((c.cclass.minions || {})[tier] || []).length;
-          if (got < need) issues.push(`${tier === 'sig' ? 'Signature minions' : '3-essence minions'}: ${got} of ${need} picked`);
+          if (got < need) push('other', `${tier === 'sig' ? 'Signature minions' : '3-essence minions'}: ${got} of ${need} picked`);
         }
       }
       // Kit picks must come from the pool the chosen subclass allows
       // (Fury's Stormwight is limited to stormwight kits).
       const kitPool = kitPoolFor(cls, c.cclass.subclass);
       const inKitPool = (id) => kitPool.some(k => k.id === id);
-      if (cls.kitRequired && !(c.kit.id && inKitPool(c.kit.id))) issues.push(c.kit.id ? 'Kit not in the allowed pool' : 'Kit not chosen');
-      if (cls.kit2Required && !(c.kit2?.id && inKitPool(c.kit2.id))) issues.push(c.kit2?.id ? 'Second kit not in the allowed pool' : 'Second kit not chosen');
+      if (cls.kitRequired && !(c.kit.id && inKitPool(c.kit.id))) push('other', c.kit.id ? 'Kit not in the allowed pool' : 'Kit not chosen');
+      if (cls.kit2Required && !(c.kit2?.id && inKitPool(c.kit2.id))) push('other', c.kit2?.id ? 'Second kit not in the allowed pool' : 'Second kit not chosen');
       // Prayer/Ward (Conduit) and Enchantment/Ward (Elementalist) feature choices.
-      if (cls.prayers && !c.cclass.prayer) issues.push('Prayer not chosen');
-      if (cls.enchantments && !c.cclass.enchantment) issues.push('Enchantment not chosen');
-      if (cls.wards && !c.cclass.ward) issues.push('Ward not chosen');
+      if (cls.prayers && !c.cclass.prayer) push('other', 'Prayer not chosen');
+      if (cls.enchantments && !c.cclass.enchantment) push('other', 'Enchantment not chosen');
+      if (cls.wards && !c.cclass.ward) push('other', 'Ward not chosen');
       // Class skill picks (plus the subclass's skill-group pick, e.g. Tactician doctrines).
       {
         const sub = (cls.subclasses || []).find(s => (s.id || s.name) === c.cclass.subclass);
         const needSkills = classSkillPicks(cls, sub).reduce((s, p) => s + p.count, 0);
         const gotSkills = (c.cclass.skills || []).length;
-        if (gotSkills < needSkills) issues.push(`Class skills: ${gotSkills} of ${needSkills} picked`);
+        if (gotSkills < needSkills) push('skill', `Class skills: ${gotSkills} of ${needSkills} picked`);
         // Grant duplicates need their "choose another instead" swap.
         const ownNames = [...classGrantedSkills(cls, sub), ...(c.cclass.skills || [])];
         issues.push(...swapIssues(classGrantCollisions(c), c.cclass.skillSwaps, 'class', ownNames));
@@ -534,10 +548,10 @@ function stepIssues(c, idx) {
       if (cls.flexCharOrder) {
         const chars = c.cclass.characteristics || {};
         const vals = cls.flexCharOrder.map(k => chars[k]);
-        if (vals.some(v => typeof v !== 'number' || v < -1 || v > 2)) issues.push('Characteristics out of range');
+        if (vals.some(v => typeof v !== 'number' || v < -1 || v > 2)) push('other', 'Characteristics out of range');
         else {
           const budget = Math.max(...(cls.charArrays || [[0]]).map(arr => arr.reduce((s, v) => s + v, 0)));
-          if (vals.reduce((s, v) => s + v, 0) !== budget && !matchesCharArray(cls, vals)) issues.push('Characteristic points not fully spent');
+          if (vals.reduce((s, v) => s + v, 0) !== budget && !matchesCharArray(cls, vals)) push('other', 'Characteristic points not fully spent');
         }
       }
       return issues;
@@ -548,36 +562,37 @@ function stepIssues(c, idx) {
       const comp = complicationDef(c);
       if (!comp) return [];
       const issues = [];
+      const push = (topic, text) => issues.push(E(topic, text));
       for (let i = 0; i < (comp.skillChoices || []).length; i++) {
         const got = (((c.complication.skills) || {})[i] || []).length;
         const count = comp.skillChoices[i].count;
-        if (got < count) issues.push(count === 1 ? 'Skill not picked' : `Skills: ${got} of ${count} picked`);
+        if (got < count) push('skill', count === 1 ? 'Skill not picked' : `Skills: ${got} of ${count} picked`);
       }
       if (comp.languageChoice && ((c.complication.languages || []).length < comp.languageChoice.count)) {
         const got = (c.complication.languages || []).length;
-        issues.push(comp.languageChoice.count === 1 ? 'Language not chosen' : `Languages: ${got} of ${comp.languageChoice.count} picked`);
+        push('language', comp.languageChoice.count === 1 ? 'Language not chosen' : `Languages: ${got} of ${comp.languageChoice.count} picked`);
       }
       // Follow-up picks the prose asks for. Text prompts are optional and never listed.
       const own = complicationOwnSkillPicks(c);
       (comp.ownSkillChoices || []).forEach((ch, i) => {
         const pool = heldSkillsFor(c, { groups: ch.groups, excludeKeyPrefix: ch.excludeOwnGrants ? 'comp:' : null });
         const got = (own[i] || []).length;
-        if (pool.length >= ch.count && got < ch.count) issues.push(ch.count === 1 ? `${ch.label} not picked` : `${ch.label}: ${got} of ${ch.count} picked`);
+        if (pool.length >= ch.count && got < ch.count) push('skill', ch.count === 1 ? `${ch.label} not picked` : `${ch.label}: ${got} of ${ch.count} picked`);
       });
       (comp.optionChoices || []).forEach((ch, i) => {
-        if (((c.complication.options || {})[i] || []).length < ch.count) issues.push(`${ch.label} not chosen`);
+        if (((c.complication.options || {})[i] || []).length < ch.count) push('other', `${ch.label} not chosen`);
       });
       if ((comp.abilityChoices || []).length) {
         const pools = heroicAbilityPools(c);
         for (const ch of comp.abilityChoices) {
           const pool = ch.pool === 'known-heroic' ? pools.known : pools.future;
           const name = (c.complication.abilityPicks || {})[ch.id];
-          if (pool.length && !pool.some(a => a.name === name)) issues.push(`${ch.label} not chosen`);
+          if (pool.length && !pool.some(a => a.name === name)) push('other', `${ch.label} not chosen`);
         }
       }
       if (comp.languageLoss) {
         const forgotten = (c.complication.forgottenLanguages || []).length;
-        if (forgotten < comp.languageLoss.count) issues.push(`${comp.languageLoss.label} not chosen`);
+        if (forgotten < comp.languageLoss.count) push('language', `${comp.languageLoss.label} not chosen`);
       }
       if (comp.traitChoice) {
         const anc = DS_ANCESTRIES.find(a => a.id === comp.traitChoice.ancestry);
@@ -586,7 +601,7 @@ function stepIssues(c, idx) {
         const picked = c.complication.traits || [];
         const spent = pool.filter(t => picked.includes(t.name)).reduce((s, t) => s + (t.cost || 0), 0);
         const affordable = pool.some(t => !picked.includes(t.name) && spent + (t.cost || 0) <= comp.traitChoice.points);
-        if (spent < comp.traitChoice.points && affordable) issues.push(`${comp.traitChoice.label}: ${spent} of ${comp.traitChoice.points} points spent`);
+        if (spent < comp.traitChoice.points && affordable) push('other', `${comp.traitChoice.label}: ${spent} of ${comp.traitChoice.points} points spent`);
       }
       // Fixed grants colliding with an earlier slot must carry a same-group swap.
       const ownNames = [...(comp.skills || []), ...Object.values(c.complication.skills || {}).flat()];
@@ -595,11 +610,11 @@ function stepIssues(c, idx) {
       return issues;
     }
     case 'identity':
-      return (c.identity.name || '').trim().length > 0 ? [] : ['Hero not yet named'];
+      return (c.identity.name || '').trim().length > 0 ? [] : [E('other', 'Hero not yet named')];
     case 'review':
       return [];
     default:
-      return ['Unknown chapter'];
+      return [E('other', 'Unknown chapter')];
   }
 }
 
@@ -650,4 +665,4 @@ const STEP_COMPONENTS = {
 };
 
 
-export { Wizard, isStepValid, stepIssues, classSections, wizardProgress };
+export { Wizard, isStepValid, stepIssues, stepIssueEntries, classSections, wizardProgress, unresolvedSwaps, stepSummary };

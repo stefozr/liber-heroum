@@ -477,8 +477,18 @@ body[data-theme="obsidian"] { -webkit-tap-highlight-color: rgba(176,138,72,0.15)
 }
 .roster-section-title {
   display: flex; align-items: center; justify-content: space-between;
-  margin: 40px 0 18px;
+  margin: 40px 0 18px; gap: 12px; flex-wrap: wrap;
 }
+.roster-section-title .rst-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Which creation layout opens a hero (classic wizard vs the Codex-style prototype). */
+.layout-switch { display: inline-flex; border: 1px solid var(--line-2); }
+.layout-switch button {
+  appearance: none; background: transparent; border: 0; cursor: pointer; padding: 6px 12px;
+  font-family: var(--mono); font-size: var(--fs-3); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+}
+.layout-switch button + button { border-left: 1px solid var(--line-2); }
+.layout-switch button:hover { color: var(--ink); }
+.layout-switch button[aria-pressed="true"] { background: var(--grad-card-sel); color: var(--gold-2); }
 .roster-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px;
 }
@@ -629,6 +639,8 @@ ${MQ.phone} {
   /* SAVED/SAVING restate the norm on a cramped bar; a failed save must stay visible. */
   .tb-right .pill:not(.rubric) { display: none; }
   .tb-brand, .tb-sub { font-size: var(--fs-3); }
+  /* The layout switch is also on the roster; a phone bar has no room for it. */
+  .tb-right .wiz-switch { display: none; }
 }
 
 /* Key/value rows in the career step. */

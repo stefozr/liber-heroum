@@ -6,7 +6,7 @@ import { classDef, ancestryDef } from './app.jsx';
 import { wizardProgress } from './wizard.jsx';
 // roster.jsx — Character roster (multi-character) screen.
 
-function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, onCreate, onDelete, onAssign, onSetVisibility }) {
+function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, onCreate, onDelete, onAssign, onSetVisibility, creatorPref = null, onSetCreatorPref = null }) {
   const completed = characters.filter(c => c.status === 'complete');
   const inProgress = characters.filter(c => c.status !== 'complete');
   const campById = React.useMemo(
@@ -28,7 +28,7 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
           <div className="glyphs-top"><GlyphRow>✠ · ❦ · ✦ · ❦ · ✠</GlyphRow></div>
           <h1>LIBER HEROUM</h1>
           <div className="sub">A Chronicle of Heroes, Drawn from Steel</div>
-          <div className="meta">A Draw Steel Character Manager · v 1.8</div>
+          <div className="meta">A Draw Steel Character Manager · v 2.0</div>
           <div style={{marginTop: 22, display:'flex', justifyContent:'center'}}>
             <RulesButton onClick={() => setRulesOpen(true)}>Rules Glossary</RulesButton>
           </div>
@@ -38,7 +38,15 @@ function RosterScreen({ characters, campaigns = [], userCampaigns = [], onOpen, 
 
         <div className="roster-section-title">
           <H2>Your Heroes</H2>
-          <Pill kind="muted">{characters.length} TOTAL</Pill>
+          <div className="rst-right">
+            {onSetCreatorPref && (
+              <div className="layout-switch" role="group" aria-label="Creation layout" title="Which layout opens an unfinished hero">
+                <button type="button" aria-pressed={creatorPref !== 'codex'} onClick={() => onSetCreatorPref('wizard')}>Classic wizard</button>
+                <button type="button" aria-pressed={creatorPref === 'codex'} onClick={() => onSetCreatorPref('codex')}>Codex layout</button>
+              </div>
+            )}
+            <Pill kind="muted">{characters.length} TOTAL</Pill>
+          </div>
         </div>
 
         <div className="roster-grid">

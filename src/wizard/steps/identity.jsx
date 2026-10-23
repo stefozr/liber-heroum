@@ -6,6 +6,7 @@ import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, com
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { DS } from '../../backend.jsx';
+import * as mut from '../mutations.js';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -36,7 +37,7 @@ async function shrinkImage(file) {
 
 function IdentityStep({ character, update }) {
   const id = character.identity || {};
-  const setF = (k, v) => update(c => ({ ...c, identity: { ...c.identity, [k]: v }, name: k === 'name' ? v : c.name }));
+  const setF = (k, v) => update(c => mut.setIdentityField(c, k, v));
   const fileRef = React.useRef(null);
   const [dragOver, setDragOver] = React.useState(false);
   const [uploading, setUploading] = useState(false);

@@ -6,6 +6,7 @@ import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, com
 import { timeString, parseCareerSkills, complicationGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
+import * as mut from '../mutations.js';
 import { OptionChoicePicker, OwnSkillPicker, LanguageChipPicker, TextChoiceField, AbilityPickGrid, TraitPointPicker } from './pickers.jsx';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
@@ -14,51 +15,25 @@ function ComplicationStep({ character, update }) {
   const sel = character.complication.id;
   // Re-clicking the chosen card keeps its picks — the drawer with the pickers
   // sits right under it, so a stray click on the card mustn't wipe them.
-  const blank = (id) => ({ id, custom: '', skills: {}, skillSwaps: {}, languages: [], ownSkills: {}, options: {}, texts: {}, abilityPicks: {}, forgottenLanguages: [], traits: [] });
-  const pick = (id) => update(c => (c.complication.id === id ? c : { ...c, complication: blank(id) }));
-  const skip = () => update(c => ({ ...c, complication: blank(null) }));
+  const pick = (id) => update(c => mut.setComplication(c, id));
+  const skip = () => update(c => mut.skipComplication(c));
   const comp = complicationDef(character);
   const compSkills = character.complication.skills || {};
   const compLangs = character.complication.languages || [];
-  const toggleChoiceSkill = (i, count, s) => update(c => {
-    const cur = { ...(c.complication.skills || {}) };
-    const arr = cur[i] || [];
-    cur[i] = arr.includes(s) ? arr.filter(x => x !== s) : (arr.length >= count ? arr : [...arr, s]);
-    return { ...c, complication: { ...c.complication, skills: cur } };
-  });
-  const toggleLang = (count, L) => update(c => {
-    const cur = c.complication.languages || [];
-    const next = cur.includes(L) ? cur.filter(x => x !== L) : (cur.length >= count ? cur : [...cur, L]);
-    return { ...c, complication: { ...c.complication, languages: next } };
-  });
+  const toggleChoiceSkill = (i, count, s) => update(c => mut.toggleComplicationChoiceSkill(c, i, count, s));
+  const toggleLang = (count, L) => update(c => mut.toggleComplicationLanguage(c, count, L));
   // Fixed grants duplicated by an earlier slot — official rules allow a same-group swap.
   const collisions = comp ? complicationGrantCollisions(character) : [];
   const swaps = character.complication.skillSwaps || {};
-  const setSwap = (skill, name) => update(c => {
-    const next = { ...(c.complication.skillSwaps || {}) };
-    if (name) next[skill] = name; else delete next[skill];
-    return { ...c, complication: { ...c.complication, skillSwaps: next } };
-  });
+  const setSwap = (skill, name) => update(c => mut.setComplicationSwap(c, skill, name));
   // Follow-up picks the prose asks for: one of YOUR skills, an enumerated option, an
   // ability, a free-text detail, a forgotten language, borrowed traits. Each toggles a
   // keyed array under c.complication so a stray re-click of the card can't wipe them.
-  const toggleIn = (field, key, count, value) => update(c => {
-    const cur = { ...(c.complication[field] || {}) };
-    const arr = cur[key] || [];
-    cur[key] = arr.includes(value) ? arr.filter(x => x !== value) : (arr.length >= count ? arr : [...arr, value]);
-    return { ...c, complication: { ...c.complication, [field]: cur } };
-  });
-  const setText = (i, v) => update(c => ({ ...c, complication: { ...c.complication, texts: { ...(c.complication.texts || {}), [i]: v } } }));
-  const setAbility = (id, name) => update(c => ({ ...c, complication: { ...c.complication, abilityPicks: { ...(c.complication.abilityPicks || {}), [id]: name } } }));
-  const toggleForgotten = (count, L) => update(c => {
-    const cur = c.complication.forgottenLanguages || [];
-    const next = cur.includes(L) ? cur.filter(x => x !== L) : (cur.length >= count ? cur : [...cur, L]);
-    return { ...c, complication: { ...c.complication, forgottenLanguages: next } };
-  });
-  const toggleTrait = (name) => update(c => {
-    const cur = c.complication.traits || [];
-    return { ...c, complication: { ...c.complication, traits: cur.includes(name) ? cur.filter(x => x !== name) : [...cur, name] } };
-  });
+  const toggleIn = (field, key, count, value) => update(c => mut.toggleComplicationIn(c, field, key, count, value));
+  const setText = (i, v) => update(c => mut.setComplicationText(c, i, v));
+  const setAbility = (id, name) => update(c => mut.setComplicationAbility(c, id, name));
+  const toggleForgotten = (count, L) => update(c => mut.toggleForgottenLanguage(c, count, L));
+  const toggleTrait = (name) => update(c => mut.toggleComplicationTrait(c, name));
   const ownPicks = comp ? complicationOwnSkillPicks(character) : {};
   const abilityPools = comp?.abilityChoices ? heroicAbilityPools(character) : null;
   const hasFollowUps = comp && ((comp.ownSkillChoices || []).length || (comp.optionChoices || []).length || (comp.abilityChoices || []).length

@@ -5,41 +5,18 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept } from '../../app.jsx';
 import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import * as mut from '../mutations.js';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 function CultureStep({ character, update }) {
   const cu = character.culture || {};
-  const setField = (k, v) => update(c => ({ ...c, culture: { ...c.culture, [k]: v } }));
-  const setAspect = (key, itemId, item) => update(c => {
-    const prevSkills = c.culture.skills || {};
-    const skillsCopy = { ...prevSkills };
-    // Clear the picked skill for this aspect; the skill group set may have changed.
-    delete skillsCopy[key];
-    // If the manual pick diverges from the applied archetype, stop highlighting
-    // its chip as if it still described this culture.
-    const arche = DS_CULTURES.archetypes.find(a => a.name === c.culture.archetype);
-    const aField = { environment: 'env', organization: 'org', upbringing: 'upb' }[key];
-    const archetype = arche && arche[aField] === itemId ? c.culture.archetype : null;
-    return { ...c, culture: { ...c.culture, [key]: itemId, skills: skillsCopy, archetype } };
-  });
+  const setField = (k, v) => update(c => mut.setCultureField(c, k, v));
+  const setAspect = (key, itemId) => update(c => mut.setCultureAspect(c, key, itemId, DS_CULTURES.archetypes));
   // Toggle, like career's toggleSkill: clicking the picked chip releases it, so
   // a made choice can be revisited even though the other chips are blocked.
-  const toggleSkill = (key, skill) => update(c => {
-    const skills = { ...(c.culture.skills || {}) };
-    if (skills[key] === skill) delete skills[key];
-    else skills[key] = skill;
-    return { ...c, culture: { ...c.culture, skills } };
-  });
-
-  const apply = (arche) => update(c => ({
-    ...c, culture: {
-      ...c.culture,
-      environment: arche.env, organization: arche.org, upbringing: arche.upb,
-      archetype: arche.name,
-      skills: {}, // archetype resets skill picks — choose them next
-    }
-  }));
+  const toggleSkill = (key, skill) => update(c => mut.toggleCultureSkill(c, key, skill));
+  const apply = (arche) => update(c => mut.applyCultureArchetype(c, arche));
 
   const aspects = [
     { key: 'environment', name: 'Environment', items: DS_CULTURES.environments },

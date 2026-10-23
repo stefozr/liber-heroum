@@ -472,12 +472,13 @@ function orderTraitCards(traits) {
 
 // Scroll the wizard body to an anchored section — used after picking a class or
 // career so the configuration panels below the card grid come into view.
-// (Same math as the complication step's roll-to-card scroll.)
-function scrollWizardTo(id) {
+// (Same math as the complication step's roll-to-card scroll.) The Codex-style
+// creator scrolls its own main column, so it passes that selector.
+function scrollWizardTo(id, scrollerSelector = '.wiz-step') {
   requestAnimationFrame(() => {
     const el = document.getElementById(id);
     if (!el) return;
-    const scroller = el.closest('.wiz-step');
+    const scroller = el.closest(scrollerSelector);
     if (!scroller) return;
     const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     // Honour reduced-motion (matchMedia is absent under jsdom — treat as no preference).

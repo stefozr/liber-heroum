@@ -7,6 +7,7 @@ import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, com
 import { timeString, parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, classGrantCollisions, PERKS, CHAR_MIN, CHAR_MAX, charBudget, matchesCharArray, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { ClassDocket } from '../ClassDocket.jsx';
 import { SkillSwapBlock } from './skill-swap.jsx';
+import * as mut from '../mutations.js';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -17,40 +18,7 @@ function ClassStep({ character, update, sections = [] }) {
     // The aspect/skill/kit panels live below the poster grid — bring them into
     // view on a fresh pick, or a first-timer never learns they exist.
     if (id !== character.cclass.id) scrollWizardTo('class-config');
-    update(c => {
-    if (c.cclass.id === id) return c; // re-selecting the same class changes nothing
-    return {
-    ...c,
-    level: 1,
-    levelChoices: {},
-    cclass: {
-      ...c.cclass,
-      id,
-      subclass: null, domains: [],
-      domainFeature: null, domainAbility: null, domainSkill: null,
-      characteristics: {}, charArrayIndex: 0,
-      signatures: [], heroic3: null, heroic5: null,
-      skills: [], skillPicks: {}, skillSwaps: {},
-      levelAbilities: {},
-      prayer: null, ward: null, enchantment: null, triggeredAction: null,
-      companion: null, companionOptions: {}, formation: null, quickCommand: null, minions: { sig: [], t3: [] },
-    },
-    // Reset all play-state resources to their defaults (Heroic Resource is class-specific).
-    play: {
-      ...c.play,
-      stamina: null,
-      resource: 0,
-      recoveriesUsed: 0,
-      victories: 0,
-      surges: 0,
-      heroTokens: 0,
-      conditions: {},
-      companionStamina: null,
-      rampage: 0,
-      squads: [],
-    },
-  };
-    });
+    update(c => mut.setClass(c, id));
   };
 
   return (
@@ -180,14 +148,8 @@ function CompanionPicker({ character, update }) {
   if (!cls?.companionRequired) return null;
   const chosen = character.cclass.companion;
   const comp = companionById(chosen);
-  const setCompanion = (id) => update(c => ({
-    ...c,
-    cclass: { ...c.cclass, companion: c.cclass.companion === id ? null : id, companionOptions: {} },
-  }));
-  const setOption = (optId, val) => update(c => ({
-    ...c,
-    cclass: { ...c.cclass, companionOptions: { ...(c.cclass.companionOptions || {}), [optId]: val } },
-  }));
+  const setCompanion = (id) => update(c => mut.setCompanion(c, id));
+  const setOption = (optId, val) => update(c => mut.setCompanionOption(c, optId, val));
   return (
     <div>
       <SheetStyles />
@@ -242,14 +204,7 @@ function PortfolioPicker({ character, update }) {
     );
   }
   const chosen = character.cclass.minions || { sig: [], t3: [] };
-  const toggle = (tier, id, need) => update(c => {
-    const cur = (c.cclass.minions || {})[tier] || [];
-    let next;
-    if (cur.includes(id)) next = cur.filter(x => x !== id);
-    else if (cur.length < need) next = [...cur, id];
-    else return c;
-    return { ...c, cclass: { ...c.cclass, minions: { ...(c.cclass.minions || { sig: [], t3: [] }), [tier]: next } } };
-  });
+  const toggle = (tier, id, need) => update(c => mut.toggleMinion(c, tier, id, need));
   return (
     <div className="stack-22">
       <SheetStyles />
@@ -296,7 +251,7 @@ const PW_CONFIG = {
 
 function PrayerWardPicker({ character, update, cls, feature }) {
   const groups = PW_CONFIG[feature?.choose] || PW_CONFIG.prayerWard;
-  const setKey = (stateKey, name) => update(c => ({ ...c, cclass: { ...c.cclass, [stateKey]: c.cclass[stateKey] === name ? null : name } }));
+  const setKey = (stateKey, name) => update(c => mut.setClassChoice(c, stateKey, name));
 
   const Group = ({ label, options, current, onPick, anchor }) => (
     <div id={anchor}>
@@ -338,49 +293,11 @@ function ClassSubclassPicker({ character, update }) {
   if (!cls || (!cls.subclasses && !cls.pickTwoDomains)) return null;
 
   const isMulti = cls.pickTwoDomains;
-  const setSub = (id) => update(c => {
-    // Subclass can scope the kit pool (e.g. Fury's Stormwight) — drop kit picks
-    // that fall outside the new subclass's pool.
-    const pool = kitPoolFor(cls, id);
-    const keep = (kit) => (kit?.id && pool.some(k => k.id === kit.id)) ? kit : { id: null };
-    // Subclass can also grant a skill pick (Tactician doctrines) — drop chosen class
-    // skills that no longer fit any pick pool under the new subclass.
-    const newSub = (cls.subclasses || []).find(s => (s.id || s.name) === id);
-    const pools = classSkillPicks(cls, newSub).map(pickPool);
-    const skills = (c.cclass.skills || []).filter(s => pools.some(p => p.includes(s)));
-    const skillPicks = Object.fromEntries(Object.entries(c.cclass.skillPicks || {}).filter(([s]) => skills.includes(s)));
-    // Duplicate-grant swaps only survive for skills the new subclass still grants.
-    const grants = classGrantedSkills(cls, newSub);
-    const skillSwaps = Object.fromEntries(Object.entries(c.cclass.skillSwaps || {}).filter(([s]) => grants.includes(s)));
-    // Summoner: the circle IS the portfolio — minion picks don't carry across circles.
-    const minions = cls.minionPicks ? { sig: [], t3: [] } : c.cclass.minions;
-    return { ...c, cclass: { ...c.cclass, subclass: id, skills, skillPicks, skillSwaps, minions }, kit: keep(c.kit), kit2: keep(c.kit2) };
-  });
-  const toggleDomain = (name) => update(c => {
-    const cur = c.cclass.domains || [];
-    // Dropping a domain clears any domain feature/ability tied to it.
-    const clean = (next) => {
-      let df = c.cclass.domainFeature;
-      let da = c.cclass.domainAbility;
-      let ds = c.cclass.domainSkill;
-      if (df && !next.includes(df.domain)) { df = null; ds = null; }
-      if (da && !next.includes(da.domain)) da = null;
-      return { ...c, cclass: { ...c.cclass, domains: next, domainFeature: df, domainAbility: da, domainSkill: ds } };
-    };
-    if (cur.includes(name)) return clean(cur.filter(x => x !== name));
-    if (cur.length >= 2) return clean([cur[1], name]);
-    return clean([...cur, name]);
-  });
-  const setDomainFeature = (domain) => update(c => {
-    const f = window.DOMAIN_1ST_FEATURES?.[domain];
-    return { ...c, cclass: { ...c.cclass, domainFeature: f ? { domain, name: f.name, text: f.text, skillGroup: f.skillGroup } : null, domainSkill: null } };
-  });
-  const setDomainAbility = (domain) => update(c => {
-    const list = window.DOMAIN_2_ABILITIES?.[domain] || [];
-    const ab = list[0];
-    return { ...c, cclass: { ...c.cclass, domainAbility: ab ? { domain, name: ab.name } : null } };
-  });
-  const setDomainSkill = (skill) => update(c => ({ ...c, cclass: { ...c.cclass, domainSkill: c.cclass.domainSkill === skill ? null : skill } }));
+  const setSub = (id) => update(c => mut.setSubclass(c, id));
+  const toggleDomain = (name) => update(c => mut.toggleDomain(c, name));
+  const setDomainFeature = (domain) => update(c => mut.setDomainFeature(c, domain));
+  const setDomainAbility = (domain) => update(c => mut.setDomainAbility(c, domain));
+  const setDomainSkill = (skill) => update(c => mut.setDomainSkill(c, skill));
 
   if (cls.pickTwoDomains) {
     const chosenDomains = character.cclass.domains || [];
@@ -520,29 +437,11 @@ function ClassSkillPicker({ character, update }) {
   const collisions = classGrantCollisions(character);
   if (!picks.length && !collisions.length) return null;
   const swaps = character.cclass.skillSwaps || {};
-  const setSwap = (skill, name) => update(c => {
-    const next = { ...(c.cclass.skillSwaps || {}) };
-    if (name) next[skill] = name; else delete next[skill];
-    return { ...c, cclass: { ...c.cclass, skillSwaps: next } };
-  });
+  const setSwap = (skill, name) => update(c => mut.setClassSwap(c, skill, name));
 
   const toggleSkill = (pickIdx, skillName) => {
     const isOn = attribution.get(skillName) === pickIdx;
-    update(c => {
-      const skills = c.cclass.skills || [];
-      const sp = { ...(c.cclass.skillPicks || {}) };
-      let next;
-      if (isOn) {
-        next = skills.filter(s => s !== skillName);
-        delete sp[skillName];
-      } else if (skills.includes(skillName)) {
-        return c;   // already held by a sibling pick group — rendered blocked
-      } else {
-        next = [...skills, skillName];
-        sp[skillName] = pickIdx;
-      }
-      return { ...c, cclass: { ...c.cclass, skills: next, skillPicks: sp } };
-    });
+    update(c => mut.toggleClassSkill(c, pickIdx, skillName, isOn));
   };
 
   return (
@@ -550,11 +449,7 @@ function ClassSkillPicker({ character, update }) {
       <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between'}}>
         <H3>Class Skills</H3>
         {cls.quickSkills?.length > 0 && (
-          <button type="button" className="quick-pick-btn" onClick={() => {
-            // Quick build: the class's suggested skills, minus autos and duplicates elsewhere.
-            const next = cls.quickSkills.filter(s => !granted.includes(s) && !takenElsewhere.has(s));
-            update(c => ({ ...c, cclass: { ...c.cclass, skills: next, skillPicks: {} } }));
-          }}>Use Quick Build</button>
+          <button type="button" className="quick-pick-btn" onClick={() => update(c => mut.applyClassQuickBuild(c, takenElsewhere))}>Use Quick Build</button>
         )}
       </div>
       <Deck>
@@ -617,16 +512,8 @@ function CensorDomainPicker({ character, update }) {
   const curFeature = character.cclass.domainFeature;
   const curSkill = character.cclass.domainSkill;
 
-  const pickDomain = (d) => update(c => {
-    if ((c.cclass.domains || [])[0] === d) {
-      return { ...c, cclass: { ...c.cclass, domains: [], domainFeature: null, domainSkill: null } };
-    }
-    const f = (window.CENSOR_DOMAIN_1 || window.DOMAIN_1ST_FEATURES || {})[d];
-    return { ...c, cclass: { ...c.cclass, domains: [d],
-      domainFeature: f ? { domain: d, name: f.name, text: f.text, skillGroup: f.skillGroup } : null,
-      domainSkill: null } };
-  });
-  const setDomainSkill = (s) => update(c => ({ ...c, cclass: { ...c.cclass, domainSkill: c.cclass.domainSkill === s ? null : s } }));
+  const pickDomain = (d) => update(c => mut.pickCensorDomain(c, d));
+  const setDomainSkill = (s) => update(c => mut.setDomainSkill(c, s));
 
   return (
     <div className="stack-22">
@@ -706,10 +593,9 @@ function CharacteristicPicker({ character, update }) {
   const chars = character.cclass.characteristics || {};
 
   // Initialise once per class with a valid default spread.
+  // (Guarded here too: every update() queues a save, even a no-op one.)
   useEffect(() => {
-    if (cls && (!character.cclass.characteristics || Object.keys(character.cclass.characteristics).length === 0)) {
-      update(c => ({ ...c, cclass: { ...c.cclass, characteristics: { ...fixed, ...defaultFlexValues(cls) } } }));
-    }
+    if (Object.keys(character.cclass.characteristics || {}).length === 0) update(c => mut.ensureCharacteristics(c));
     // eslint-disable-next-line
   }, [cls?.id]);
 
@@ -719,11 +605,8 @@ function CharacteristicPicker({ character, update }) {
   // Lesser-sum official arrays (e.g. 2/−1/−1) are legal even though they underspend.
   const isOfficialArray = remaining > 0 && matchesCharArray(cls, flexVals);
 
-  const setStat = (key, val) => {
-    val = Math.max(CHAR_MIN, Math.min(CHAR_MAX, val));
-    update(c => ({ ...c, cclass: { ...c.cclass, characteristics: { ...fixed, ...c.cclass.characteristics, [key]: val } } }));
-  };
-  const reset = () => update(c => ({ ...c, cclass: { ...c.cclass, characteristics: { ...fixed, ...defaultFlexValues(cls) } } }));
+  const setStat = (key, val) => update(c => mut.setCharacteristic(c, key, val));
+  const reset = () => update(c => mut.resetCharacteristics(c));
 
   const fixedLabel = Object.entries(fixed).map(([k, v]) => `${k} ${v >= 0 ? '+' : ''}${v}`).join(', ');
   const ALL = ['Might', 'Agility', 'Reason', 'Intuition', 'Presence'];
@@ -769,18 +652,9 @@ function AbilityPicker({ character, update }) {
 
   const sigsRequired = cls.sigCount ?? 1;
   const sigsChosen = character.cclass.signatures || [];
-  const toggleSig = (name) => {
-    if (sigsChosen.includes(name)) {
-      update(c => ({ ...c, cclass: { ...c.cclass, signatures: c.cclass.signatures.filter(x => x !== name) } }));
-    } else if (sigsChosen.length < sigsRequired) {
-      update(c => ({ ...c, cclass: { ...c.cclass, signatures: [...c.cclass.signatures, name] } }));
-    } else if (sigsRequired === 1) {
-      update(c => ({ ...c, cclass: { ...c.cclass, signatures: [name] } }));
-    }
-  };
-
-  const setH3 = (n) => update(c => ({ ...c, cclass: { ...c.cclass, heroic3: n } }));
-  const setH5 = (n) => update(c => ({ ...c, cclass: { ...c.cclass, heroic5: n } }));
+  const toggleSig = (name) => update(c => mut.toggleSignature(c, name));
+  const setH3 = (n) => update(c => mut.setHeroic3(c, n));
+  const setH5 = (n) => update(c => mut.setHeroic5(c, n));
 
   return (
     <div className="stack-22">
@@ -866,7 +740,7 @@ function ClassKitPicker({ character, update }) {
   const pool = kitPoolFor(cls, character.cclass.subclass);
   const sel = character.kit.id;
   const sel2 = character.kit2?.id;
-  const setKit = (id) => update(c => ({ ...c, kit: { id } }));
+  const setKit = (id) => update(c => mut.setKit(c, id));
   // Suggested kits only make sense while they're in the active pool
   // (Fury suggests Panther, which a Stormwight can't take).
   const inPool = (name) => name && pool.some(k => k.name === name);
@@ -877,14 +751,7 @@ function ClassKitPicker({ character, update }) {
 
   // Dual-kit (e.g. Tactician's Field Arsenal): one selection group, pick two.
   // Clicking toggles a kit in/out of the pair; picking a third drops the oldest.
-  const pickDual = (id) => update(c => {
-    const k1 = c.kit.id, k2 = c.kit2?.id;
-    if (id === k1) return { ...c, kit: { id: k2 || '' }, kit2: { id: '' } };
-    if (id === k2) return { ...c, kit2: { id: '' } };
-    if (!k1) return { ...c, kit: { id } };
-    if (!k2) return { ...c, kit2: { id } };
-    return { ...c, kit: { id: k2 }, kit2: { id } };
-  });
+  const pickDual = (id) => update(c => mut.pickDualKit(c, id));
   // Order badge (1st / 2nd) for a kit id in the dual selection.
   const orderOf = (id) => (id === sel ? 1 : id === sel2 ? 2 : 0);
 

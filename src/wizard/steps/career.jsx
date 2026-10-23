@@ -5,6 +5,7 @@ import { OrnDivider, GlyphRow, Crest, renderGlyph, renderRich, Pill, Tag, Button
 import { classDef, ancestryDef, kitDef, kit2Def, careerDef, complicationDef, computeDerived, summarizeBenefits, skillsTakenExcept, languagesTakenExcept, heldSkillsFor } from '../../app.jsx';
 import { timeString, parseCareerSkills, attributeCareerSkills, careerAutoCollisions, PERKS, PERK_CHOICES, CHAR_MIN, CHAR_MAX, charBudget, defaultFlexValues, parseKitSig, fmtKitDmg, scrollWizardTo } from '../helpers.js';
 import { StepHeader } from '../StepHeader.jsx';
+import * as mut from '../mutations.js';
 import { SkillSwapBlock } from './skill-swap.jsx';
 import { OwnSkillPicker, LanguageChipPicker } from './pickers.jsx';
 import { TraitProse, TraitAbilityCards } from '../../theme/sheet.jsx';
@@ -17,24 +18,14 @@ function CareerStep({ character, update }) {
     // The incident/skills/perk panels live below the card grid — bring them
     // into view on a fresh pick.
     if (id !== character.career.id) scrollWizardTo('career-config');
-    update(c => {
-      const newCar = DS_CAREERS.find(x => x.id === id);
-      const parsed = newCar ? parseCareerSkills(newCar) : { auto: [], picks: [] };
-      return { ...c, career: { ...c.career, id, incident: '', taken: '', skills: [...parsed.auto], skillPicks: {}, skillSwaps: {}, languages: [], perk: '', perkPicks: { skills: [], languages: [] } } };
-    });
+    update(c => mut.setCareer(c, id));
   };
-  const setIncident = (v) => update(c => ({ ...c, career: { ...c.career, incident: v } }));
-  const setTaken = (v) => update(c => ({ ...c, career: { ...c.career, taken: v } }));
-  const setCarLangs = (arr) => update(c => ({ ...c, career: { ...c.career, languages: arr } }));
+  const setIncident = (v) => update(c => mut.setCareerIncident(c, v));
+  const setTaken = (v) => update(c => mut.setCareerTaken(c, v));
   // Re-clicking the chosen perk keeps its follow-up picks (its drawer sits right under it).
-  const setPerkName = (v) => update(c => (c.career.perk === v ? c : { ...c, career: { ...c.career, perk: v, perkPicks: { skills: [], languages: [] } } }));
+  const setPerkName = (v) => update(c => mut.setCareerPerk(c, v));
   const perkPicks = character.career.perkPicks || { skills: [], languages: [] };
-  const togglePerkPick = (field, count, v) => update(c => {
-    const cur = { skills: [], languages: [], ...(c.career.perkPicks || {}) };
-    const arr = cur[field] || [];
-    cur[field] = arr.includes(v) ? arr.filter(x => x !== v) : (arr.length >= count ? arr : [...arr, v]);
-    return { ...c, career: { ...c.career, perkPicks: cur } };
-  });
+  const togglePerkPick = (field, count, v) => update(c => mut.togglePerkPick(c, field, count, v));
   // The follow-up picks a chosen perk asks for (Area of Expertise's skill, Linguist's
   // two languages), attached beneath its card like the wizard's other drawers.
   const perkDrawer = (perkName) => {
@@ -74,35 +65,13 @@ function CareerStep({ character, update }) {
   // Career autos duplicated by ancestry/culture — official rules allow a same-group swap.
   const collisions = careerAutoCollisions(character);
   const swaps = character.career.skillSwaps || {};
-  const setSwap = (skill, name) => update(c => {
-    const next = { ...(c.career.skillSwaps || {}) };
-    if (name) next[skill] = name; else delete next[skill];
-    return { ...c, career: { ...c.career, skillSwaps: next } };
-  });
+  const setSwap = (skill, name) => update(c => mut.setCareerSwap(c, skill, name));
 
   const toggleSkill = (pickIdx, skillName) => {
     const isOn = attribution.get(skillName) === pickIdx;
-    update(c => {
-      const skills = c.career.skills || [];
-      const picks = { ...(c.career.skillPicks || {}) };
-      let next;
-      if (isOn) {
-        next = skills.filter(s => s !== skillName);
-        delete picks[skillName];
-      } else if (skills.includes(skillName)) {
-        return c;   // already held by a sibling pick group — rendered blocked
-      } else {
-        next = [...skills, skillName];
-        picks[skillName] = pickIdx;
-      }
-      return { ...c, career: { ...c.career, skills: next, skillPicks: picks } };
-    });
+    update(c => mut.toggleCareerSkill(c, pickIdx, skillName, isOn));
   };
-  const toggleLang = (L) => {
-    const on = carLangs.includes(L);
-    if (on) setCarLangs(carLangs.filter(x => x !== L));
-    else setCarLangs([...carLangs, L]);
-  };
+  const toggleLang = (L) => update(c => mut.toggleCareerLanguage(c, L));
 
   return (
     <div className="stack-22">
@@ -187,14 +156,7 @@ function CareerStep({ character, update }) {
           <div className="orn-frame" style={{padding:'18px 22px'}}>
             <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, flexWrap:'wrap'}}>
               <H3>Career Skills</H3>
-              <button type="button" className="quick-pick-btn" onClick={() => {
-                // Quick build: apply autos + the career's `quick` field as a comma/dot-separated guess
-                const quickList = (car.quick || '').split(/[·\u00b7,;]/).map(s => s.trim()).filter(Boolean);
-                // Skip any skill already held in another slot — quick build mustn't create duplicates.
-                const next = [...new Set([...parsed.auto, ...quickList])].filter(s => !takenElsewhere.has(s));
-                // No explicit attribution — attributeCareerSkills assigns each to the first pick with room.
-                update(c => ({ ...c, career: { ...c.career, skills: next, skillPicks: {} } }));
-              }}>Use Quick Build</button>
+              <button type="button" className="quick-pick-btn" onClick={() => update(c => mut.applyCareerQuickBuild(c, takenElsewhere))}>Use Quick Build</button>
             </div>
             <Deck>Granted: <b style={{color:'var(--gold-2)'}}>{parsed.auto.join(', ') || 'none'}</b>. Pick your remaining skill choices below.</Deck>
             <div className="stack-12" style={{marginTop: 14}}>

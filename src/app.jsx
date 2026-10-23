@@ -10,6 +10,8 @@ import { CampaignStyles, CampaignHub, CampaignDetail } from './campaigns.jsx';
 const TweaksHost = import.meta.env.DEV ? React.lazy(() => import('./tweaks-host.jsx')) : null;
 import { RosterScreen } from './roster.jsx';
 import { Wizard } from './wizard.jsx';
+import { Creator } from './creator/Creator.jsx';
+import { getCreatorPref, setCreatorPref as storeCreatorPref, editorViewFor, isEditorView } from './creator/preference.js';
 import { PlayView } from './play.jsx';
 import { careerAutoCollisions, effectiveCareerSkills, classGrantCollisions, effectiveClassGrants, effectiveComplicationSkills, formerLifeDef, resolvedAncestryTraits, ancestrySignatures, parseCareerSkills, PERK_CHOICES, perkDef } from './wizard/helpers.js';
 import { LEVELUP_DATA, CENSOR_DOMAIN_1, makeContext, levelChoicesFor } from './levelup.jsx';
@@ -39,10 +41,10 @@ function parseHash(h) {
   if (seg === 'campaign' && id) return { view: 'campaign', id: decodeURIComponent(id) };
   return null;
 }
-// wizard and play both serialize to '#/hero/<id>' — the URL deliberately never
-// encodes editability; opening it re-derives wizard-vs-play via openCharacter.
+// wizard, creator and play all serialize to '#/hero/<id>' — the URL deliberately
+// never encodes editability (or layout); opening it re-derives the view via openCharacter.
 function navToHash({ view, activeId, activeCampaignId }) {
-  if ((view === 'wizard' || view === 'play') && activeId) return `#/hero/${encodeURIComponent(activeId)}`;
+  if ((isEditorView(view) || view === 'play') && activeId) return `#/hero/${encodeURIComponent(activeId)}`;
   if (view === 'campaign' && activeCampaignId) return `#/campaign/${encodeURIComponent(activeCampaignId)}`;
   if (view === 'campaigns') return '#/campaigns';
   if (view === 'admin') return '#/admin';
@@ -446,6 +448,13 @@ function App() {
   // Admin-only testing aid: force the open sheet into the genuine read-only rendering.
   // Session-only, and dropped when the open hero changes.
   const [adminPreview, setAdminPreview] = useState(false);
+  // Which creation layout opens an unfinished hero. The Codex-style creator is the
+  // default for everyone; the classic wizard stays reachable, but only admins see
+  // the switch (and only their stored preference is honoured) while it's retired.
+  const [storedCreatorPref, setCreatorPrefState] = useState(getCreatorPref);
+  const setCreatorPref = useCallback((v) => { storeCreatorPref(v); setCreatorPrefState(v); }, []);
+  const canSwitchLayout = !!currentUser?.isAdmin;
+  const creatorPref = canSwitchLayout ? storedCreatorPref : 'codex';
   useEffect(() => { setAdminPreview(false); }, [activeId]);
 
   const active = useMemo(() => characters.find(c => c.id === activeId) || null, [characters, activeId]);
@@ -679,11 +688,11 @@ function App() {
     setCharacters(prev => [...prev, ch]);
     setActiveId(ch.id);
     setBackView(back);
-    setView('wizard');
+    setView(editorViewFor(creatorPref));
     // Through the pill machinery: a failed create shows SAVE FAILED in the
     // wizard the user just landed in, and any subsequent edit re-upserts anyway.
     runSave(ch);
-  }, [currentUser, runSave]);
+  }, [currentUser, runSave, creatorPref]);
 
   const openCharacter = useCallback((id, back = { view: 'roster' }) => {
     const ch = characters.find(c => c.id === id);
@@ -693,8 +702,8 @@ function App() {
     // Non-editors (other players viewing a party sheet) always land on the read-only
     // play view — never the wizard, even for an in-progress hero — so they can't edit.
     const editable = canEditCharacter(ch);
-    setView(editable && ch.status !== 'complete' ? 'wizard' : 'play');
-  }, [characters, canEditCharacter]);
+    setView(editable && ch.status !== 'complete' ? editorViewFor(creatorPref) : 'play');
+  }, [characters, canEditCharacter, creatorPref]);
 
   const deleteCharacter = useCallback((id) => {
     if (pendingSave.current && pendingSave.current.id === id) pendingSave.current = null;
@@ -911,7 +920,7 @@ function App() {
 
   // Boot guards: keep view consistent with what exists.
   useEffect(() => {
-    if ((view === 'wizard' || view === 'play') && !active) setView('roster');
+    if ((isEditorView(view) || view === 'play') && !active) setView('roster');
     if (view === 'campaign' && !activeCampaign) setView('campaigns');
     if (view === 'admin' && currentUser && !currentUser.isAdmin) setView('roster');
   }, [active, activeCampaign, view, currentUser]);
@@ -1023,6 +1032,8 @@ function App() {
                   onDelete={deleteCharacter}
                   onAssign={assignCharacter}
                   onSetVisibility={setCharacterVisibility}
+                  creatorPref={creatorPref}
+                  onSetCreatorPref={canSwitchLayout ? setCreatorPref : null}
                 />
               )}
               {view === 'campaigns' && (
@@ -1063,14 +1074,9 @@ function App() {
               )}
             </div>
           </div>
-        ) : view === 'wizard' && active ? (
-          <Wizard
-            character={active}
-            update={updateActive}
-            saveState={saveState}
-            onExit={goBackFromHero}
-            onHome={goHome}
-            onComplete={(isComplete = true) => {
+        ) : isEditorView(view) && active ? (
+          (() => {
+            const onComplete = (isComplete = true) => {
               if (isComplete) {
                 updateActive(c => ({ ...c, status: 'complete' }));
                 setView('play');
@@ -1078,8 +1084,26 @@ function App() {
                 updateActive(c => ({ ...c, status: 'in-progress' }));
                 goBackFromHero();
               }
-            }}
-          />
+            };
+            // Flip the layout preference and reopen this hero in the other creator (admins only).
+            const onSwitchLayout = !canSwitchLayout ? null : () => {
+              const next = creatorPref === 'codex' ? 'wizard' : 'codex';
+              setCreatorPref(next);
+              setView(editorViewFor(next));
+            };
+            const Editor = view === 'creator' ? Creator : Wizard;
+            return (
+              <Editor
+                character={active}
+                update={updateActive}
+                saveState={saveState}
+                onExit={goBackFromHero}
+                onHome={goHome}
+                onComplete={onComplete}
+                onSwitchLayout={onSwitchLayout}
+              />
+            );
+          })()
         ) : view === 'play' && active ? (
           (() => {
             // A previewing admin gets the genuine read-only wiring — the exact
@@ -1093,7 +1117,7 @@ function App() {
                 onExit={goBackFromHero}
                 onHome={goHome}
                 exitLabel={backView && backView.view === 'campaign' ? '◂ CAMPAIGN' : '◂ ROSTER'}
-                onEdit={editable ? () => setView('wizard') : null}
+                onEdit={editable ? () => setView(editorViewFor(creatorPref)) : null}
                 canEdit={editable}
                 saveState={editable ? saveState : null}
                 owner={users.find(u => u.id === active.ownerId) || null}
@@ -1111,7 +1135,7 @@ function App() {
 
         {currentUser?.isAllowed && (
           <SyncPill
-            saveState={view === 'wizard' || view === 'play' ? null : saveState}
+            saveState={isEditorView(view) || view === 'play' ? null : saveState}
             syncError={syncError}
             onRetry={retrySave}
             onDismiss={() => setSyncError(null)}
@@ -1429,17 +1453,22 @@ function summarizeBenefits(c) {
 // perk has no follow-ups). An own-skill pick only counts as owed once the hero holds
 // enough qualifying skills to make it.
 function perkPickIssues(perkName, perkPicks, c) {
+  return perkPickIssueEntries(perkName, perkPicks, c).map(e => e.text);
+}
+
+// perkPickIssues tagged by topic ('skill' | 'language') — see stepIssueEntries.
+function perkPickIssueEntries(perkName, perkPicks, c) {
   const spec = PERK_CHOICES[perkName];
   if (!spec) return [];
   const issues = [];
   if (spec.ownSkill) {
     const pool = heldSkillsFor(c, { groups: spec.ownSkill.groups });
     const got = (perkPicks?.skills || []).filter(s => pool.includes(s)).length;
-    if (pool.length >= spec.ownSkill.count && got < spec.ownSkill.count) issues.push(`${perkName}: ${spec.ownSkill.label.toLowerCase()} not picked`);
+    if (pool.length >= spec.ownSkill.count && got < spec.ownSkill.count) issues.push({ topic: 'skill', text: `${perkName}: ${spec.ownSkill.label.toLowerCase()} not picked` });
   }
   if (spec.languages) {
     const got = (perkPicks?.languages || []).length;
-    if (got < spec.languages.count) issues.push(`${perkName}: languages ${got} of ${spec.languages.count} picked`);
+    if (got < spec.languages.count) issues.push({ topic: 'language', text: `${perkName}: languages ${got} of ${spec.languages.count} picked` });
   }
   return issues;
 }
@@ -1898,7 +1927,7 @@ export { collectDistanceBonuses, applyDistanceBonuses };
 export { collectSkillPicks, collectPerkPicks, skillsTakenExcept, perksTakenExcept };
 export { collectSkillEntries, duplicateSkillPicks, normalizeSkills, charBonusPicksAt };
 export { collectLanguagePicks, languagesTakenExcept, normalizeLanguages };
-export { heldSkillsFor, complicationOwnSkillPicks, chosenComplicationOptions, complicationOptionEffects, heroicAbilityPools, complicationTraitPicks, complicationPickRows, levelUpPerkPicks, perkPickText, perkPickIssues };
+export { heldSkillsFor, complicationOwnSkillPicks, chosenComplicationOptions, complicationOptionEffects, heroicAbilityPools, complicationTraitPicks, complicationPickRows, levelUpPerkPicks, perkPickText, perkPickIssues, perkPickIssueEntries };
 export { canEditCharacterFor, canSetVisibilityFor, shouldSkipRealtimeMerge, isHollowHero, ensureShape, normalizeLoaded };
 export { parseHash, navToHash };
 export { App };

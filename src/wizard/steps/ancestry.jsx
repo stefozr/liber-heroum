@@ -7,6 +7,7 @@ import { timeString, parseCareerSkills, PERKS, CHAR_MIN, CHAR_MAX, charBudget, d
 import { StepHeader } from '../StepHeader.jsx';
 import { TraitProse, TraitAbilityCards } from '../../theme/sheet.jsx';
 import { SkillChoicePicker, OptionChoicePicker } from './pickers.jsx';
+import * as mut from '../mutations.js';
 
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
@@ -17,8 +18,7 @@ function AncestryStep({ character, update }) {
     // The signature trait and the trait-point budget live below the poster grid —
     // bring them into view on a fresh pick, or the points go unspent.
     if (id !== character.ancestry.id) scrollWizardTo('ancestry-config');
-    update(c => c.ancestry.id === id ? c
-      : ({ ...c, ancestry: { ...c.ancestry, id, traits: [], formerLife: null, prevLifeTraits: {}, sigSkills: {}, sigOptions: {}, traitSkills: {}, traitOptions: {} } }));
+    update(c => mut.setAncestry(c, id));
   };
 
   const anc = ancestryDef(character);
@@ -32,94 +32,20 @@ function AncestryStep({ character, update }) {
   const formerAnc = formerLifeId ? DS_ANCESTRIES.find(a => a.id === formerLifeId) : null;
   const prevLifeTraits = character.ancestry.prevLifeTraits || {};
 
-  // Drop trait-choice picks that belong to a borrowed (former-life) trait no longer held.
-  const pruneBorrowedChoices = (ancestry) => {
-    const own = new Set((DS_ANCESTRIES.find(a => a.id === ancestry.id)?.traits || []).map(t => t.name));
-    const kept = new Set([...own, ...Object.values(ancestry.prevLifeTraits || {}).filter(Boolean)]);
-    const prune = (map) => Object.fromEntries(Object.entries(map || {}).filter(([k]) => kept.has(k)));
-    return { ...ancestry, traitSkills: prune(ancestry.traitSkills), traitOptions: prune(ancestry.traitOptions) };
-  };
+  const setFormerLife = (id) => update(c => mut.setFormerLife(c, id));
+  const setPrevLifeTrait = (cost, traitName) => update(c => mut.setPrevLifeTrait(c, cost, traitName));
 
-  const setFormerLife = (id) => update(c => {
-    let ancestry = pruneBorrowedChoices({ ...c.ancestry, formerLife: id, prevLifeTraits: {} });
-    // A smaller budget (leaving a 1S former life) can strand an overspent build —
-    // drop the most recently purchased traits until it fits.
-    const nextBudget = ancestryPoints({ ...c, ancestry });
-    const costOf = (n) => (DS_ANCESTRIES.find(a => a.id === ancestry.id)?.traits || []).find(t => t.name === n)?.cost || 0;
-    let traits = [...(ancestry.traits || [])];
-    while (traits.reduce((s, n) => s + costOf(n), 0) > nextBudget) traits.pop();
-    return { ...c, ancestry: { ...ancestry, traits } };
-  });
-  const setPrevLifeTrait = (cost, traitName) => update(c => {
-    const cur = c.ancestry.prevLifeTraits || {};
-    const key = `${cost}pt`;
-    const next = { ...cur, [key]: cur[key] === traitName ? null : traitName };
-    return { ...c, ancestry: pruneBorrowedChoices({ ...c.ancestry, prevLifeTraits: next }) };
-  });
-
-  // ── Signature-granted skill choices (e.g. Devil's Silver Tongue) ──
+  // ── Signature-granted skill / option choices (Silver Tongue, Wyrmplate) ──
   const sigSkills = character.ancestry.sigSkills || {};
-  const toggleSigSkill = (sigName, count, skill) => update(c => {
-    const cur = (c.ancestry.sigSkills || {})[sigName] || [];
-    let next;
-    if (cur.includes(skill)) next = cur.filter(s => s !== skill);
-    else if (cur.length >= count) return c; // at capacity
-    else next = [...cur, skill];
-    return { ...c, ancestry: { ...c.ancestry, sigSkills: { ...(c.ancestry.sigSkills || {}), [sigName]: next } } };
-  });
-
-  // ── Signature-granted option choices (e.g. Dragon Knight's Wyrmplate damage immunity) ──
+  const toggleSigSkill = (sigName, count, skill) => update(c => mut.toggleSigSkill(c, sigName, count, skill));
   const sigOptions = character.ancestry.sigOptions || {};
-  const toggleSigOption = (sigName, count, opt) => update(c => {
-    const cur = (c.ancestry.sigOptions || {})[sigName] || [];
-    let next;
-    if (cur.includes(opt)) next = cur.filter(o => o !== opt);
-    else if (count === 1) next = [opt];
-    else if (cur.length >= count) return c;
-    else next = [...cur, opt];
-    return { ...c, ancestry: { ...c.ancestry, sigOptions: { ...(c.ancestry.sigOptions || {}), [sigName]: next } } };
-  });
+  const toggleSigOption = (sigName, count, opt) => update(c => mut.toggleSigOption(c, sigName, count, opt));
 
   // ── Trait-granted choices (Prismatic Scales, Psionic Gift, Passionate Artisan) ──
-  const toggleTraitSkill = (traitName, count, skill) => update(c => {
-    const cur = (c.ancestry.traitSkills || {})[traitName] || [];
-    let next;
-    if (cur.includes(skill)) next = cur.filter(s => s !== skill);
-    else if (cur.length >= count) return c; // at capacity
-    else next = [...cur, skill];
-    return { ...c, ancestry: { ...c.ancestry, traitSkills: { ...(c.ancestry.traitSkills || {}), [traitName]: next } } };
-  });
-  const toggleTraitOption = (traitName, count, opt) => update(c => {
-    const cur = (c.ancestry.traitOptions || {})[traitName] || [];
-    let next;
-    if (cur.includes(opt)) next = cur.filter(o => o !== opt);
-    else if (count === 1) next = [opt];
-    else if (cur.length >= count) return c;
-    else next = [...cur, opt];
-    return { ...c, ancestry: { ...c.ancestry, traitOptions: { ...(c.ancestry.traitOptions || {}), [traitName]: next } } };
-  });
+  const toggleTraitSkill = (traitName, count, skill) => update(c => mut.toggleTraitSkill(c, traitName, count, skill));
+  const toggleTraitOption = (traitName, count, opt) => update(c => mut.toggleTraitOption(c, traitName, count, opt));
 
-  const toggleTrait = (traitName) => {
-    if (!anc) return;
-    const t = anc.traits.find(tr => tr.name === traitName);
-    const isOn = (character.ancestry.traits || []).includes(traitName);
-    if (isOn) {
-      update(c => {
-        // Clear any linked Previous Life pick and trait choices when the trait is removed.
-        const nextPL = { ...(c.ancestry.prevLifeTraits || {}) };
-        if (traitName === 'Previous Life: 1pt') delete nextPL['1pt'];
-        if (traitName === 'Previous Life: 2pt') delete nextPL['2pt'];
-        const nextTS = { ...(c.ancestry.traitSkills || {}) };
-        const nextTO = { ...(c.ancestry.traitOptions || {}) };
-        delete nextTS[traitName];
-        delete nextTO[traitName];
-        return { ...c, ancestry: { ...c.ancestry, traits: c.ancestry.traits.filter(x => x !== traitName), prevLifeTraits: nextPL, traitSkills: nextTS, traitOptions: nextTO } };
-      });
-    } else {
-      if (t.cost > remaining) return;
-      update(c => ({ ...c, ancestry: { ...c.ancestry, traits: [...(c.ancestry.traits || []), traitName] } }));
-    }
-  };
+  const toggleTrait = (traitName) => update(c => mut.toggleAncestryTrait(c, traitName));
 
   // Follow-up picks a purchased trait unlocks — rendered as a drawer right under
   // its card in the grid (and, for a borrowed trait, under its card in the

@@ -202,9 +202,12 @@ function StatTile({ label, value, sub, gold, rubric, title }) {
 // classes paint over it.
 // `dimmed` is visual-only (no disabled): the group's pick is made, but clicking
 // still switches to this card in one step. `blocked` means the pick is invalid.
-function SelCard({ selected, onClick, children, style, id, className, blocked, dimmed, title }) {
+// `rest` passes extra handlers through to the button (the Codex-style creator's
+// hover/focus previews).
+function SelCard({ selected, onClick, children, style, id, className, blocked, dimmed, title, ...rest }) {
   return (
     <button
+      {...rest}
       type="button"
       id={id}
       title={title}
