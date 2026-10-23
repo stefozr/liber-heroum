@@ -10,7 +10,7 @@ import { SheetStyles } from '../theme/sheet.jsx';
 import { classDef } from '../app.jsx';
 import { UnfinishedChapters } from '../wizard/UnfinishedChapters.jsx';
 import * as mut from '../wizard/mutations.js';
-import { CREATOR_STEPS, creatorStepIndex } from './steps.js';
+import { CREATOR_STEPS, creatorStepIndex, creatorStepIntro } from './steps.js';
 import { creatorIssues } from './status.js';
 import { CreatorContext } from './context.js';
 import { DetailProvider } from './detail-context.jsx';
@@ -79,11 +79,16 @@ function Creator({ character, update, saveState, onExit, onComplete, onHome = nu
   // Keep the active tab in view where the strip scrolls (optional call: jsdom has none).
   const activeTabRef = useRef(null);
   useEffect(() => { activeTabRef.current?.scrollIntoView?.({ inline: 'center', block: 'nearest' }); }, [stepIndex]);
-  // Warm the class posters one step ahead, so the class grid doesn't pop in.
+  // Warm the next step's backdrop, so CONTINUE doesn't flash a bare gradient — and,
+  // one step ahead of Class, its posters, so the class grid doesn't pop in.
   useEffect(() => {
-    if (CREATOR_STEPS[stepIndex + 1]?.id !== 'class' || typeof Image === 'undefined') return;
-    for (const c of DS_CLASSES) if (c.cardImg) { const img = new Image(); img.src = c.cardImg; }
+    const next = CREATOR_STEPS[stepIndex + 1];
+    if (!next || typeof Image === 'undefined') return;
+    const bg = creatorStepIntro(next).bg;
+    if (bg) { const img = new Image(); img.src = bg; }
+    if (next.id === 'class') for (const c of DS_CLASSES) if (c.cardImg) { const img = new Image(); img.src = c.cardImg; }
   }, [stepIndex]);
+  const bg = creatorStepIntro(step).bg;
 
   // Sidebar widths the user dragged to (per browser); unset sides follow the stylesheet.
   const shellRef = useRef(null);
@@ -110,6 +115,7 @@ function Creator({ character, update, saveState, onExit, onComplete, onHome = nu
         <div className="cr" ref={shellRef} style={paneStyle}>
           <CreatorStyles />
           <SheetStyles />
+          {bg && <div className="cr-bg" aria-hidden="true" style={{ backgroundImage: `url(${bg})` }} />}
           <CreatorHeader character={character} stepIndex={stepIndex} setStep={setStep} saveState={saveState}
             onExit={onExit} onHome={onHome} onSwitchLayout={onSwitchLayout} activeTabRef={activeTabRef} />
           <HeroSummary character={character} />

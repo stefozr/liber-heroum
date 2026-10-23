@@ -225,6 +225,22 @@ describe('detail panel', () => {
   });
 });
 
+describe('step backdrop', () => {
+  const bgOf = (container: HTMLElement) => (container.querySelector('.cr-bg') as HTMLElement | null)?.style.backgroundImage || '';
+
+  it('shows the current step’s art and follows the step', () => {
+    const { container, getByRole } = renderCreator(at(hero(), 'ancestry'));
+    expect(bgOf(container)).toContain('Ancestry.webp');
+    fireEvent.click(within(getByRole('navigation', { name: 'Creation steps' })).getByText('Class'));
+    expect(bgOf(container)).toContain('Class.webp');
+  });
+
+  it('gives the Skills step its own art', () => {
+    const { container } = renderCreator(at(hero(), 'skills'));
+    expect(bgOf(container)).toContain('Summary.webp');
+  });
+});
+
 describe('resizable sidebars', () => {
   // This jsdom runs without Web Storage; give the widths a Map-backed store.
   const store = new Map<string, string>();

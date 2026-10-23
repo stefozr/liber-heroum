@@ -17,6 +17,26 @@ const CREATOR_CSS = `
   grid-template-areas: "top top top" "tabs tabs tabs" "left main right" "foot foot foot";
 }
 .cr > * { min-width: 0; }
+
+/* The step's backdrop art, full-bleed behind the whole creator: the classic wizard's
+   art and opacity (.wiz-step .step-bg) under a darker veil than the wizard's, since
+   here the art sits behind three columns of text. z-index:-1 works because
+   .cr is its own stacking context (position:relative; z-index:2): the layer paints
+   beneath every grid child without changing any child's positioning. Absolutely
+   positioned, it is not a grid item, so it covers the shell at every breakpoint. */
+.cr-bg {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-size: cover; background-position: center top; opacity: 0.8;
+}
+.cr-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(8,8,10, calc(0.84 * var(--surface-alpha))) 0%,
+      rgba(8,8,10, calc(0.89 * var(--surface-alpha))) 50%,
+      rgba(8,8,10, calc(0.95 * var(--surface-alpha))) 90%,
+      var(--bg-0) 100%);
+}
 .cr > .topbar { grid-area: top; }
 .cr-tabs, .cr-navbar { grid-area: tabs; }
 .cr-left { grid-area: left; }
@@ -161,7 +181,7 @@ const CREATOR_CSS = `
 .cr-stack { display: flex; flex-direction: column; gap: 14px; }
 
 .cr-sec { position: relative; }
-.cr-sec.framed { border: 1px solid var(--line-2); background: var(--grad-card); padding: 16px 18px 18px; }
+.cr-sec.framed { border: 1px solid var(--line-2); background: var(--grad-card), var(--bg-1); padding: 16px 18px 18px; }
 .cr-sec.framed.is-done { border-color: var(--line); }
 .cr-sec-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
 .cr-sec-title { font-family: var(--display-2); font-size: var(--fs-8); font-weight: 600; color: var(--ink); letter-spacing: 0.08em; margin: 0; }
@@ -191,31 +211,31 @@ const CREATOR_CSS = `
 .opt-cell { position: relative; min-width: 0; display: flex; }
 .opt-btn {
   flex: 1; min-height: 44px; min-width: 0; padding: 9px 12px;
-  border: 1px solid var(--line-2); background: var(--grad-card); color: var(--ink);
+  border: 1px solid var(--line-2); background: var(--grad-card), var(--bg-1); color: var(--ink);
   font-family: var(--display-2); font-weight: 600; font-size: var(--fs-5); letter-spacing: 0.04em;
   text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  transition: border-color .12s, background .12s, box-shadow .12s, opacity .12s, color .12s;
+  transition: border-color .12s, background .12s, box-shadow .12s, color .12s;
 }
 .opt-btn .opt-name { overflow-wrap: anywhere; line-height: 1.25; }
 .opt-btn .opt-sub { font-family: var(--mono); font-weight: 400; font-size: var(--fs-2); color: var(--ink-3); letter-spacing: 0.12em; text-transform: uppercase; }
 .opt-btn .opt-cost { font-family: var(--mono); font-weight: 400; font-size: var(--fs-3); color: var(--gold-2); margin-left: 4px; }
 .opt-btn .opt-badge { margin-top: 2px; }
-.opt-btn:hover, .opt-btn:focus-visible { border-color: var(--gold-deep); background: var(--grad-card-hover); }
+.opt-btn:hover, .opt-btn:focus-visible { border-color: var(--gold-deep); background: var(--grad-card-hover), var(--bg-1); }
 .opt-btn:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
-.opt-btn.selected { border-color: var(--gold); background: var(--grad-card-sel); box-shadow: var(--shadow-card-sel); color: var(--gold-2); }
+.opt-btn.selected { border-color: var(--gold); background: var(--grad-card-sel), var(--bg-1); box-shadow: var(--shadow-card-sel); color: var(--gold-2); }
 .opt-btn.selected .opt-sub { color: var(--gold-2); opacity: 0.8; }
-.opt-btn.dimmed { opacity: 0.55; }
-.opt-btn.dimmed:hover, .opt-btn.dimmed:focus-visible { opacity: 1; }
-.opt-btn.blocked { opacity: 0.4; text-decoration: line-through; cursor: not-allowed; }
-.opt-btn.blocked:hover { border-color: var(--line-2); background: var(--grad-card); }
-.opt-btn.granted { border-color: var(--gold-deep); background: var(--grad-card-sel); color: var(--gold-2); cursor: default; opacity: 1; text-decoration: none; }
-.opt-btn.granted:hover { border-color: var(--gold-deep); background: var(--grad-card-sel); }
+.opt-btn.dimmed { color: var(--ink-3); border-color: var(--line); }
+.opt-btn.dimmed:hover, .opt-btn.dimmed:focus-visible { color: var(--ink); border-color: var(--gold-deep); }
+.opt-btn.blocked { color: var(--ink-4); border-color: var(--line); text-decoration: line-through; cursor: not-allowed; }
+.opt-btn.blocked:hover { color: var(--ink-4); border-color: var(--line); background: var(--grad-card), var(--bg-1); }
+.opt-btn.granted { border-color: var(--gold-deep); background: var(--grad-card-sel), var(--bg-1); color: var(--gold-2); cursor: default; text-decoration: none; }
+.opt-btn.granted:hover { border-color: var(--gold-deep); background: var(--grad-card-sel), var(--bg-1); }
 .opt-btn.warn { border-color: var(--rubric); }
 .opt-btn .opt-left { font-size: var(--fs-2); }
 .opt-info { display: none; }
 
 /* The informational "Skills & Languages" box on the source steps. */
-.cr-infobox { border: 1px solid var(--line-strong); padding: 14px 18px 12px; background: var(--surface-panel); margin: 20px 0 6px; }
+.cr-infobox { border: 1px solid var(--line-strong); padding: 14px 18px 12px; background: var(--bg-1); margin: 20px 0 6px; }
 .cr-infobox-title { text-align: center; font-family: var(--display-2); font-weight: 600; font-size: var(--fs-8); color: var(--gold-2); letter-spacing: 0.14em; margin-bottom: 10px; }
 .cr-infobox-row { font-family: var(--serif); font-size: var(--fs-8); color: var(--ink-2); line-height: 1.5; padding: 2px 0; text-align: center; }
 .cr-infobox-row b { color: var(--ink); font-weight: 600; }
@@ -314,7 +334,7 @@ ${MQ.rail} {
   }
   .opt-info {
     appearance: none; flex: 0 0 auto; width: 34px; margin-left: -1px;
-    border: 1px solid var(--gold); background: var(--grad-card-sel); color: var(--gold-2); cursor: pointer;
+    border: 1px solid var(--gold); background: var(--grad-card-sel), var(--bg-1); color: var(--gold-2); cursor: pointer;
     align-items: center; justify-content: center; font-family: var(--serif); font-style: italic; font-size: var(--fs-8);
   }
   .opt-cell:not(.has-info) .opt-info { display: none; }
@@ -362,10 +382,10 @@ ${MQ.phone} {
 
 /* Touch: hover is not a preview, and a stuck :hover must not look like a pick. */
 ${MQ.touch} {
-  .opt-btn:hover { border-color: var(--line-2); background: var(--grad-card); }
-  .opt-btn.selected:hover { border-color: var(--gold); background: var(--grad-card-sel); }
-  .opt-btn.dimmed:hover { opacity: 0.55; }
-  .opt-btn.granted:hover { border-color: var(--gold-deep); background: var(--grad-card-sel); }
+  .opt-btn:hover { border-color: var(--line-2); background: var(--grad-card), var(--bg-1); }
+  .opt-btn.selected:hover { border-color: var(--gold); background: var(--grad-card-sel), var(--bg-1); }
+  .opt-btn.dimmed:hover { color: var(--ink-3); border-color: var(--line); }
+  .opt-btn.granted:hover { border-color: var(--gold-deep); background: var(--grad-card-sel), var(--bg-1); }
 }
 `;
 
