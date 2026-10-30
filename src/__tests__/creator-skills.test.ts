@@ -83,6 +83,13 @@ describe('career and class', () => {
     const after = s.toggle(c, free);
     expect(after.cclass.skillSwaps.Sneak).toBe(free);
     expect(slot(after, 'swap:class:Sneak').done).toBe(true);
+    // The class section flags its duplicate Sneak, naming the career that keeps it.
+    expect(s.holder).toBe('Agent');
+    expect(slot(c, 'class').note).toContain('Sneak (already from Agent — pick a replacement below)');
+    expect(slot(c, 'class').grantFlags.get('Sneak')).toEqual({ reason: 'Also granted by Agent — choose a replacement below', open: true });
+    expect(slot(after, 'class').note).toContain(`Sneak → ${free}`);
+    expect(slot(after, 'class').grantFlags.get('Sneak')).toEqual({ reason: `Also granted by Agent — replaced by ${free}`, open: false });
+    expect(slot(c, 'career').grantFlags.has('Sneak')).toBe(false);
     // Clicking the chosen replacement clears it again.
     expect(slot(after, 'swap:class:Sneak').toggle(after, free).cclass.skillSwaps.Sneak).toBeUndefined();
   });

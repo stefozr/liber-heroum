@@ -14,7 +14,7 @@ import {
 } from '../app.jsx';
 import {
   parseCareerSkills, attributeCareerSkills, pickPool, classSkillPicks, classGrantedSkills, groupsOfSkill,
-  careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, effectiveComplicationSkills, resolvedAncestryTraits, ancestrySignatures, PERK_CHOICES,
+  careerAutoCollisions, classGrantCollisions, complicationGrantCollisions, resolvedAncestryTraits, ancestrySignatures, PERK_CHOICES,
 } from '../wizard/helpers.js';
 import { unresolvedSwaps } from '../wizard/Wizard.jsx';
 import * as mut from '../wizard/mutations.js';
@@ -32,13 +32,13 @@ const ASPECTS = [
 
 // A pick slot over one or more groups. `attr` maps a picked name to the group it
 // counts toward (career/class attribution); single-group slots attribute to 0.
-function pickSlot({ id, key, step, source, granted = [], groups, picked, attr, taken, dupIssues = [], toggle, done, quickBuild = null, quickLabel = null, note = null }) {
+function pickSlot({ id, key, step, source, granted = [], grantFlags = new Map(), groups, picked, attr, taken, dupIssues = [], toggle, done, quickBuild = null, quickLabel = null, note = null }) {
   const attribution = attr || new Map(picked.map(n => [n, 0]));
   const inGroup = (idx) => picked.filter(n => attribution.get(n) === idx);
   const issues = dupIssues.map(d => `Duplicate skill: ${d.name} already held by ${d.holder} — choose another`);
   const dupNames = new Set(dupIssues.map(d => d.name));
   return {
-    id, key, step, source, kind: 'pick', granted, note,
+    id, key, step, source, kind: 'pick', granted, grantFlags, note,
     groups: groups.map((g, idx) => ({ ...g, idx, picked: inGroup(idx) })),
     picked, taken, issues, dupNames,
     done: done && issues.length === 0,
@@ -56,6 +56,30 @@ function pickSlot({ id, key, step, source, granted = [], groups, picked, attr, t
   };
 }
 
+// The collision helpers name the holding step ("Career"); say which career or class.
+function holderName(c, source) {
+  if (source === 'Career') return careerDef(c)?.name || source;
+  if (source === 'Class') return classDef(c)?.name || source;
+  return source;
+}
+
+// A slot's auto-grants that another source already holds → Map<skill, { reason, open }>
+// for the chip (`open` until a replacement is chosen); the "Granted: …" note names the
+// same state in words.
+function grantFlags(c, collisions, swaps) {
+  return new Map(collisions.map(({ skill, source }) => [skill, swaps[skill]
+    ? { reason: `Also granted by ${holderName(c, source)} — replaced by ${swaps[skill]}`, open: false }
+    : { reason: `Also granted by ${holderName(c, source)} — choose a replacement below`, open: true }]));
+}
+
+function grantNote(c, granted, collisions, swaps) {
+  const holder = new Map(collisions.map(x => [x.skill, holderName(c, x.source)]));
+  const label = (s) => !holder.has(s) ? s
+    : swaps[s] ? `${s} → ${swaps[s]}`
+    : `${s} (already from ${holder.get(s)} — pick a replacement below)`;
+  return `Granted: ${granted.map(label).join(', ')}`;
+}
+
 // The "choose another instead" slot for one duplicated auto-grant.
 function swapSlots({ step, source, collisions, swaps, ownKey, ownNames, c, setSwap }) {
   if (!collisions.length) return [];
@@ -68,7 +92,7 @@ function swapSlots({ step, source, collisions, swaps, ownKey, ownNames, c, setSw
     const otherSwaps = Object.entries(swaps || {}).filter(([k]) => k !== skill).map(([, v]) => v);
     return {
       id: `swap:${ownKey}:${skill}`, key: null, step, source, kind: 'swap',
-      collision: { skill, source: holder }, groupNames: groups, pool, chosen,
+      collision: { skill, source: holder }, holder: holderName(c, holder), groupNames: groups, pool, chosen,
       picked: chosen ? [chosen] : [], granted: [], taken, issues: [],
       done: !unresolved.includes(skill),
       toggle: (cc, name) => setSwap(cc, skill, (cc_swaps(cc, ownKey)[skill] === name) ? null : name),
@@ -183,11 +207,10 @@ function skillSlots(c) {
     const picked = skills.filter(s => !parsed.auto.includes(s));
     const swaps = c.career.skillSwaps || {};
     const collisions = careerAutoCollisions(c);
-    const colliding = new Set(collisions.map(x => x.skill));
     const takenCareer = skillsTakenExcept(c, 'career');
     out.push(pickSlot({
       id: 'career', key: 'career', step: 'career', source: car.name,
-      granted: parsed.auto, note: parsed.auto.length ? `Granted: ${parsed.auto.map(s => (colliding.has(s) && swaps[s] ? `${s} → ${swaps[s]}` : s)).join(', ')}` : null,
+      granted: parsed.auto, grantFlags: grantFlags(c, collisions, swaps), note: parsed.auto.length ? grantNote(c, parsed.auto, collisions, swaps) : null,
       groups: parsed.picks.map(p => ({ count: p.count, groups: p.groups, options: p.options, label: `Choose ${p.label}`, pool: pickPool(p) })),
       picked, attr, taken: takenCareer, dupIssues: duplicateSkillPicks(c).filter(d => d.key === 'career'),
       toggle: (cc, name, idx) => {
@@ -221,12 +244,11 @@ function skillSlots(c) {
     const chosen = c.cclass.skills || [];
     const swaps = c.cclass.skillSwaps || {};
     const collisions = classGrantCollisions(c);
-    const colliding = new Set(collisions.map(x => x.skill));
     const need = picks.reduce((s, p) => s + p.count, 0);
     if (picks.length || granted.length) {
       out.push(pickSlot({
         id: 'class', key: 'class', step: 'class', source: sub?.skillGroup ? `${cls.name} · ${sub.name}` : cls.name,
-        granted, note: granted.length ? `Granted: ${granted.map(s => (colliding.has(s) && swaps[s] ? `${s} → ${swaps[s]}` : s)).join(', ')}` : null,
+        granted, grantFlags: grantFlags(c, collisions, swaps), note: granted.length ? grantNote(c, granted, collisions, swaps) : null,
         groups: picks.map(p => ({ count: p.count, groups: p.groups, options: p.options, label: `Choose ${p.label}`, pool: pickPool(p) })),
         picked: chosen, attr: attributeCareerSkills({ auto: granted, picks }, chosen, c.cclass.skillPicks),
         taken: skillsTakenExcept(c, 'class'), dupIssues: duplicateSkillPicks(c).filter(d => d.key === 'class'),
@@ -273,10 +295,9 @@ function skillSlots(c) {
     const swaps = c.complication.skillSwaps || {};
     const collisions = complicationGrantCollisions(c);
     if (fixed.length) {
-      const eff = effectiveComplicationSkills(c);
       out.push({
         id: 'comp:fixed', key: 'comp:fixed', step: 'complication', source: comp.name, kind: 'grant',
-        granted: fixed, note: `Granted: ${fixed.map((s, i) => (eff[i] !== s ? `${s} → ${eff[i]}` : s)).join(', ')}`,
+        granted: fixed, grantFlags: grantFlags(c, collisions, swaps), note: grantNote(c, fixed, collisions, swaps),
         groups: [], picked: [], taken: new Map(), issues: [], done: true,
         toggle: (cc) => cc, isOn: () => false, blockedReason: () => null,
       });

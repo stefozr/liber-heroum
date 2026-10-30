@@ -34,7 +34,7 @@ function SlotSection({ slot, lang }) {
     ? `Choose another ${slot.groupNames.join(' or ')} skill instead of ${slot.collision.skill}`
     : slot.source;
   const hint = slot.kind === 'swap'
-    ? `${slot.collision.skill} is already granted by ${slot.collision.source}. ${slot.source} grants it too, so you take another skill from the same group.`
+    ? `${slot.collision.skill} is already granted by ${slot.holder}. ${slot.source} grants it too, so you take another skill from the same group.`
     : [slot.note, slot.quickLabel && slot.quickBuild ? `Quick build: ${slot.quickLabel}` : null].filter(Boolean).join(' · ') || null;
   return (
     <ChoiceSection id={`cr-slot-${slot.id}`} title={title} status={slotStatus(slot)} hint={hint} issues={slot.issues || []}
@@ -47,7 +47,10 @@ function SlotSection({ slot, lang }) {
       )}
       {slot.kind === 'grant' && (
         <OptionGrid>
-          {slot.granted.map(n => <OptionButton key={n} label={n} granted reason={`Granted by ${slot.source}`} info={false} />)}
+          {slot.granted.map(n => {
+            const flag = slot.grantFlags?.get(n);
+            return <OptionButton key={n} label={n} granted warn={!!flag?.open} reason={flag?.reason || `Granted by ${slot.source}`} info={false} />;
+          })}
         </OptionGrid>
       )}
       {slot.kind === 'swap' && (
@@ -71,7 +74,8 @@ function SlotSection({ slot, lang }) {
               {g.pool.map(n => {
                 const isGranted = slot.granted.includes(n);
                 const on = slot.isOn(n, g.idx);
-                const reason = isGranted ? `Granted by ${slot.source}` : slot.blockedReason(n, g.idx);
+                const flag = isGranted ? slot.grantFlags?.get(n) : null;
+                const reason = isGranted ? (flag?.reason || `Granted by ${slot.source}`) : slot.blockedReason(n, g.idx);
                 const capacity = isCapacity(reason);
                 // A single pick swaps on click; a full multi-pick asks you to drop one first.
                 const onSelect = !capacity ? () => update(x => slot.toggle(x, n, g.idx))
@@ -80,7 +84,7 @@ function SlotSection({ slot, lang }) {
                 return (
                   <OptionButton key={n} label={n} selected={on} granted={isGranted}
                     dimmed={full} blocked={!isGranted && !!reason && !capacity} reason={reason}
-                    warn={on && slot.dupNames?.has(n)}
+                    warn={(on && slot.dupNames?.has(n)) || !!flag?.open}
                     detail={{ kind, name: n, reason: capacity ? null : reason }}
                     onSelect={onSelect} />
                 );
